@@ -5,6 +5,7 @@ import {
   calculateInvoiceTotals,
   computeShopSummary,
   computeDashboardMetrics,
+  formatDateTimeBn,
   getDueShopSummaries,
   mergeCatalogProducts,
 } from './ledger';
@@ -239,4 +240,15 @@ test('getDueShopSummaries returns only shops with due > 0 sorted highest first',
   assert.equal(dueList[0]?.summary.totalDue, 3000);
   assert.equal(dueList[1]?.shop.id, 's2');
   assert.equal(dueList[1]?.summary.totalDue, 1500);
+});
+
+test('formatDateTimeBn displays both Bengali date and 12-hour time for ISO timestamps', () => {
+  const formatted = formatDateTimeBn('2026-11-18T10:30:00.000Z');
+  assert.match(formatted, /২০২৬/);
+  assert.match(formatted, /:/);
+  assert.match(formatted, /(AM|PM|পূর্বাহ্ণ|অপরাহ্ণ)/i);
+
+  const dateOnly = formatDateTimeBn('2026-11-18');
+  assert.match(dateOnly, /২০২৬/);
+  assert.doesNotMatch(dateOnly, /:/);
 });

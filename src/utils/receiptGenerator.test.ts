@@ -78,9 +78,10 @@ test('buildPrintableReceiptHtml escapes shop name and includes totals', () => {
   assert.match(html, /নগদ আংশিক জমা/);
 });
 
-test('buildReceiptSummaryText contains shop, items, and due amount', () => {
+test('buildReceiptSummaryText contains shop, items, date/time, and due amount', () => {
   const txt = buildReceiptSummaryText(sampleSale);
   assert.match(txt, /INV-0042/);
+  assert.match(txt, /তারিখ ও সময়:.*:/);
   assert.match(txt, /Dexlan 30mg/);
   assert.match(txt, /মন্তব্য: নগদ আংশিক জমা/);
 });

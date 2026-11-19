@@ -196,13 +196,30 @@ export function formatBDT(amount: number): string {
 }
 
 export function formatDateTimeBn(isoString: string): string {
-  const date = new Date(isoString);
+  const trimmed = isoString.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [y, m, d] = trimmed.split('-').map(Number);
+    const localDate = new Date(y, m - 1, d);
+    if (Number.isNaN(localDate.getTime())) return isoString;
+    return localDate.toLocaleDateString('bn-BD', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+  const date = new Date(trimmed);
   if (Number.isNaN(date.getTime())) return isoString;
-  return date.toLocaleDateString('bn-BD', {
+  const datePart = date.toLocaleDateString('bn-BD', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
+  const timePart = date.toLocaleTimeString('bn-BD', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+  return `${datePart}, ${timePart}`;
 }
 
 export function generateNextInvoiceNo(sales: SaleRecord[]): string {

@@ -13123,13 +13123,28 @@ function formatBDT(amount) {
 	})}`;
 }
 function formatDateTimeBn(isoString) {
-	const date = new Date(isoString);
+	const trimmed = isoString.trim();
+	if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+		const [y, m, d] = trimmed.split("-").map(Number);
+		const localDate = new Date(y, m - 1, d);
+		if (Number.isNaN(localDate.getTime())) return isoString;
+		return localDate.toLocaleDateString("bn-BD", {
+			day: "numeric",
+			month: "short",
+			year: "numeric"
+		});
+	}
+	const date = new Date(trimmed);
 	if (Number.isNaN(date.getTime())) return isoString;
-	return date.toLocaleDateString("bn-BD", {
+	return `${date.toLocaleDateString("bn-BD", {
 		day: "numeric",
 		month: "short",
 		year: "numeric"
-	});
+	})}, ${date.toLocaleTimeString("bn-BD", {
+		hour: "numeric",
+		minute: "2-digit",
+		hour12: true
+	})}`;
 }
 function generateNextInvoiceNo(sales) {
 	return `INV-${sales.length + 101}`;
@@ -13240,7 +13255,7 @@ function buildReceiptSummaryText(sale) {
 		"THE IBN SINA'S Production — বিক্রয় রসিদ",
 		`দোকান: ${sale.shopName}`,
 		`ইনভয়েস: ${sale.invoiceNo}`,
-		`তারিখ: ${formatDateTimeBn(sale.date)}`,
+		`তারিখ ও সময়: ${formatDateTimeBn(sale.date)}`,
 		`মোট আইটেম: ${sale.items.length}টি (${sale.totalBoxes} বক্স)`,
 		"--------------------------------",
 		...sale.items.map((item, idx) => `${idx + 1}. ${item.productName} (${item.boxes} বক্স × ${formatBDT(item.effectiveBoxPrice)}) = ${formatBDT(item.netTotal)}`),
@@ -13390,7 +13405,7 @@ function buildShopStatementHtml(shop, sales, payments) {
       <div class="meta">মালিক: ${escapeHtml(shop.ownerName || "—")} · এলাকা: ${escapeHtml(shop.area || "—")}${shop.phone ? ` · ফোন: ${escapeHtml(shop.phone)}` : ""}</div>
     </div>
     <div class="meta" style="text-align:right;">
-      <div>রিপোর্ট তারিখ</div>
+      <div>রিপোর্ট তারিখ ও সময়</div>
       <div style="font-weight:600;color:#0f172a;">${escapeHtml(formatDateTimeBn((/* @__PURE__ */ new Date()).toISOString()))}</div>
     </div>
   </div>
@@ -13405,7 +13420,7 @@ function buildShopStatementHtml(shop, sales, payments) {
   <table>
     <thead>
       <tr>
-        <th>তারিখ</th>
+        <th>তারিখ ও সময়</th>
         <th>নম্বর</th>
         <th>বিবরণ</th>
         <th class="num">বিল</th>
@@ -13592,7 +13607,7 @@ async function renderReceiptPng(sale) {
 var receiptRenderCache = /* @__PURE__ */ new Map();
 function getCachedReceiptPng(sale) {
 	const fontId = getActiveFontOption().id;
-	const cacheKey = `${sale.id}:${sale.netTotal}:${sale.paidAmount}:${sale.items.length}:${fontId}`;
+	const cacheKey = `${sale.id}:${sale.date}:${sale.netTotal}:${sale.paidAmount}:${sale.items.length}:${fontId}`;
 	const cached = receiptRenderCache.get(cacheKey);
 	if (cached) return cached;
 	if (receiptRenderCache.size >= 12) {

@@ -30,7 +30,7 @@ export function buildReceiptSummaryText(sale: SaleRecord): string {
     "THE IBN SINA'S Production — বিক্রয় রসিদ",
     `দোকান: ${sale.shopName}`,
     `ইনভয়েস: ${sale.invoiceNo}`,
-    `তারিখ: ${formatDateTimeBn(sale.date)}`,
+    `তারিখ ও সময়: ${formatDateTimeBn(sale.date)}`,
     `মোট আইটেম: ${sale.items.length}টি (${sale.totalBoxes} বক্স)`,
     '--------------------------------',
     ...sale.items.map(
@@ -232,7 +232,7 @@ export function buildShopStatementHtml(
       <div class="meta">মালিক: ${escapeHtml(shop.ownerName || '—')} · এলাকা: ${escapeHtml(shop.area || '—')}${shop.phone ? ` · ফোন: ${escapeHtml(shop.phone)}` : ''}</div>
     </div>
     <div class="meta" style="text-align:right;">
-      <div>রিপোর্ট তারিখ</div>
+      <div>রিপোর্ট তারিখ ও সময়</div>
       <div style="font-weight:600;color:#0f172a;">${escapeHtml(formatDateTimeBn(new Date().toISOString()))}</div>
     </div>
   </div>
@@ -247,7 +247,7 @@ export function buildShopStatementHtml(
   <table>
     <thead>
       <tr>
-        <th>তারিখ</th>
+        <th>তারিখ ও সময়</th>
         <th>নম্বর</th>
         <th>বিবরণ</th>
         <th class="num">বিল</th>
@@ -524,7 +524,7 @@ const receiptRenderCache = new Map<string, Promise<RenderedReceiptResult>>();
 
 export function getCachedReceiptPng(sale: SaleRecord): Promise<RenderedReceiptResult> {
   const fontId = getActiveFontOption().id;
-  const cacheKey = `${sale.id}:${sale.netTotal}:${sale.paidAmount}:${sale.items.length}:${fontId}`;
+  const cacheKey = `${sale.id}:${sale.date}:${sale.netTotal}:${sale.paidAmount}:${sale.items.length}:${fontId}`;
   const cached = receiptRenderCache.get(cacheKey);
   if (cached) return cached;
 
