@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BarChart3,
   CheckCircle2,
@@ -9,19 +9,20 @@ import {
   LayoutDashboard,
   LogIn,
   LogOut,
+  MoreVertical,
   Package,
   Plus,
   RefreshCw,
   Store,
-  UploadCloud,
+  UserCircle2,
 } from 'lucide-react';
+import { AccountModal } from './components/AccountModal';
 import { DashboardView } from './components/DashboardView';
 import {
   AddShopModal,
   CollectPaymentModal,
   InvoiceDetailModal,
   ProductFormModal,
-  ProductSheetImageModal,
 } from './components/Modals';
 import { NewSaleView } from './components/NewSaleView';
 import { ProductsView } from './components/ProductsView';
@@ -44,20 +45,44 @@ export default function App() {
   const [preselectedShopId, setPreselectedShopId] = useState<string | undefined>(undefined);
   const [selectedLedgerShop, setSelectedLedgerShop] = useState<Shopkeeper | null>(null);
 
-  const [addShopOpen, setAddShopOpen] = useState(false);
+  const [shopModalState, setShopModalState] = useState<{
+    open: boolean;
+    editing: Shopkeeper | null;
+  }>({ open: false, editing: null });
   const [collectTarget, setCollectTarget] = useState<{ shop: Shopkeeper; due: number } | null>(null);
   const [detailSale, setDetailSale] = useState<SaleRecord | null>(null);
-  const [sheetImageOpen, setSheetImageOpen] = useState(false);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [dismissedUpdateTag, setDismissedUpdateTag] = useState<string | null>(null);
   const [productModalState, setProductModalState] = useState<{
     open: boolean;
     editing: Product | null;
   }>({ open: false, editing: null });
 
+  const menuContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, [activeView]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (menuContainerRef.current && !menuContainerRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutside);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [menuOpen]);
 
   const metrics = useMemo(
     () => computeDashboardMetrics(store.shops, store.sales, store.payments),
@@ -82,22 +107,58 @@ export default function App() {
     updater.latestRelease &&
     dismissedUpdateTag !== updater.latestRelease.tagName;
 
+  const userInitial = (store.user?.displayName || store.user?.email || 'M')
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900 pb-24 md:pb-10">
-      {/* 3-Zone Top Bar Contract */}
+      {/* 3-Zone Top App Bar */}
       <header className="no-print sticky top-0 z-30 border-b border-slate-200 bg-white pt-safe">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 sm:gap-8 px-4 py-3 sm:px-6">
-          {/* Zone 1: Single-line Brand Title */}
-          <button
-            type="button"
-            onClick={() => setActiveView('dashboard')}
-            className="font-display text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0"
-          >
-            ইবনে সিনা টালিখাতা
-          </button>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-6 px-3 py-2.5 sm:px-6 sm:py-3">
+          {/* Zone 1: Brand Emblem + Title + Compact Sync Status */}
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => setActiveView('dashboard')}
+              className="flex items-center gap-2 text-left min-w-0"
+            >
+              <img
+                src="/icon.svg"
+                alt=""
+                className="h-8 w-8 rounded-lg border border-emerald-100 shrink-0"
+              />
+              <span className="font-display text-[15px] sm:text-lg font-bold tracking-tight text-slate-900 truncate">
+                ইবনে সিনা টালিখাতা
+              </span>
+            </button>
+            <span
+              data-testid="sync-status-text"
+              title={store.syncStatus.detail}
+              className={`hidden lg:inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${
+                store.syncStatus.state === 'offline'
+                  ? 'bg-amber-50 text-amber-700'
+                  : store.syncStatus.state === 'syncing'
+                    ? 'bg-blue-50 text-blue-700'
+                    : store.user
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {store.syncStatus.state === 'offline' ? (
+                <CloudOff className="h-3 w-3" />
+              ) : store.syncStatus.state === 'syncing' ? (
+                <RefreshCw className="h-3 w-3 animate-spin" />
+              ) : (
+                <Cloud className="h-3 w-3" />
+              )}
+              {store.syncStatus.label}
+            </span>
+          </div>
 
-          {/* Zone 2: Clean Single-line Nav Links */}
-          <nav className="hidden md:flex items-center gap-6" aria-label="প্রধান নেভিগেশন">
+          {/* Zone 2: Clean Single-line Desktop Nav Links */}
+          <nav className="hidden md:flex items-center gap-5" aria-label="প্রধান নেভিগেশন">
             {navItems.map((item) => {
               const active = activeView === item.id;
               return (
@@ -120,16 +181,156 @@ export default function App() {
             })}
           </nav>
 
-          {/* Zone 3: 1 Primary CTA Action */}
-          <div className="shrink-0">
+          {/* Zone 3: Primary CTA + Modern Account Chip + 3-Dot Overflow Menu */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={() => openNewSale()}
-              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 sm:px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 whitespace-nowrap shrink-0"
+              className="inline-flex min-h-[40px] items-center gap-1 rounded-lg bg-emerald-600 px-2.5 sm:px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 whitespace-nowrap shrink-0"
             >
               <Plus className="h-4 w-4" />
-              নতুন বিক্রি
+              <span>নতুন বিক্রি</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setAccountModalOpen(true)}
+              aria-label={store.user ? 'অ্যাকাউন্ট প্রোফাইল ও লগআউট' : 'জিমেইল দিয়ে লগইন'}
+              className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-1.5 sm:px-2.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-100 shrink-0"
+            >
+              {store.user ? (
+                <>
+                  {store.user.photoURL ? (
+                    <img
+                      src={store.user.photoURL}
+                      alt={store.user.displayName || 'User'}
+                      referrerPolicy="no-referrer"
+                      className="h-7 w-7 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+                      {userInitial}
+                    </span>
+                  )}
+                  <span className="hidden sm:inline max-w-[90px] truncate">
+                    {store.user.displayName?.split(' ')[0] || 'অ্যাকাউন্ট'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <UserCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <span className="hidden sm:inline">লগইন</span>
+                </>
+              )}
+            </button>
+
+            {/* 3-Dot Overflow Menu */}
+            <div className="relative" ref={menuContainerRef}>
+              <button
+                type="button"
+                aria-label="আরও অপশন"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-100 shrink-0"
+              >
+                <MoreVertical className="h-5 w-5" />
+                {updater.updateAvailable && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-600 ring-2 ring-white"
+                  />
+                )}
+              </button>
+
+              {menuOpen && (
+                <div
+                  role="menu"
+                  aria-label="অতিরিক্ত অপশন মেনু"
+                  className="absolute right-0 mt-2 w-72 origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl z-40"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setUpdateModalOpen(true);
+                    }}
+                    className="flex w-full min-h-[44px] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-slate-50"
+                  >
+                    <span className="flex items-center gap-2.5 whitespace-nowrap">
+                      <FolderDown className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <span>ডাউনলোড ও আপডেট</span>
+                    </span>
+                    {updater.updateAvailable ? (
+                      <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 whitespace-nowrap shrink-0">
+                        নতুন আপডেট
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-mono-num text-slate-400 whitespace-nowrap shrink-0">
+                        v{updater.installedVersion}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setAccountModalOpen(true);
+                    }}
+                    className="flex w-full min-h-[44px] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-slate-50"
+                  >
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      {store.user ? (
+                        <Cloud className="h-4 w-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <LogIn className="h-4 w-4 text-emerald-600 shrink-0" />
+                      )}
+                      <span className="truncate">
+                        {store.user ? 'অ্যাকাউন্ট ও ক্লাউড সিঙ্ক' : 'জিমেইল লগইন করুন'}
+                      </span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setActiveView('reports');
+                    }}
+                    className="flex w-full min-h-[44px] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-slate-50"
+                  >
+                    <BarChart3 className="h-4 w-4 text-slate-600 shrink-0" />
+                    <span>ডাটা ব্যাকআপ ও রিপোর্ট</span>
+                  </button>
+
+                  {store.user && (
+                    <>
+                      <div className="my-1 border-t border-slate-100" />
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setAccountModalOpen(true);
+                        }}
+                        className="flex w-full min-h-[44px] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4 shrink-0" />
+                        <span>লগআউট</span>
+                      </button>
+                    </>
+                  )}
+
+                  <div className="px-2 pt-1">
+                    <PWAInstallButton />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -171,140 +372,50 @@ export default function App() {
           </div>
         )}
 
-        {/* Offline / Auto-Sync & Gmail Auth Toolbar */}
-        <div className="no-print mb-6 rounded-xl border border-slate-200 bg-white px-4 py-3 sm:px-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {store.user ? (
-              <>
-                <div className="flex items-center gap-3 min-w-0">
-                  {store.user.photoURL ? (
-                    <img
-                      src={store.user.photoURL}
-                      alt={store.user.displayName || 'User'}
-                      referrerPolicy="no-referrer"
-                      className="h-9 w-9 rounded-full border border-slate-200 object-cover shrink-0"
-                    />
+        {/* Contextual Offline / Sync / Auth Notice (Only shown when needed, no bulky legacy bar) */}
+        {(store.syncStatus.state === 'offline' ||
+          store.syncStatus.state === 'syncing' ||
+          store.justSyncedNotice ||
+          store.authError) && (
+          <div className="no-print mb-5 space-y-2">
+            {(store.syncStatus.state === 'offline' || store.syncStatus.state === 'syncing') && (
+              <div
+                className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-xs ${
+                  store.syncStatus.state === 'offline'
+                    ? 'border-amber-200 bg-amber-50 text-amber-900'
+                    : 'border-blue-200 bg-blue-50 text-blue-900'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {store.syncStatus.state === 'offline' ? (
+                    <CloudOff className="h-4 w-4 text-amber-600 shrink-0" />
                   ) : (
-                    <Cloud className="h-5 w-5 text-emerald-600 shrink-0" />
+                    <RefreshCw className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
                   )}
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-slate-900">
-                      {store.user.displayName || 'MR অ্যাকাউন্ট'}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
-                      <span className="truncate max-w-[200px] sm:max-w-none">{store.user.email}</span>
-                      <span aria-hidden="true">·</span>
-                      <span
-                        data-testid="sync-status-text"
-                        className={`inline-flex items-center gap-1 font-medium ${
-                          store.syncStatus.state === 'offline'
-                            ? 'text-amber-700'
-                            : store.syncStatus.state === 'syncing'
-                              ? 'text-blue-700'
-                              : 'text-emerald-700'
-                        }`}
-                      >
-                        {store.syncStatus.state === 'offline' ? (
-                          <CloudOff className="h-3.5 w-3.5 shrink-0" />
-                        ) : store.syncStatus.state === 'syncing' ? (
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" />
-                        ) : (
-                          <Cloud className="h-3.5 w-3.5 shrink-0" />
-                        )}
-                        {store.syncStatus.label}
-                      </span>
-                    </div>
-                  </div>
+                  <span>
+                    <strong>{store.syncStatus.label}:</strong> {store.syncStatus.detail}
+                  </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <PWAInstallButton />
-                  <button
-                    type="button"
-                    onClick={() => setUpdateModalOpen(true)}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-                  >
-                    <FolderDown className="h-3.5 w-3.5 text-emerald-600" />
-                    ডাউনলোড ও আপডেট
-                  </button>
-                  {store.shops.length === 0 && !store.cloudLoading && (
-                    <button
-                      type="button"
-                      onClick={() => store.syncLocalDemoToCloud()}
-                      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 whitespace-nowrap"
-                    >
-                      <UploadCloud className="h-3.5 w-3.5" />
-                      লোকাল ডাটা ক্লাউডে আনুন
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => store.signOutUser()}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    লগআউট
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-                  {store.isOnline ? (
-                    <Cloud className="h-4 w-4 text-slate-500 shrink-0 mt-0.5 sm:mt-0" />
-                  ) : (
-                    <CloudOff className="h-4 w-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
-                  )}
-                  <div className="text-xs sm:text-sm text-slate-600">
-                    <span
-                      data-testid="sync-status-text"
-                      className={`font-semibold ${
-                        store.isOnline ? 'text-slate-800' : 'text-amber-700'
-                      }`}
-                    >
-                      {store.syncStatus.label}:
-                    </span>{' '}
-                    <span>{store.syncStatus.detail}</span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <PWAInstallButton />
-                  <button
-                    type="button"
-                    onClick={() => setUpdateModalOpen(true)}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-                  >
-                    <FolderDown className="h-3.5 w-3.5 text-emerald-600" />
-                    ডাউনলোড ও আপডেট
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => store.signInWithGoogle()}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-50 whitespace-nowrap shrink-0"
-                  >
-                    <LogIn className="h-3.5 w-3.5 text-emerald-600" />
-                    জিমেইল দিয়ে লগইন
-                  </button>
-                </div>
-              </>
+              </div>
+            )}
+
+            {store.justSyncedNotice && (
+              <div
+                role="status"
+                className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-medium text-emerald-800"
+              >
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                অফলাইনে করা সকল ডাটা স্বয়ংক্রিয়ভাবে ক্লাউডে আপলোড ও সিঙ্ক হয়েছে।
+              </div>
+            )}
+
+            {store.authError && (
+              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700" role="alert">
+                {store.authError}
+              </p>
             )}
           </div>
-
-          {store.justSyncedNotice && (
-            <div
-              role="status"
-              className="mt-2.5 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800"
-            >
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-              অফলাইনে করা সকল ডাটা স্বয়ংক্রিয়ভাবে ক্লাউডে আপলোড ও সিঙ্ক হয়েছে।
-            </div>
-          )}
-
-          {store.authError && (
-            <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700" role="alert">
-              {store.authError}
-            </p>
-          )}
-        </div>
+        )}
 
         {activeView === 'dashboard' && (
           <DashboardView
@@ -320,7 +431,6 @@ export default function App() {
             }}
             onOpenSaleDetail={(sale) => setDetailSale(sale)}
             onOpenAllReports={() => setActiveView('reports')}
-            onOpenProductSheet={() => setSheetImageOpen(true)}
           />
         )}
 
@@ -331,7 +441,7 @@ export default function App() {
             sales={store.sales}
             payments={store.payments}
             preselectedShopId={preselectedShopId}
-            onRequestAddShop={() => setAddShopOpen(true)}
+            onRequestAddShop={() => setShopModalState({ open: true, editing: null })}
             onSaveSale={store.recordSale}
             onSaleCreated={(sale) => {
               setDetailSale(sale);
@@ -347,7 +457,8 @@ export default function App() {
             payments={store.payments}
             selectedLedgerShop={selectedLedgerShop}
             onSelectLedgerShop={setSelectedLedgerShop}
-            onRequestAddShop={() => setAddShopOpen(true)}
+            onRequestAddShop={() => setShopModalState({ open: true, editing: null })}
+            onRequestEditShop={(shop) => setShopModalState({ open: true, editing: shop })}
             onStartNewSale={openNewSale}
             onCollectDue={(shop, due) => setCollectTarget({ shop, due })}
             onOpenSaleDetail={(sale) => setDetailSale(sale)}
@@ -359,7 +470,6 @@ export default function App() {
             products={store.products}
             onEditProduct={(product) => setProductModalState({ open: true, editing: product })}
             onAddProduct={() => setProductModalState({ open: true, editing: null })}
-            onOpenProductSheet={() => setSheetImageOpen(true)}
           />
         )}
 
@@ -381,7 +491,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation (44px+ Android touch targets, under 15% height cap) */}
+      {/* Mobile Bottom Navigation (44px+ Android touch targets) */}
       <nav
         aria-label="মোবাইল নেভিগেশন"
         className="no-print fixed inset-x-0 bottom-0 z-30 flex min-h-[60px] pb-safe items-center justify-around border-t border-slate-200 bg-white md:hidden"
@@ -410,11 +520,16 @@ export default function App() {
 
       {/* Modals */}
       <AddShopModal
-        open={addShopOpen}
-        onClose={() => setAddShopOpen(false)}
+        open={shopModalState.open}
+        editingShop={shopModalState.editing}
+        onClose={() => setShopModalState({ open: false, editing: null })}
         onSave={(data) => {
-          const created = store.addShopkeeper(data);
-          setPreselectedShopId(created.id);
+          if (shopModalState.editing) {
+            store.updateShopkeeper(shopModalState.editing.id, data);
+          } else {
+            const created = store.addShopkeeper(data);
+            setPreselectedShopId(created.id);
+          }
         }}
       />
 
@@ -428,8 +543,6 @@ export default function App() {
 
       <InvoiceDetailModal sale={detailSale} onClose={() => setDetailSale(null)} />
 
-      <ProductSheetImageModal open={sheetImageOpen} onClose={() => setSheetImageOpen(false)} />
-
       <ProductFormModal
         open={productModalState.open}
         editingProduct={productModalState.editing}
@@ -438,14 +551,26 @@ export default function App() {
         onUpdatePrice={(id, price, packInfo) => store.updateProductPrice(id, price, packInfo)}
       />
 
+      <AccountModal
+        open={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+        user={store.user}
+        isOnline={store.isOnline}
+        syncStatus={store.syncStatus}
+        authError={store.authError}
+        cloudLoading={store.cloudLoading}
+        shopCount={store.shops.length}
+        onSignInWithGoogle={store.signInWithGoogle}
+        onSignOut={store.signOutUser}
+        onSyncLocalToCloud={store.syncLocalDemoToCloud}
+      />
+
       <UpdateCenterModal
         open={updateModalOpen}
         onClose={() => setUpdateModalOpen(false)}
         installedVersion={updater.installedVersion}
         installedCode={updater.installedCode}
         packageName={updater.packageName}
-        githubRepo={updater.githubRepo}
-        onChangeGithubRepo={updater.setGithubRepo}
         isNativeApp={updater.isNativeApp}
         isOnline={store.isOnline}
         checking={updater.checking}

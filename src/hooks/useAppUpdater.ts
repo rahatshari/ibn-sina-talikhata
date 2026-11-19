@@ -53,7 +53,8 @@ export interface DownloadTask {
 function loadSavedRepo(): string {
   if (typeof window === 'undefined') return DEFAULT_GITHUB_REPO;
   try {
-    return window.localStorage.getItem(GITHUB_REPO_STORAGE_KEY) || DEFAULT_GITHUB_REPO;
+    const saved = window.localStorage.getItem(GITHUB_REPO_STORAGE_KEY)?.trim();
+    return saved || DEFAULT_GITHUB_REPO;
   } catch {
     return DEFAULT_GITHUB_REPO;
   }

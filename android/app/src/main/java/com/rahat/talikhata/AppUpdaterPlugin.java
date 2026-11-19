@@ -6,6 +6,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -13,7 +15,13 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.print.PrintAttributes;
+import android.print.PrintManager;
+import android.provider.MediaStore;
 import android.provider.Settings;
+import android.util.Base64;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
@@ -26,6 +34,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -360,5 +371,172 @@ public class AppUpdaterPlugin extends Plugin {
             getContext().startActivity(intent);
         }
         call.resolve();
+    }
+
+    @PluginMethod
+    public void saveFileToDownloads(PluginCall call) {
+        String base64Data = call.getString("base64Data");
+        String rawFileName = call.getString("fileName", "talikhata-file");
+        String mimeType = call.getString("mimeType", "application/octet-stream");
+        if (base64Data == null || base64Data.trim().isEmpty()) {
+            call.reject("base64Data is required");
+            return;
+        }
+
+        String safeFileName = rawFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String cleanBase64 = base64Data.contains(",")
+            ? base64Data.substring(base64Data.indexOf(',') + 1)
+            : base64Data;
+
+        byte[] bytes;
+        try {
+            bytes = Base64.decode(cleanBase64, Base64.DEFAULT);
+        } catch (IllegalArgumentException e) {
+            call.reject("Invalid base64 data");
+            return;
+        }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ContentResolver resolver = getContext().getContentResolver();
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Downloads.DISPLAY_NAME, safeFileName);
+                values.put(MediaStore.Downloads.MIME_TYPE, mimeType);
+                values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/IbnSinaTallyKhata");
+                Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                if (uri == null) {
+                    call.reject("Could not create download entry");
+                    return;
+                }
+                try (OutputStream out = resolver.openOutputStream(uri)) {
+                    if (out == null) {
+                        call.reject("Could not open output stream");
+                        return;
+                    }
+                    out.write(bytes);
+                    out.flush();
+                }
+            } else {
+                File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                File appDir = new File(downloadsDir, "IbnSinaTallyKhata");
+                if (!appDir.exists() && !appDir.mkdirs()) {
+                    appDir = getContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                }
+                if (appDir == null) {
+                    call.reject("Downloads directory unavailable");
+                    return;
+                }
+                File targetFile = new File(appDir, safeFileName);
+                try (FileOutputStream fos = new FileOutputStream(targetFile)) {
+                    fos.write(bytes);
+                    fos.flush();
+                }
+            }
+
+            JSObject ret = new JSObject();
+            ret.put("saved", true);
+            ret.put("fileName", safeFileName);
+            call.resolve(ret);
+        } catch (IOException e) {
+            call.reject("Failed to save file: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void shareFile(PluginCall call) {
+        String base64Data = call.getString("base64Data");
+        String rawFileName = call.getString("fileName", "receipt.png");
+        String mimeType = call.getString("mimeType", "image/png");
+        String title = call.getString("title", "ইবনে সিনা টালিখাতা রসিদ");
+        String text = call.getString("text", "");
+
+        if (base64Data == null || base64Data.trim().isEmpty()) {
+            call.reject("base64Data is required");
+            return;
+        }
+
+        String safeFileName = rawFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String cleanBase64 = base64Data.contains(",")
+            ? base64Data.substring(base64Data.indexOf(',') + 1)
+            : base64Data;
+
+        byte[] bytes;
+        try {
+            bytes = Base64.decode(cleanBase64, Base64.DEFAULT);
+        } catch (IllegalArgumentException e) {
+            call.reject("Invalid base64 data");
+            return;
+        }
+
+        try {
+            File cacheFile = new File(getContext().getCacheDir(), safeFileName);
+            try (FileOutputStream fos = new FileOutputStream(cacheFile)) {
+                fos.write(bytes);
+                fos.flush();
+            }
+
+            Uri uri = FileProvider.getUriForFile(
+                getContext(),
+                getContext().getPackageName() + ".fileprovider",
+                cacheFile
+            );
+
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType(mimeType);
+            shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+            if (!text.isEmpty()) {
+                shareIntent.putExtra(Intent.EXTRA_TEXT, text);
+            }
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            Intent chooser = Intent.createChooser(shareIntent, title);
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(chooser);
+
+            JSObject ret = new JSObject();
+            ret.put("shared", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed to share file: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void printHtml(PluginCall call) {
+        String html = call.getString("html");
+        String jobName = call.getString("jobName", "IbnSina-Receipt");
+        if (html == null || html.trim().isEmpty()) {
+            call.reject("html content is required");
+            return;
+        }
+
+        if (getActivity() == null) {
+            call.reject("Activity unavailable");
+            return;
+        }
+
+        getActivity().runOnUiThread(() -> {
+            try {
+                WebView printWebView = new WebView(getActivity());
+                printWebView.getSettings().setJavaScriptEnabled(false);
+                printWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public void onPageFinished(WebView view, String url) {
+                        PrintManager printManager = (PrintManager) getActivity().getSystemService(Context.PRINT_SERVICE);
+                        if (printManager != null) {
+                            printManager.print(
+                                jobName,
+                                view.createPrintDocumentAdapter(jobName),
+                                new PrintAttributes.Builder().build()
+                            );
+                        }
+                    }
+                });
+                printWebView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+                call.resolve();
+            } catch (Exception e) {
+                call.reject("Failed to start print: " + e.getMessage());
+            }
+        });
     }
 }

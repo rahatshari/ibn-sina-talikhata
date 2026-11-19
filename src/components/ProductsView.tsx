@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Image, Pencil, Plus, Search } from 'lucide-react';
+import { Pencil, Plus, Search } from 'lucide-react';
 import type { Product, ProductTier } from '../types/tally';
 import { formatBDT } from '../utils/ledger';
 
@@ -7,7 +7,6 @@ interface ProductsViewProps {
   products: Product[];
   onEditProduct: (product: Product) => void;
   onAddProduct: () => void;
-  onOpenProductSheet: () => void;
 }
 
 const TIERS: Array<'All' | ProductTier> = [
@@ -25,7 +24,6 @@ export function ProductsView({
   products,
   onEditProduct,
   onAddProduct,
-  onOpenProductSheet,
 }: ProductsViewProps) {
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState<'All' | ProductTier>('All');
@@ -53,16 +51,8 @@ export function ProductsView({
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={onOpenProductSheet}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap shrink-0"
-          >
-            <Image className="h-4 w-4" />
-            মূল প্রোডাক্ট তালিকা ছবি
-          </button>
-          <button
-            type="button"
             onClick={onAddProduct}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 whitespace-nowrap shrink-0"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 whitespace-nowrap shrink-0"
           >
             <Plus className="h-4 w-4" />
             নতুন প্রোডাক্ট

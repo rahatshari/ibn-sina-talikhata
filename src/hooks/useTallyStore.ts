@@ -555,6 +555,48 @@ export function useTallyStore() {
     [user],
   );
 
+  const updateShopkeeper = useCallback(
+    (
+      shopId: string,
+      input: { shopName: string; ownerName: string; phone: string; area: string },
+    ) => {
+      const updatedFields = {
+        shopName: clampStr(input.shopName, 120),
+        ownerName: clampStr(input.ownerName || 'প্রোপ্রাইটর', 100),
+        phone: clampStr(input.phone || '', 30),
+        area: clampStr(input.area || 'লোকাল মার্কেট', 100),
+      };
+      if (!updatedFields.shopName) return;
+
+      if (user) {
+        const path = `users/${user.uid}/shops/${shopId}`;
+        updateDoc(doc(db, 'users', user.uid, 'shops', shopId), {
+          ...updatedFields,
+          updatedAt: serverTimestamp(),
+        }).catch((err) => {
+          if (isOfflineFirestoreError(err)) return;
+          try {
+            handleFirestoreError(err, OperationType.UPDATE, path);
+          } catch (wrapped) {
+            setAsyncError(wrapped as Error);
+          }
+        });
+      } else {
+        setLocalState((prev) => ({
+          ...prev,
+          shops: prev.shops.map((s) => (s.id === shopId ? { ...s, ...updatedFields } : s)),
+          sales: prev.sales.map((sale) =>
+            sale.shopId === shopId ? { ...sale, shopName: updatedFields.shopName } : sale,
+          ),
+          payments: prev.payments.map((pay) =>
+            pay.shopId === shopId ? { ...pay, shopName: updatedFields.shopName } : pay,
+          ),
+        }));
+      }
+    },
+    [user],
+  );
+
   const recordSale = useCallback(
     (input: {
       shopId: string;
@@ -916,6 +958,7 @@ export function useTallyStore() {
     sales: activeState.sales,
     payments: activeState.payments,
     addShopkeeper,
+    updateShopkeeper,
     recordSale,
     recordPayment,
     deleteSale,

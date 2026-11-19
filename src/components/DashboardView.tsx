@@ -12,7 +12,6 @@ interface DashboardViewProps {
   onOpenShopLedger: (shop: Shopkeeper) => void;
   onOpenSaleDetail: (sale: SaleRecord) => void;
   onOpenAllReports: () => void;
-  onOpenProductSheet: () => void;
 }
 
 export function DashboardView({
@@ -25,7 +24,6 @@ export function DashboardView({
   onOpenShopLedger,
   onOpenSaleDetail,
   onOpenAllReports,
-  onOpenProductSheet,
 }: DashboardViewProps) {
   const shopSummaries = shops
     .map((shop) => ({
@@ -77,15 +75,8 @@ export function DashboardView({
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={onOpenProductSheet}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 whitespace-nowrap shrink-0"
-          >
-            প্রোডাক্ট তালিকা ছবি
-          </button>
-          <button
-            type="button"
             onClick={() => onStartNewSale()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 whitespace-nowrap shrink-0"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 whitespace-nowrap shrink-0"
           >
             <Plus className="h-4 w-4" />
             নতুন বিক্রি করুন

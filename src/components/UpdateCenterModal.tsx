@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import {
   CheckCircle2,
   Download,
   ExternalLink,
   FolderDown,
   RefreshCw,
-  Settings,
   ShieldCheck,
   Smartphone,
   Trash2,
@@ -21,8 +19,6 @@ interface UpdateCenterModalProps {
   installedVersion: string;
   installedCode: number;
   packageName: string;
-  githubRepo: string;
-  onChangeGithubRepo: (repo: string) => void;
   isNativeApp: boolean;
   isOnline: boolean;
   checking: boolean;
@@ -44,8 +40,6 @@ export function UpdateCenterModal({
   installedVersion,
   installedCode,
   packageName,
-  githubRepo,
-  onChangeGithubRepo,
   isNativeApp,
   isOnline,
   checking,
@@ -60,9 +54,6 @@ export function UpdateCenterModal({
   onOpenInstallPermission,
   onClearHistory,
 }: UpdateCenterModalProps) {
-  const [repoInput, setRepoInput] = useState(githubRepo);
-  const [editingRepo, setEditingRepo] = useState(!githubRepo);
-
   const activeDownload = downloads.find((d) => d.status === 'downloading');
 
   return (
@@ -103,53 +94,6 @@ export function UpdateCenterModal({
             <div className="mt-2.5 text-[11px] text-slate-500">
               সর্বশেষ চেক: {formatDateTimeBn(lastCheckedAt)}
             </div>
-          )}
-        </div>
-
-        {/* GitHub Repo Configuration */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <div className="text-xs font-semibold text-slate-800">GitHub Release সোর্স</div>
-              <div className="text-xs text-slate-500 font-mono-num">
-                {githubRepo || 'সেট করা নেই (username/repo)'}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setRepoInput(githubRepo);
-                setEditingRepo((prev) => !prev);
-              }}
-              className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-            >
-              <Settings className="h-3.5 w-3.5" />
-              {editingRepo ? 'বন্ধ' : 'পরিবর্তন'}
-            </button>
-          </div>
-          {editingRepo && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                onChangeGithubRepo(repoInput);
-                setEditingRepo(false);
-              }}
-              className="mt-3 flex flex-col gap-2 sm:flex-row"
-            >
-              <input
-                type="text"
-                value={repoInput}
-                onChange={(e) => setRepoInput(e.target.value)}
-                placeholder="যেমন: rahat/ibn-sina-talikhata"
-                className="flex-1 min-h-[44px] rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono-num text-slate-900 focus:border-emerald-600 focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="min-h-[44px] rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 whitespace-nowrap"
-              >
-                রিপো সেভ করুন
-              </button>
-            </form>
           )}
         </div>
 

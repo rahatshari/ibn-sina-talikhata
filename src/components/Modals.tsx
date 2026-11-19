@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Printer, X } from 'lucide-react';
-import { PRODUCT_SHEET_IMAGE_URL } from '../data/ibnSinaProducts';
+import { CheckCircle2, Download, Printer, Share2, X } from 'lucide-react';
+import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import type { PaymentRecord, Product, ProductTier, SaleRecord, Shopkeeper } from '../types/tally';
 import { formatBDT, formatDateTimeBn } from '../utils/ledger';
+import {
+  buildPrintableReceiptHtml,
+  buildReceiptSummaryText,
+  renderReceiptPng,
+} from '../utils/receiptGenerator';
 
 interface ModalShellProps {
   open: boolean;
@@ -62,11 +67,12 @@ export function ModalShell({
 
 interface AddShopModalProps {
   open: boolean;
+  editingShop?: Shopkeeper | null;
   onClose: () => void;
   onSave: (data: { shopName: string; ownerName: string; phone: string; area: string }) => void;
 }
 
-export function AddShopModal({ open, onClose, onSave }: AddShopModalProps) {
+export function AddShopModal({ open, editingShop, onClose, onSave }: AddShopModalProps) {
   const [shopName, setShopName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -75,13 +81,20 @@ export function AddShopModal({ open, onClose, onSave }: AddShopModalProps) {
 
   useEffect(() => {
     if (open) {
-      setShopName('');
-      setOwnerName('');
-      setPhone('');
-      setArea('');
+      if (editingShop) {
+        setShopName(editingShop.shopName);
+        setOwnerName(editingShop.ownerName);
+        setPhone(editingShop.phone);
+        setArea(editingShop.area);
+      } else {
+        setShopName('');
+        setOwnerName('');
+        setPhone('');
+        setArea('');
+      }
       setError('');
     }
-  }, [open]);
+  }, [open, editingShop]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +112,11 @@ export function AddShopModal({ open, onClose, onSave }: AddShopModalProps) {
   };
 
   return (
-    <ModalShell open={open} onClose={onClose} title="নতুন দোকানদার যোগ করুন">
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      title={editingShop ? `দোকানদারের তথ্য এডিট — ${editingShop.shopName}` : 'নতুন দোকানদার যোগ করুন'}
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
@@ -167,15 +184,15 @@ export function AddShopModal({ open, onClose, onSave }: AddShopModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="min-h-[44px] rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             বাতিল
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className="min-h-[44px] rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700"
           >
-            দোকান সেভ করুন
+            {editingShop ? 'পরিবর্তন সেভ করুন' : 'দোকান সেভ করুন'}
           </button>
         </div>
       </form>
@@ -337,7 +354,135 @@ interface InvoiceDetailModalProps {
 }
 
 export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
+  const [actionBusy, setActionBusy] = useState<'download' | 'share' | 'print' | null>(null);
+  const [actionNotice, setActionNotice] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  useEffect(() => {
+    setActionNotice(null);
+    setActionBusy(null);
+  }, [sale?.id]);
+
   if (!sale) return null;
+
+  const handleDownloadImage = async () => {
+    setActionBusy('download');
+    setActionNotice(null);
+    try {
+      const { blob, base64, fileName } = await renderReceiptPng(sale);
+      if (isNativeAndroid()) {
+        await AppUpdater.saveFileToDownloads({
+          base64Data: base64,
+          fileName,
+          mimeType: 'image/png',
+        });
+        setActionNotice({
+          type: 'ok',
+          text: `রসিদের ছবি ফোনের Downloads/IbnSinaTallyKhata ফোল্ডারে সেভ হয়েছে।`,
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+        setActionNotice({ type: 'ok', text: 'রসিদের ছবি (PNG) ডাউনলোড হয়েছে।' });
+      }
+    } catch {
+      setActionNotice({ type: 'err', text: 'রসিদের ছবি তৈরি করা যায়নি। আবার চেষ্টা করুন।' });
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
+  const handleShareReceipt = async () => {
+    setActionBusy('share');
+    setActionNotice(null);
+    try {
+      const { blob, base64, fileName } = await renderReceiptPng(sale);
+      const summaryText = buildReceiptSummaryText(sale);
+
+      if (isNativeAndroid()) {
+        await AppUpdater.shareFile({
+          base64Data: base64,
+          fileName,
+          mimeType: 'image/png',
+          title: `রসিদ শেয়ার — ${sale.invoiceNo}`,
+          text: summaryText,
+        });
+        setActionNotice({ type: 'ok', text: 'শেয়ার অপশন খোলা হয়েছে।' });
+        return;
+      }
+
+      const file = new File([blob], fileName, { type: 'image/png' });
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `বিক্রয় রসিদ — ${sale.invoiceNo}`,
+            text: summaryText,
+          });
+          setActionNotice({ type: 'ok', text: 'রসিদ শেয়ার করা হয়েছে।' });
+          return;
+        }
+        await navigator.share({
+          title: `বিক্রয় রসিদ — ${sale.invoiceNo}`,
+          text: summaryText,
+        });
+        setActionNotice({ type: 'ok', text: 'রসিদের তথ্য শেয়ার করা হয়েছে।' });
+        return;
+      }
+
+      // Desktop browser fallback: download PNG & copy text summary
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(summaryText).catch(() => {});
+      }
+      setActionNotice({
+        type: 'ok',
+        text: 'রসিদের ছবি ডাউনলোড হয়েছে এবং হিসাব কপি হয়েছে—এখন যেকোনো অ্যাপে পাঠাতে পারবেন।',
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (!msg.toLowerCase().includes('abort')) {
+        setActionNotice({ type: 'err', text: 'রসিদ শেয়ার করা যায়নি। আবার চেষ্টা করুন।' });
+      }
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
+  const handlePrintReceipt = async () => {
+    setActionBusy('print');
+    setActionNotice(null);
+    try {
+      if (isNativeAndroid()) {
+        const html = buildPrintableReceiptHtml(sale);
+        await AppUpdater.printHtml({
+          html,
+          jobName: `IbnSina-${sale.invoiceNo}`,
+        });
+        setActionNotice({ type: 'ok', text: 'প্রিন্ট / PDF ডায়ালগ খোলা হয়েছে।' });
+      } else {
+        window.print();
+      }
+    } catch {
+      setActionNotice({ type: 'err', text: 'প্রিন্ট শুরু করা যায়নি। ছবি ডাউনলোড করে প্রিন্ট করুন।' });
+    } finally {
+      setActionBusy(null);
+    }
+  };
 
   return (
     <ModalShell
@@ -359,15 +504,50 @@ export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
               <span>মোট {sale.totalBoxes} বক্স</span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="no-print inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap shrink-0"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            প্রিন্ট করুন
-          </button>
+          <div className="no-print flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={actionBusy !== null}
+              onClick={() => void handleDownloadImage()}
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 whitespace-nowrap shrink-0"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {actionBusy === 'download' ? 'তৈরি হচ্ছে...' : 'ছবি ডাউনলোড'}
+            </button>
+            <button
+              type="button"
+              disabled={actionBusy !== null}
+              onClick={() => void handleShareReceipt()}
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-60 whitespace-nowrap shrink-0"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              শেয়ার করুন
+            </button>
+            <button
+              type="button"
+              disabled={actionBusy !== null}
+              onClick={() => void handlePrintReceipt()}
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap shrink-0"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              প্রিন্ট করুন
+            </button>
+          </div>
         </div>
+
+        {actionNotice && (
+          <div
+            role="status"
+            className={`no-print flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-xs font-medium ${
+              actionNotice.type === 'ok'
+                ? 'border border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border border-red-200 bg-red-50 text-red-700'
+            }`}
+          >
+            {actionNotice.type === 'ok' && <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />}
+            <span>{actionNotice.text}</span>
+          </div>
+        )}
 
         <div className="overflow-x-auto rounded-lg border border-slate-200">
           <table className="w-full text-left text-sm">
@@ -441,45 +621,6 @@ export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
             </div>
           </div>
         </div>
-      </div>
-    </ModalShell>
-  );
-}
-
-interface ProductSheetImageModalProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export function ProductSheetImageModal({ open, onClose }: ProductSheetImageModalProps) {
-  const [imgFailed, setImgFailed] = useState(false);
-
-  return (
-    <ModalShell
-      open={open}
-      onClose={onClose}
-      title="THE IBN SINA'S Production — মূল প্রোডাক্ট তালিকা"
-      maxWidthClass="max-w-3xl"
-    >
-      <div className="space-y-3">
-        <p className="text-sm text-slate-600">
-          আপনার প্রদত্ত কোম্পানির ৫৫টি প্রোডাক্টের মূল তালিকা অনুযায়ী অ্যাপের সকল প্রোডাক্ট যুক্ত করা হয়েছে।
-        </p>
-        {!imgFailed ? (
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <img
-              src={PRODUCT_SHEET_IMAGE_URL}
-              alt="THE IBN SINA'S Production - Product List Sheet"
-              referrerPolicy="no-referrer"
-              onError={() => setImgFailed(true)}
-              className="mx-auto max-h-[68vh] w-auto rounded-md object-contain"
-            />
-          </div>
-        ) : (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
-            মূল তালিকার ছবিটি লোড করা যায়নি, তবে সকল ৫৫টি প্রোডাক্ট অ্যাপে সংরক্ষিত আছে।
-          </div>
-        )}
       </div>
     </ModalShell>
   );

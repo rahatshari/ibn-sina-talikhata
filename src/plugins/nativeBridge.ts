@@ -51,6 +51,19 @@ export interface AppUpdaterPlugin {
   getDownloadStatus(options: { downloadId: number }): Promise<NativeDownloadStatus>;
   installApk(options: { downloadId: number }): Promise<InstallApkResult>;
   openUnknownSourcesSettings(): Promise<void>;
+  saveFileToDownloads(options: {
+    base64Data: string;
+    fileName: string;
+    mimeType: string;
+  }): Promise<{ saved: boolean; fileName: string }>;
+  shareFile(options: {
+    base64Data: string;
+    fileName: string;
+    mimeType: string;
+    title: string;
+    text?: string;
+  }): Promise<{ shared: boolean }>;
+  printHtml(options: { html: string; jobName: string }): Promise<void>;
   addListener(
     eventName: 'downloadProgress',
     listenerFunc: (data: NativeDownloadStatus & { downloadId: number }) => void,

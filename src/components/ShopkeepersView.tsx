@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Banknote, ChevronRight, Plus, Search, UserPlus } from 'lucide-react';
+import { Banknote, ChevronRight, Pencil, Plus, Search, UserPlus } from 'lucide-react';
 import type { PaymentRecord, SaleRecord, Shopkeeper } from '../types/tally';
 import { computeShopSummary, formatBDT, formatDateTimeBn } from '../utils/ledger';
 import { ModalShell } from './Modals';
@@ -11,6 +11,7 @@ interface ShopkeepersViewProps {
   selectedLedgerShop: Shopkeeper | null;
   onSelectLedgerShop: (shop: Shopkeeper | null) => void;
   onRequestAddShop: () => void;
+  onRequestEditShop: (shop: Shopkeeper) => void;
   onStartNewSale: (shopId: string) => void;
   onCollectDue: (shop: Shopkeeper, currentDue: number) => void;
   onOpenSaleDetail: (sale: SaleRecord) => void;
@@ -23,6 +24,7 @@ export function ShopkeepersView({
   selectedLedgerShop,
   onSelectLedgerShop,
   onRequestAddShop,
+  onRequestEditShop,
   onStartNewSale,
   onCollectDue,
   onOpenSaleDetail,
@@ -51,14 +53,19 @@ export function ShopkeepersView({
       .sort((a, b) => b.summary.totalDue - a.summary.totalDue);
   }, [shops, sales, payments, search, filter]);
 
-  const activeShopSummary = selectedLedgerShop
-    ? computeShopSummary(selectedLedgerShop.id, sales, payments)
+  const liveLedgerShop = useMemo(() => {
+    if (!selectedLedgerShop) return null;
+    return shops.find((s) => s.id === selectedLedgerShop.id) ?? selectedLedgerShop;
+  }, [selectedLedgerShop, shops]);
+
+  const activeShopSummary = liveLedgerShop
+    ? computeShopSummary(liveLedgerShop.id, sales, payments)
     : null;
 
   const activeShopTimeline = useMemo(() => {
-    if (!selectedLedgerShop) return [];
+    if (!liveLedgerShop) return [];
     const shopSales = sales
-      .filter((s) => s.shopId === selectedLedgerShop.id)
+      .filter((s) => s.shopId === liveLedgerShop.id)
       .map((s) => ({
         kind: 'sale' as const,
         id: s.id,
@@ -68,7 +75,7 @@ export function ShopkeepersView({
         payment: null,
       }));
     const shopPayments = payments
-      .filter((p) => p.shopId === selectedLedgerShop.id)
+      .filter((p) => p.shopId === liveLedgerShop.id)
       .map((p) => ({
         kind: 'payment' as const,
         id: p.id,
@@ -78,7 +85,7 @@ export function ShopkeepersView({
         payment: p,
       }));
     return [...shopSales, ...shopPayments].sort((a, b) => b.date.localeCompare(a.date));
-  }, [selectedLedgerShop, sales, payments]);
+  }, [liveLedgerShop, sales, payments]);
 
   return (
     <div className="space-y-6">
@@ -223,9 +230,18 @@ export function ShopkeepersView({
                         </button>
                         <button
                           type="button"
+                          onClick={() => onRequestEditShop(shop)}
+                          aria-label={`তথ্য এডিট: ${shop.shopName}`}
+                          className="inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          এডিট
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => onSelectLedgerShop(shop)}
                           aria-label={`খাতা দেখুন: ${shop.shopName}`}
-                          className="inline-flex items-center gap-0.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 whitespace-nowrap"
+                          className="inline-flex min-h-[36px] items-center gap-0.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 whitespace-nowrap"
                         >
                           খাতা
                           <ChevronRight className="h-3.5 w-3.5" />
@@ -242,27 +258,35 @@ export function ShopkeepersView({
 
       {/* Individual Shop TallyKhata Ledger Modal */}
       <ModalShell
-        open={Boolean(selectedLedgerShop)}
+        open={Boolean(liveLedgerShop)}
         onClose={() => onSelectLedgerShop(null)}
-        title={selectedLedgerShop ? `দোকানের খাতা — ${selectedLedgerShop.shopName}` : ''}
+        title={liveLedgerShop ? `দোকানের খাতা — ${liveLedgerShop.shopName}` : ''}
         maxWidthClass="max-w-3xl"
       >
-        {selectedLedgerShop && activeShopSummary && (
+        {liveLedgerShop && activeShopSummary && (
           <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
               <div className="text-xs text-slate-600 space-y-0.5">
-                <div className="text-sm font-semibold text-slate-900">{selectedLedgerShop.ownerName}</div>
+                <div className="text-sm font-semibold text-slate-900">{liveLedgerShop.ownerName}</div>
                 <div>
-                  {selectedLedgerShop.area}
-                  {selectedLedgerShop.phone ? ` · ${selectedLedgerShop.phone}` : ''}
+                  {liveLedgerShop.area}
+                  {liveLedgerShop.phone ? ` · ${liveLedgerShop.phone}` : ''}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onRequestEditShop(liveLedgerShop)}
+                  className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  তথ্য এডিট করুন
+                </button>
                 {activeShopSummary.totalDue > 0 && (
                   <button
                     type="button"
-                    onClick={() => onCollectDue(selectedLedgerShop, activeShopSummary.totalDue)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-medium text-white hover:bg-emerald-700"
+                    onClick={() => onCollectDue(liveLedgerShop, activeShopSummary.totalDue)}
+                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-medium text-white hover:bg-emerald-700"
                   >
                     <Banknote className="h-3.5 w-3.5" />
                     বাকি আদায় করুন
@@ -272,9 +296,9 @@ export function ShopkeepersView({
                   type="button"
                   onClick={() => {
                     onSelectLedgerShop(null);
-                    onStartNewSale(selectedLedgerShop.id);
+                    onStartNewSale(liveLedgerShop.id);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   নতুন বিক্রি
