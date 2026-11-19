@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BarChart3,
+  Check,
   CheckCircle2,
   Cloud,
   CloudOff,
@@ -14,6 +15,7 @@ import {
   Plus,
   RefreshCw,
   Store,
+  Type,
   UserCircle2,
 } from 'lucide-react';
 import { AccountModal } from './components/AccountModal';
@@ -34,6 +36,13 @@ import { useAppUpdater } from './hooks/useAppUpdater';
 import { useTallyStore } from './hooks/useTallyStore';
 import type { Product, SaleRecord, Shopkeeper } from './types/tally';
 import { computeDashboardMetrics } from './utils/ledger';
+import {
+  APP_FONT_OPTIONS,
+  loadSavedFontId,
+  saveAndApplyAppFont,
+  type AppFontId,
+} from './utils/fontPreferences';
+import { parseReleaseChangelog } from './utils/updater';
 
 type AppView = 'dashboard' | 'new-sale' | 'shops' | 'products' | 'reports';
 
@@ -59,8 +68,13 @@ export default function App() {
     open: boolean;
     editing: Product | null;
   }>({ open: false, editing: null });
+  const [selectedFontId, setSelectedFontId] = useState<AppFontId>(() => loadSavedFontId());
 
   const menuContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    saveAndApplyAppFont(selectedFontId);
+  }, [selectedFontId]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
@@ -247,7 +261,7 @@ export default function App() {
                 <div
                   role="menu"
                   aria-label="অতিরিক্ত অপশন মেনু"
-                  className="absolute right-0 mt-2 w-72 origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl z-40"
+                  className="absolute right-0 mt-2 w-72 max-h-[82vh] overflow-y-auto origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl z-40"
                 >
                   <button
                     type="button"
@@ -307,6 +321,43 @@ export default function App() {
                     <span>ডাটা ব্যাকআপ ও রিপোর্ট</span>
                   </button>
 
+                  <div className="my-1.5 border-t border-slate-100" />
+                  <div className="px-3 py-1.5">
+                    <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+                      <Type className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>লেখার ফন্ট পরিবর্তন</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1">
+                      {APP_FONT_OPTIONS.map((font) => {
+                        const active = selectedFontId === font.id;
+                        return (
+                          <button
+                            key={font.id}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={active}
+                            onClick={() => {
+                              setSelectedFontId(font.id);
+                              saveAndApplyAppFont(font.id);
+                            }}
+                            style={{ fontFamily: font.fontFamily }}
+                            className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+                              active
+                                ? 'bg-emerald-50 font-semibold text-emerald-800'
+                                : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <span>{font.label}</span>
+                              <span className="text-[11px] text-slate-400">({font.sample})</span>
+                            </span>
+                            {active && <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {store.user && (
                     <>
                       <div className="my-1 border-t border-slate-100" />
@@ -337,40 +388,60 @@ export default function App() {
 
       {/* Main Content */}
       <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
-        {/* New APK Release Notification Banner */}
-        {showUpdateBanner && updater.latestRelease && (
-          <div
-            role="status"
-            className="no-print mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Download className="h-4 w-4 text-emerald-700 shrink-0" />
-              <div className="text-xs sm:text-sm text-emerald-950">
-                <strong>নতুন অ্যাপ আপডেট v{updater.latestRelease.version} পাওয়া গেছে!</strong>{' '}
-                <span className="text-emerald-800">
-                  ডাউনলোড ম্যানেজার থেকে এক ক্লিকে আপডেট করুন।
-                </span>
+        {/* New APK Release Notification Banner with What's Changed */}
+        {showUpdateBanner && updater.latestRelease && (() => {
+          const changelogItems = parseReleaseChangelog(updater.latestRelease.releaseNotes);
+          const visibleChanges = changelogItems.slice(0, 3);
+          return (
+            <div
+              role="status"
+              className="no-print mb-4 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  <Download className="mt-0.5 h-4 w-4 text-emerald-700 shrink-0" />
+                  <div className="min-w-0 space-y-1 text-xs sm:text-sm text-emerald-950">
+                    <div className="font-bold">
+                      নতুন আপডেট v{updater.latestRelease.version} এসেছে
+                    </div>
+                    {visibleChanges.length > 0 && (
+                      <ul className="space-y-0.5 text-xs text-emerald-900">
+                        {visibleChanges.map((item, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                        {changelogItems.length > visibleChanges.length && (
+                          <li className="text-[11px] font-medium text-emerald-700">
+                            + আরও {changelogItems.length - visibleChanges.length}টি পরিবর্তন
+                          </li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDismissedUpdateTag(updater.latestRelease?.tagName ?? null)}
+                    className="min-h-[36px] rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
+                  >
+                    পরে
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUpdateModalOpen(true)}
+                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 whitespace-nowrap"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    আপডেট করুন
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setDismissedUpdateTag(updater.latestRelease?.tagName ?? null)}
-                className="min-h-[36px] rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
-              >
-                পরে
-              </button>
-              <button
-                type="button"
-                onClick={() => setUpdateModalOpen(true)}
-                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 whitespace-nowrap"
-              >
-                <Download className="h-3.5 w-3.5" />
-                আপডেট দেখুন
-              </button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Contextual Offline / Sync / Auth Notice (Only shown when needed, no bulky legacy bar) */}
         {(store.syncStatus.state === 'offline' ||

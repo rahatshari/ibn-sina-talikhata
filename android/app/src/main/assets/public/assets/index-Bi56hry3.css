@@ -88,6 +88,7 @@
     --color-emerald-600: oklch(59.6% .145 163.225);
     --color-emerald-700: oklch(50.8% .118 165.612);
     --color-emerald-800: oklch(43.2% .095 166.913);
+    --color-emerald-900: oklch(37.8% .077 168.94);
     --color-emerald-950: oklch(26.2% .051 172.552);
     --color-blue-50: oklch(97% .014 254.604);
     --color-blue-200: oklch(88.2% .059 254.128);
@@ -124,8 +125,6 @@
     --text-lg--line-height: calc(1.75 / 1.125);
     --text-2xl: 1.5rem;
     --text-2xl--line-height: calc(2 / 1.5);
-    --text-3xl: 1.875rem;
-    --text-3xl--line-height: calc(2.25 / 1.875);
     --font-weight-medium: 500;
     --font-weight-semibold: 600;
     --font-weight-bold: 700;
@@ -499,6 +498,10 @@
     margin-block: var(--spacing);
   }
 
+  .my-1\.5 {
+    margin-block: calc(var(--spacing) * 1.5);
+  }
+
   .mt-0\.5 {
     margin-top: calc(var(--spacing) * .5);
   }
@@ -579,6 +582,10 @@
     display: table;
   }
 
+  .h-1\.5 {
+    height: calc(var(--spacing) * 1.5);
+  }
+
   .h-2 {
     height: calc(var(--spacing) * 2);
   }
@@ -627,8 +634,12 @@
     height: 100%;
   }
 
-  .max-h-28 {
-    max-height: calc(var(--spacing) * 28);
+  .max-h-36 {
+    max-height: calc(var(--spacing) * 36);
+  }
+
+  .max-h-\[82vh\] {
+    max-height: 82vh;
   }
 
   .max-h-\[90vh\] {
@@ -665,6 +676,10 @@
 
   .min-h-screen {
     min-height: 100vh;
+  }
+
+  .w-1\.5 {
+    width: calc(var(--spacing) * 1.5);
   }
 
   .w-2 {
@@ -719,6 +734,10 @@
     width: calc(var(--spacing) * 72);
   }
 
+  .w-fit {
+    width: fit-content;
+  }
+
   .w-full {
     width: 100%;
   }
@@ -737,6 +756,10 @@
 
   .max-w-\[90px\] {
     max-width: 90px;
+  }
+
+  .max-w-\[240px\] {
+    max-width: 240px;
   }
 
   .max-w-lg {
@@ -1411,10 +1434,6 @@
     white-space: nowrap;
   }
 
-  .whitespace-pre-line {
-    white-space: pre-line;
-  }
-
   .text-amber-600 {
     color: var(--color-amber-600);
   }
@@ -1453,6 +1472,10 @@
 
   .text-emerald-800 {
     color: var(--color-emerald-800);
+  }
+
+  .text-emerald-900 {
+    color: var(--color-emerald-900);
   }
 
   .text-emerald-950 {
@@ -1739,11 +1762,6 @@
       line-height: var(--tw-leading, var(--text-2xl--line-height));
     }
 
-    .sm\:text-3xl {
-      font-size: var(--text-3xl);
-      line-height: var(--tw-leading, var(--text-3xl--line-height));
-    }
-
     .sm\:text-lg {
       font-size: var(--text-lg);
       line-height: var(--tw-leading, var(--text-lg--line-height));
@@ -1820,7 +1838,7 @@
 }
 
 .font-display {
-  font-family: var(--font-display);
+  font-family: var(--font-display, var(--font-sans));
 }
 
 .font-mono-num {

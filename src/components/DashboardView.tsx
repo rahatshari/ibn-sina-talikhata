@@ -1,4 +1,4 @@
-import { ArrowRight, Banknote, Plus, Receipt, Store } from 'lucide-react';
+import { ArrowRight, Banknote, Store } from 'lucide-react';
 import type { DashboardMetrics, PaymentRecord, SaleRecord, Shopkeeper } from '../types/tally';
 import { computeShopSummary, formatBDT, formatDateTimeBn } from '../utils/ledger';
 
@@ -62,27 +62,7 @@ export function DashboardView({
     .slice(0, 7);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            টালিখাতা ও বিক্রয় সারসংক্ষেপ
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            THE IBN SINA&apos;S Production · দোকান ভিত্তিক বিক্রি, ডিসকাউন্ট, জমা এবং বাকি হিসাব
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => onStartNewSale()}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 whitespace-nowrap shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            নতুন বিক্রি করুন
-          </button>
-        </div>
-      </div>
+    <div className="space-y-5">
 
       {/* 4-Column KPI Strip */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -126,11 +106,8 @@ export function DashboardView({
       {/* Main Split: Shop Due Ledger & Recent Activity */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <section className="rounded-xl border border-slate-200 bg-white lg:col-span-7">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900">দোকানদারের বাকি ও খাতা</h2>
-              <p className="text-xs text-slate-500">যেকোনো দোকানে ক্লিক করে বিস্তারিত খাতা দেখুন বা বাকি আদায় করুন</p>
-            </div>
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
+            <h2 className="text-base font-semibold text-slate-900">দোকানদারের বাকি ও খাতা</h2>
             <Store className="h-4 w-4 text-slate-400" />
           </div>
 
@@ -212,11 +189,8 @@ export function DashboardView({
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white lg:col-span-5">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900">সাম্প্রতিক লেনদেন</h2>
-              <p className="text-xs text-slate-500">সর্বশেষ বিক্রয় বিল ও নগদ আদায়</p>
-            </div>
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
+            <h2 className="text-base font-semibold text-slate-900">সাম্প্রতিক লেনদেন</h2>
             <button
               type="button"
               onClick={onOpenAllReports}
@@ -286,23 +260,6 @@ export function DashboardView({
             </div>
           )}
         </section>
-      </div>
-
-      {/* Quick Product Highlight Footer Card */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4">
-        <div className="flex items-center gap-3">
-          <Receipt className="h-5 w-5 text-emerald-600 shrink-0" />
-          <p className="text-sm text-slate-700">
-            প্রতিটি বিক্রয় বিলে আলাদা প্রোডাক্টের বক্স সংখ্যা, পার্সেন্ট ডিসকাউন্ট, ডিসকাউন্টের পর দাম, নগদ জমা ও বাকি স্বয়ংক্রিয়ভাবে হিসাব হয়।
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => onStartNewSale()}
-          className="text-sm font-medium text-emerald-700 hover:underline whitespace-nowrap shrink-0"
-        >
-          বিল তৈরি করুন →
-        </button>
       </div>
     </div>
   );

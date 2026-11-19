@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -65,7 +67,7 @@ jobs:
 
       - name: Run unit tests & lint
         run: |
-          npx --no-install tsx --test src/utils/ledger.test.ts src/utils/updater.test.ts
+          npx --no-install tsx --test src/utils/ledger.test.ts src/utils/updater.test.ts src/utils/receiptGenerator.test.ts
           npm run lint
 
       - name: Build web bundle with baked release metadata
@@ -132,6 +134,24 @@ jobs:
           name: IbnSina-TallyKhata-${{ steps.version.outputs.tag_name }}
           path: IbnSina-TallyKhata-${{ steps.version.outputs.tag_name }}.apk
 
+      - name: Prepare release changelog
+        run: |
+          {
+            echo "versionCode: ${{ steps.version.outputs.version_code }}"
+            echo ""
+            if [ -s RELEASE_NOTES.md ]; then
+              cat RELEASE_NOTES.md
+              echo ""
+            fi
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+            if [ -n "$PREV_TAG" ]; then
+              git log "${PREV_TAG}..HEAD" --no-merges --pretty=format:"- %s"
+            else
+              git log -n 5 --no-merges --pretty=format:"- %s"
+            fi
+            echo ""
+          } > release_notes.txt
+
       - name: Publish signed APK to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
@@ -139,10 +159,5 @@ jobs:
           name: ইবনে সিনা টালিখাতা ${{ steps.version.outputs.tag_name }}
           draft: false
           prerelease: false
-          body: |
-            অটোমেটিক বিল্ড ও রিলিজ (${{ steps.version.outputs.tag_name }})
-            versionCode: ${{ steps.version.outputs.version_code }}
-
-            - একই রিলিজ সিগনেচারে সাইন করা APK (পুরনো অ্যাপের ডাটা রেখেই সরাসরি আপডেট করা যাবে)
-            - অফলাইন ও অনলাইন অটো-সিঙ্ক এবং ইন-অ্যাপ ডাউনলোড ম্যানেজার যুক্ত
+          body_path: release_notes.txt
           files: IbnSina-TallyKhata-${{ steps.version.outputs.tag_name }}.apk

@@ -8,6 +8,7 @@ import {
 } from '../version';
 import {
   extractVersionCodeFromBody,
+  formatUpdateNotificationBody,
   isNewerReleaseAvailable,
   normalizeVersionString,
   pickBestApkAsset,
@@ -198,8 +199,8 @@ export function useAppUpdater(isOnline: boolean) {
             const lastNotified = window.localStorage.getItem(LAST_NOTIFIED_TAG_KEY);
             if (lastNotified !== payload.tag_name) {
               await AppUpdater.showUpdateNotification({
-                title: `নতুন আপডেট v${releaseInfo.version} পাওয়া গেছে`,
-                body: 'ইবনে সিনা টালিখাতা অ্যাপের নতুন ভার্সন ডাউনলোড ও আপডেট করতে ট্যাপ করুন।',
+                title: `নতুন আপডেট v${releaseInfo.version}`,
+                body: formatUpdateNotificationBody(releaseInfo.version, payload.body),
                 version: releaseInfo.version,
               });
               window.localStorage.setItem(LAST_NOTIFIED_TAG_KEY, payload.tag_name);

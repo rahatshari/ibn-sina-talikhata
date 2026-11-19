@@ -12361,6 +12361,16 @@ var ChartColumn = createLucideIcon("chart-column", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var Check = createLucideIcon("check", [["path", {
+	d: "M20 6 9 17l-5-5",
+	key: "1gmf2c"
+}]]);
+/**
+* @license lucide-react v0.546.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var ChevronRight = createLucideIcon("chevron-right", [["path", {
 	d: "m9 18 6-6-6-6",
 	key: "mthhwq"
@@ -12506,18 +12516,26 @@ var EllipsisVertical = createLucideIcon("ellipsis-vertical", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
-var ExternalLink = createLucideIcon("external-link", [
+var FileText = createLucideIcon("file-text", [
 	["path", {
-		d: "M15 3h6v6",
-		key: "1q9fwt"
+		d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z",
+		key: "1rqfz7"
 	}],
 	["path", {
-		d: "M10 14 21 3",
-		key: "gplh6r"
+		d: "M14 2v4a2 2 0 0 0 2 2h4",
+		key: "tnqrlb"
 	}],
 	["path", {
-		d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6",
-		key: "a6xqqp"
+		d: "M10 9H8",
+		key: "b1mrlr"
+	}],
+	["path", {
+		d: "M16 13H8",
+		key: "t4e002"
+	}],
+	["path", {
+		d: "M16 17H8",
+		key: "z1uh3a"
 	}]
 ]);
 /**
@@ -12710,26 +12728,6 @@ var Printer = createLucideIcon("printer", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
-var Receipt = createLucideIcon("receipt", [
-	["path", {
-		d: "M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z",
-		key: "q3az6g"
-	}],
-	["path", {
-		d: "M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8",
-		key: "1h4pet"
-	}],
-	["path", {
-		d: "M12 17.5v-11",
-		key: "1jc1ny"
-	}]
-]);
-/**
-* @license lucide-react v0.546.0 - ISC
-*
-* This source code is licensed under the ISC license.
-* See the LICENSE file in the root directory of this source tree.
-*/
 var RefreshCw = createLucideIcon("refresh-cw", [
 	["path", {
 		d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8",
@@ -12893,6 +12891,26 @@ var Trash2 = createLucideIcon("trash-2", [
 	["path", {
 		d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",
 		key: "e791ji"
+	}]
+]);
+/**
+* @license lucide-react v0.546.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var Type = createLucideIcon("type", [
+	["path", {
+		d: "M12 4v16",
+		key: "1654pz"
+	}],
+	["path", {
+		d: "M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2",
+		key: "e0r10z"
+	}],
+	["path", {
+		d: "M9 20h6",
+		key: "s66wpe"
 	}]
 ]);
 /**
@@ -13114,6 +13132,72 @@ function mergeCatalogProducts(stored, defaults) {
 	const custom = stored.filter((p) => !defaultIds.has(p.id));
 	return [...merged, ...custom];
 }
+// src/utils/fontPreferences.ts
+var FONT_STORAGE_KEY = "ibn_sina_app_font_v1";
+var APP_FONT_OPTIONS = [
+	{
+		id: "hind-siliguri",
+		label: "হিন্দ শিলিগুড়ি",
+		sample: "আধুনিক ক্লিন",
+		fontFamily: "'Hind Siliguri', 'Plus Jakarta Sans', system-ui, sans-serif",
+		canvasFont: "\"Hind Siliguri\", system-ui, sans-serif"
+	},
+	{
+		id: "noto-sans",
+		label: "নোটো সানস",
+		sample: "অফিসিয়াল স্পষ্ট",
+		fontFamily: "'Noto Sans Bengali', 'Plus Jakarta Sans', system-ui, sans-serif",
+		canvasFont: "\"Noto Sans Bengali\", system-ui, sans-serif"
+	},
+	{
+		id: "noto-serif",
+		label: "নোটো সেরিফ",
+		sample: "ক্লাসিক খাতা",
+		fontFamily: "'Noto Serif Bengali', Georgia, serif",
+		canvasFont: "\"Noto Serif Bengali\", Georgia, serif"
+	},
+	{
+		id: "baloo-da",
+		label: "বালু দা ২",
+		sample: "রাউন্ডেড বোল্ড",
+		fontFamily: "'Baloo Da 2', 'Plus Jakarta Sans', system-ui, sans-serif",
+		canvasFont: "\"Baloo Da 2\", system-ui, sans-serif"
+	},
+	{
+		id: "atma",
+		label: "আত্মা স্টাইল",
+		sample: "হাতের লেখা",
+		fontFamily: "'Atma', 'Hind Siliguri', system-ui, sans-serif",
+		canvasFont: "\"Atma\", \"Hind Siliguri\", system-ui, sans-serif"
+	}
+];
+function getFontOption(fontId) {
+	return APP_FONT_OPTIONS.find((f) => f.id === fontId) ?? APP_FONT_OPTIONS[0];
+}
+function loadSavedFontId() {
+	if (typeof window === "undefined") return "hind-siliguri";
+	try {
+		const raw = window.localStorage.getItem(FONT_STORAGE_KEY);
+		if (raw && APP_FONT_OPTIONS.some((f) => f.id === raw)) return raw;
+	} catch {}
+	return "hind-siliguri";
+}
+function saveAndApplyAppFont(fontId) {
+	const option = getFontOption(fontId);
+	if (typeof window !== "undefined") try {
+		window.localStorage.setItem(FONT_STORAGE_KEY, option.id);
+	} catch {}
+	if (typeof document !== "undefined") {
+		const root = document.documentElement;
+		root.style.setProperty("--font-sans", option.fontFamily);
+		root.style.setProperty("--font-display", option.fontFamily);
+		document.body.style.fontFamily = option.fontFamily;
+	}
+	return option;
+}
+function getActiveFontOption() {
+	return getFontOption(loadSavedFontId());
+}
 // src/utils/receiptGenerator.ts
 function escapeHtml(raw) {
 	return raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -13210,6 +13294,138 @@ function buildPrintableReceiptHtml(sale) {
 </body>
 </html>`;
 }
+function buildShopLedgerRows(shopId, sales, payments) {
+	const combined = [...sales.filter((s) => s.shopId === shopId).map((s) => ({
+		id: s.id,
+		kind: "sale",
+		date: s.date,
+		code: s.invoiceNo,
+		details: s.items.map((item) => `${item.productName} (${item.boxes} বক্স, ${item.discountPercent}% ছাড়)`).join(", "),
+		boxes: s.totalBoxes,
+		billed: s.netTotal,
+		paid: s.paidAmount
+	})), ...payments.filter((p) => p.shopId === shopId).map((p) => ({
+		id: p.id,
+		kind: "payment",
+		date: p.date,
+		code: p.receiptNo,
+		details: `বাকি আদায় · ${p.method}${p.note ? ` (${p.note})` : ""}`,
+		boxes: 0,
+		billed: 0,
+		paid: p.amount
+	}))].sort((a, b) => a.date.localeCompare(b.date));
+	let running = 0;
+	return combined.map((entry) => {
+		running = Math.round((running + entry.billed - entry.paid) * 100) / 100;
+		return {
+			...entry,
+			runningDue: running
+		};
+	});
+}
+function buildShopStatementHtml(shop, sales, payments) {
+	const summary = computeShopSummary(shop.id, sales, payments);
+	const rows = buildShopLedgerRows(shop.id, sales, payments);
+	const fontFamily = getActiveFontOption().fontFamily;
+	const tableRows = rows.length === 0 ? `<tr><td colspan="6" style="padding:18px;text-align:center;color:#64748b;">এই দোকানদারের কোনো লেনদেন পাওয়া যায়নি।</td></tr>` : rows.map((row, idx) => `
+      <tr style="background:${idx % 2 === 1 ? "#f8fafc" : "#ffffff"};">
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;white-space:nowrap;">${escapeHtml(formatDateTimeBn(row.date))}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;white-space:nowrap;">${escapeHtml(row.code)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;color:#334155;">${escapeHtml(row.details)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap;">${row.billed > 0 ? escapeHtml(formatBDT(row.billed)) : "—"}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;color:#047857;font-weight:600;white-space:nowrap;">${row.paid > 0 ? escapeHtml(formatBDT(row.paid)) : "—"}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;color:${row.runningDue > 0 ? "#dc2626" : "#047857"};white-space:nowrap;">${escapeHtml(formatBDT(row.runningDue))}</td>
+      </tr>`).join("");
+	return `<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <title>লেনদেন রিপোর্ট — ${escapeHtml(shop.shopName)}</title>
+  <style>
+    @page { size: A4; margin: 14mm; }
+    body { font-family: ${fontFamily}; color: #0f172a; margin: 0; padding: 18px; }
+    .header { border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+    .brand { font-size: 12px; font-weight: 700; color: #047857; }
+    .shop { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
+    .meta { font-size: 12px; color: #475569; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+    .kpi { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; background: #f8fafc; }
+    .kpi-label { font-size: 11px; color: #64748b; }
+    .kpi-val { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { background: #f1f5f9; text-align: left; padding: 8px 10px; border-bottom: 1px solid #cbd5e1; font-size: 11px; color: #475569; }
+    th.num { text-align: right; }
+    .footer { margin-top: 18px; font-size: 11px; color: #64748b; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="brand">THE IBN SINA'S Production — সম্পূর্ণ লেনদেনের রিপোর্ট</div>
+      <div class="shop">${escapeHtml(shop.shopName)}</div>
+      <div class="meta">মালিক: ${escapeHtml(shop.ownerName || "—")} · এলাকা: ${escapeHtml(shop.area || "—")}${shop.phone ? ` · ফোন: ${escapeHtml(shop.phone)}` : ""}</div>
+    </div>
+    <div class="meta" style="text-align:right;">
+      <div>রিপোর্ট তারিখ</div>
+      <div style="font-weight:600;color:#0f172a;">${escapeHtml(formatDateTimeBn((/* @__PURE__ */ new Date()).toISOString()))}</div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-label">মোট বক্স</div><div class="kpi-val">${summary.totalBoxes} বক্স</div></div>
+    <div class="kpi"><div class="kpi-label">মোট বিল</div><div class="kpi-val">${escapeHtml(formatBDT(summary.totalBilled))}</div></div>
+    <div class="kpi"><div class="kpi-label">মোট জমা / আদায়</div><div class="kpi-val" style="color:#047857;">${escapeHtml(formatBDT(summary.totalPaid))}</div></div>
+    <div class="kpi"><div class="kpi-label">বর্তমান মোট বাকি</div><div class="kpi-val" style="color:${summary.totalDue > 0 ? "#dc2626" : "#047857"};">${escapeHtml(formatBDT(summary.totalDue))}</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>তারিখ</th>
+        <th>নম্বর</th>
+        <th>বিবরণ</th>
+        <th class="num">বিল</th>
+        <th class="num">জমা/আদায়</th>
+        <th class="num">চলমান বাকি</th>
+      </tr>
+    </thead>
+    <tbody>${tableRows}</tbody>
+  </table>
+
+  <div class="footer">ইবনে সিনা টালিখাতা অ্যাপ থেকে তৈরি দোকানদারের সম্পূর্ণ হিসাব বিবরণী</div>
+</body>
+</html>`;
+}
+function printHtmlInBrowser(html) {
+	const iframe = document.createElement("iframe");
+	iframe.style.position = "fixed";
+	iframe.style.right = "0";
+	iframe.style.bottom = "0";
+	iframe.style.width = "0";
+	iframe.style.height = "0";
+	iframe.style.border = "0";
+	document.body.appendChild(iframe);
+	const doc = iframe.contentWindow?.document;
+	if (!doc) {
+		iframe.remove();
+		window.print();
+		return;
+	}
+	doc.open();
+	doc.write(html);
+	doc.close();
+	const cleanup = () => {
+		window.setTimeout(() => iframe.remove(), 1200);
+	};
+	window.setTimeout(() => {
+		try {
+			iframe.contentWindow?.focus();
+			iframe.contentWindow?.print();
+		} finally {
+			cleanup();
+		}
+	}, 180);
+}
 function drawRoundedRect(ctx, x, y, w, h, r) {
 	ctx.beginPath();
 	ctx.moveTo(x + r, y);
@@ -13237,17 +13453,18 @@ async function renderReceiptPng(sale) {
 	if (!ctx) throw new Error("Canvas 2D context unavailable");
 	ctx.fillStyle = "#FFFFFF";
 	ctx.fillRect(0, 0, width, height);
+	const fontFamily = getActiveFontOption().canvasFont;
 	drawRoundedRect(ctx, padding, padding, 832, 132, 16);
 	ctx.fillStyle = "#059669";
 	ctx.fill();
 	ctx.fillStyle = "#D1FAE5";
-	ctx.font = "600 18px \"Hind Siliguri\", system-ui, sans-serif";
+	ctx.font = `600 18px ${fontFamily}`;
 	ctx.fillText("THE IBN SINA'S Production · ইবনে সিনা টালিখাতা", 72, 86);
 	ctx.fillStyle = "#FFFFFF";
-	ctx.font = "700 32px \"Hind Siliguri\", system-ui, sans-serif";
+	ctx.font = `700 32px ${fontFamily}`;
 	ctx.fillText(sale.shopName, 72, 128);
 	ctx.fillStyle = "#ECFDF5";
-	ctx.font = "500 18px \"Hind Siliguri\", system-ui, sans-serif";
+	ctx.font = `500 18px ${fontFamily}`;
 	ctx.fillText(`রসিদ নং: ${sale.invoiceNo}   |   তারিখ: ${formatDateTimeBn(sale.date)}   |   মোট: ${sale.totalBoxes} বক্স`, 72, 158);
 	let cursorY = 219;
 	drawRoundedRect(ctx, padding, cursorY, 832, tableHeaderHeight, 8);
@@ -13337,14 +13554,33 @@ async function renderReceiptPng(sale) {
 	ctx.font = "500 15px \"Hind Siliguri\", system-ui, sans-serif";
 	ctx.fillText("ইবনে সিনা টালিখাতা অ্যাপ থেকে তৈরি ডিজিটাল বিক্রয় রসিদ", width / 2, height - 26);
 	const dataUrl = canvas.toDataURL("image/png");
+	const base64 = dataUrl.split(",")[1] || "";
+	const binary = atob(base64);
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
 	return {
-		blob: await new Promise((resolve, reject) => {
-			canvas.toBlob((b) => b ? resolve(b) : reject(/* @__PURE__ */ new Error("PNG export failed")), "image/png");
-		}),
-		base64: dataUrl.split(",")[1] || "",
+		blob: new Blob([bytes], { type: "image/png" }),
+		base64,
 		dataUrl,
 		fileName: buildReceiptFileName(sale)
 	};
+}
+var receiptRenderCache = /* @__PURE__ */ new Map();
+function getCachedReceiptPng(sale) {
+	const fontId = getActiveFontOption().id;
+	const cacheKey = `${sale.id}:${sale.netTotal}:${sale.paidAmount}:${sale.items.length}:${fontId}`;
+	const cached = receiptRenderCache.get(cacheKey);
+	if (cached) return cached;
+	if (receiptRenderCache.size >= 12) {
+		const firstKey = receiptRenderCache.keys().next().value;
+		if (firstKey) receiptRenderCache.delete(firstKey);
+	}
+	const promise = renderReceiptPng(sale).catch((err) => {
+		receiptRenderCache.delete(cacheKey);
+		throw err;
+	});
+	receiptRenderCache.set(cacheKey, promise);
+	return promise;
 }
 // src/components/Modals.tsx
 function ModalShell({ open, onClose, title, maxWidthClass = "max-w-lg", children }) {
@@ -13512,12 +13748,12 @@ function CollectPaymentModal({ open, shop, currentDue, onClose, onCollect }) {
 	const [error, setError] = (0, import_react.useState)("");
 	(0, import_react.useEffect)(() => {
 		if (open) {
-			setAmount(currentDue > 0 ? String(currentDue) : "");
+			setAmount("");
 			setMethod("Cash");
 			setNote("");
 			setError("");
 		}
-	}, [open, currentDue]);
+	}, [open]);
 	if (!shop) return null;
 	const handleSubmit = (e) => {
 		e.preventDefault();
@@ -13644,13 +13880,14 @@ function InvoiceDetailModal({ sale, onClose }) {
 	(0, import_react.useEffect)(() => {
 		setActionNotice(null);
 		setActionBusy(null);
-	}, [sale?.id]);
+		if (sale) getCachedReceiptPng(sale).catch(() => {});
+	}, [sale]);
 	if (!sale) return null;
 	const handleDownloadImage = async () => {
 		setActionBusy("download");
 		setActionNotice(null);
 		try {
-			const { blob, base64, fileName } = await renderReceiptPng(sale);
+			const { blob, base64, fileName } = await getCachedReceiptPng(sale);
 			if (isNativeAndroid()) {
 				await AppUpdater.saveFileToDownloads({
 					base64Data: base64,
@@ -13689,7 +13926,7 @@ function InvoiceDetailModal({ sale, onClose }) {
 		setActionBusy("share");
 		setActionNotice(null);
 		try {
-			const { blob, base64, fileName } = await renderReceiptPng(sale);
+			const { blob, base64, fileName } = await getCachedReceiptPng(sale);
 			const summaryText = buildReceiptSummaryText(sale);
 			if (isNativeAndroid()) {
 				await AppUpdater.shareFile({
@@ -13756,8 +13993,8 @@ function InvoiceDetailModal({ sale, onClose }) {
 		setActionBusy("print");
 		setActionNotice(null);
 		try {
+			const html = buildPrintableReceiptHtml(sale);
 			if (isNativeAndroid()) {
-				const html = buildPrintableReceiptHtml(sale);
 				await AppUpdater.printHtml({
 					html,
 					jobName: `IbnSina-${sale.invoiceNo}`
@@ -13766,7 +14003,7 @@ function InvoiceDetailModal({ sale, onClose }) {
 					type: "ok",
 					text: "প্রিন্ট / PDF ডায়ালগ খোলা হয়েছে।"
 				});
-			} else window.print();
+			} else printHtmlInBrowser(html);
 		} catch {
 			setActionNotice({
 				type: "err",
@@ -14357,294 +14594,252 @@ function DashboardView({ metrics, shops, sales, payments, onStartNewSale, onColl
 		sale: null
 	}))].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "space-y-6",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex flex-wrap items-end justify-between gap-4",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-					className: "text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl",
-					children: "টালিখাতা ও বিক্রয় সারসংক্ষেপ"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-1 text-sm text-slate-600",
-					children: "THE IBN SINA'S Production · দোকান ভিত্তিক বিক্রি, ডিসকাউন্ট, জমা এবং বাকি হিসাব"
-				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex flex-wrap items-center gap-3",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+		className: "space-y-5",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "rounded-xl border border-slate-200 bg-white p-4 sm:p-5",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "text-xs sm:text-sm font-medium text-slate-500",
+							children: "মোট নিট বিক্রি"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-slate-900 font-mono-num",
+							"data-testid": "kpi-total-sales",
+							children: formatBDT(metrics.totalSales)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500 font-mono-num",
+							children: [
+								metrics.totalBoxesSold,
+								" বক্স · ছাড় ",
+								formatBDT(metrics.totalDiscountGiven)
+							]
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "rounded-xl border border-slate-200 bg-white p-4 sm:p-5",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "text-xs sm:text-sm font-medium text-slate-500",
+							children: "মোট নগদ আদায়"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-emerald-700 font-mono-num",
+							"data-testid": "kpi-total-collected",
+							children: formatBDT(metrics.totalCollected)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500",
+							children: "বিক্রয়কালীন জমা ও বাকি আদায়"
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "rounded-xl border border-slate-200 bg-white p-4 sm:p-5",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "text-xs sm:text-sm font-medium text-slate-500",
+							children: "মোট বাকি পাওনা"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-red-600 font-mono-num",
+							"data-testid": "kpi-total-due",
+							children: formatBDT(metrics.totalDue)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500",
+							children: [metrics.dueShopCount, " টি দোকানে বাকি রয়েছে"]
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "rounded-xl border border-slate-200 bg-white p-4 sm:p-5",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "text-xs sm:text-sm font-medium text-slate-500",
+							children: "মোট দোকানদার"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-slate-900 font-mono-num",
+							"data-testid": "kpi-shop-count",
+							children: metrics.activeShopCount
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500",
+							children: "সক্রিয় ফার্মেসি খাতা"
+						})
+					]
+				})
+			]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "grid grid-cols-1 gap-6 lg:grid-cols-12",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+				className: "rounded-xl border border-slate-200 bg-white lg:col-span-7",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center justify-between border-b border-slate-200 px-5 py-3.5",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+						className: "text-base font-semibold text-slate-900",
+						children: "দোকানদারের বাকি ও খাতা"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Store, { className: "h-4 w-4 text-slate-400" })]
+				}), shopSummaries.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "p-8 text-center",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-sm text-slate-500",
+						children: "এখনও কোনো দোকানদার যোগ করা হয়নি।"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						onClick: () => onStartNewSale(),
-						className: "inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 whitespace-nowrap shrink-0",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, { className: "h-4 w-4" }), "নতুন বিক্রি করুন"]
-					})
-				})]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "rounded-xl border border-slate-200 bg-white p-4 sm:p-5",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "text-xs sm:text-sm font-medium text-slate-500",
-								children: "মোট নিট বিক্রি"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-slate-900 font-mono-num",
-								"data-testid": "kpi-total-sales",
-								children: formatBDT(metrics.totalSales)
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500 font-mono-num",
+						className: "mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700",
+						children: "প্রথম বিক্রি শুরু করুন"
+					})]
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "divide-y divide-slate-100",
+					children: shopSummaries.map(({ shop, summary }) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-slate-50/70 sm:flex-row sm:items-center sm:justify-between",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "min-w-0",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								onClick: () => onOpenShopLedger(shop),
+								className: "text-left text-sm font-semibold text-slate-900 hover:text-emerald-700 hover:underline",
+								children: shop.shopName
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500",
 								children: [
-									metrics.totalBoxesSold,
-									" বক্স · ছাড় ",
-									formatBDT(metrics.totalDiscountGiven)
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: shop.area }),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										"aria-hidden": "true",
+										children: "·"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "font-mono-num",
+										children: shop.phone || shop.ownerName
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										"aria-hidden": "true",
+										children: "·"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+										className: "font-mono-num",
+										children: ["মোট বিল ", formatBDT(summary.totalBilled)]
+									})
 								]
-							})
-						]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "rounded-xl border border-slate-200 bg-white p-4 sm:p-5",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "text-xs sm:text-sm font-medium text-slate-500",
-								children: "মোট নগদ আদায়"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-emerald-700 font-mono-num",
-								"data-testid": "kpi-total-collected",
-								children: formatBDT(metrics.totalCollected)
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500",
-								children: "বিক্রয়কালীন জমা ও বাকি আদায়"
-							})
-						]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "rounded-xl border border-slate-200 bg-white p-4 sm:p-5",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "text-xs sm:text-sm font-medium text-slate-500",
-								children: "মোট বাকি পাওনা"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-red-600 font-mono-num",
-								"data-testid": "kpi-total-due",
-								children: formatBDT(metrics.totalDue)
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500",
-								children: [metrics.dueShopCount, " টি দোকানে বাকি রয়েছে"]
-							})
-						]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "rounded-xl border border-slate-200 bg-white p-4 sm:p-5",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "text-xs sm:text-sm font-medium text-slate-500",
-								children: "মোট দোকানদার"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-slate-900 font-mono-num",
-								"data-testid": "kpi-shop-count",
-								children: metrics.activeShopCount
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500",
-								children: "সক্রিয় ফার্মেসি খাতা"
-							})
-						]
-					})
-				]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "grid grid-cols-1 gap-6 lg:grid-cols-12",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-					className: "rounded-xl border border-slate-200 bg-white lg:col-span-7",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex items-center justify-between border-b border-slate-200 px-5 py-4",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-							className: "text-base font-semibold text-slate-900",
-							children: "দোকানদারের বাকি ও খাতা"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-xs text-slate-500",
-							children: "যেকোনো দোকানে ক্লিক করে বিস্তারিত খাতা দেখুন বা বাকি আদায় করুন"
-						})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Store, { className: "h-4 w-4 text-slate-400" })]
-					}), shopSummaries.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "p-8 text-center",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-sm text-slate-500",
-							children: "এখনও কোনো দোকানদার যোগ করা হয়নি।"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-							type: "button",
-							onClick: () => onStartNewSale(),
-							className: "mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700",
-							children: "প্রথম বিক্রি শুরু করুন"
-						})]
-					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "divide-y divide-slate-100",
-						children: shopSummaries.map(({ shop, summary }) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-slate-50/70 sm:flex-row sm:items-center sm:justify-between",
+							})]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-center justify-between gap-3 sm:justify-end",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "min-w-0",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-									type: "button",
-									onClick: () => onOpenShopLedger(shop),
-									className: "text-left text-sm font-semibold text-slate-900 hover:text-emerald-700 hover:underline",
-									children: shop.shopName
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500",
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: shop.area }),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											"aria-hidden": "true",
-											children: "·"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "font-mono-num",
-											children: shop.phone || shop.ownerName
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											"aria-hidden": "true",
-											children: "·"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-											className: "font-mono-num",
-											children: ["মোট বিল ", formatBDT(summary.totalBilled)]
-										})
-									]
+								className: "text-left sm:text-right",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "text-xs text-slate-500",
+									children: summary.totalDue > 0 ? "বাকি আছে" : "হিসাব পরিশোধিত"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: `text-sm font-bold font-mono-num ${summary.totalDue > 0 ? "text-red-600" : "text-emerald-700"}`,
+									children: formatBDT(summary.totalDue)
 								})]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "flex items-center justify-between gap-3 sm:justify-end",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "text-left sm:text-right",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										className: "text-xs text-slate-500",
-										children: summary.totalDue > 0 ? "বাকি আছে" : "হিসাব পরিশোধিত"
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										className: `text-sm font-bold font-mono-num ${summary.totalDue > 0 ? "text-red-600" : "text-emerald-700"}`,
-										children: formatBDT(summary.totalDue)
-									})]
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "flex items-center gap-2 shrink-0",
-									children: [summary.totalDue > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-										type: "button",
-										onClick: () => onCollectDue(shop, summary.totalDue),
-										"aria-label": `বাকি আদায়: ${shop.shopName}`,
-										className: "inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 whitespace-nowrap",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Banknote, { className: "h-3.5 w-3.5" }), "বাকি আদায়"]
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-										type: "button",
-										onClick: () => onStartNewSale(shop.id),
-										"aria-label": `নতুন বিক্রি: ${shop.shopName}`,
-										className: "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap",
-										children: "বিক্রি"
-									})]
+								className: "flex items-center gap-2 shrink-0",
+								children: [summary.totalDue > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									onClick: () => onCollectDue(shop, summary.totalDue),
+									"aria-label": `বাকি আদায়: ${shop.shopName}`,
+									className: "inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 whitespace-nowrap",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Banknote, { className: "h-3.5 w-3.5" }), "বাকি আদায়"]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									onClick: () => onStartNewSale(shop.id),
+									"aria-label": `নতুন বিক্রি: ${shop.shopName}`,
+									className: "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap",
+									children: "বিক্রি"
 								})]
 							})]
-						}, shop.id))
-					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-					className: "rounded-xl border border-slate-200 bg-white lg:col-span-5",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex items-center justify-between border-b border-slate-200 px-5 py-4",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-							className: "text-base font-semibold text-slate-900",
-							children: "সাম্প্রতিক লেনদেন"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-xs text-slate-500",
-							children: "সর্বশেষ বিক্রয় বিল ও নগদ আদায়"
-						})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-							type: "button",
-							onClick: onOpenAllReports,
-							className: "inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline whitespace-nowrap shrink-0",
-							children: ["সব দেখুন", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "h-3.5 w-3.5" })]
 						})]
-					}), recentFeed.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "p-8 text-center text-sm text-slate-500",
-						children: "এখনও কোনো লেনদেন হয়নি।"
-					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "divide-y divide-slate-100",
-						children: recentFeed.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-slate-50/70",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "min-w-0",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									className: "flex items-center gap-2",
-									children: entry.sale ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-										type: "button",
-										onClick: () => onOpenSaleDetail(entry.sale),
-										className: "truncate text-sm font-medium text-slate-900 hover:text-emerald-700 hover:underline",
-										children: entry.title
-									}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "truncate text-sm font-medium text-slate-900",
-										children: entry.title
-									})
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500",
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "font-mono-num",
-											children: entry.code
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											"aria-hidden": "true",
-											children: "·"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: entry.subtitle }),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											"aria-hidden": "true",
-											children: "·"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: formatDateTimeBn(entry.date) })
-									]
-								})]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "text-right shrink-0",
-								children: entry.type === "sale" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									className: "text-sm font-semibold text-slate-900 font-mono-num",
-									children: formatBDT(entry.amount)
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "text-xs font-mono-num text-slate-500",
-									children: [
-										"জমা ",
-										formatBDT(entry.paid),
-										" ·",
-										" ",
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: entry.due > 0 ? "font-medium text-red-600" : "text-emerald-700",
-											children: entry.due > 0 ? `বাকি ${formatBDT(entry.due)}` : "পরিশোধিত"
-										})
-									]
-								})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "text-sm font-semibold text-emerald-700 font-mono-num",
-									children: ["+", formatBDT(entry.amount)]
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									className: "text-xs text-slate-500",
-									children: "বাকি আদায়"
-								})] })
-							})]
-						}, entry.id))
-					})]
+					}, shop.id))
 				})]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4",
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+				className: "rounded-xl border border-slate-200 bg-white lg:col-span-5",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex items-center gap-3",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Receipt, { className: "h-5 w-5 text-emerald-600 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "text-sm text-slate-700",
-						children: "প্রতিটি বিক্রয় বিলে আলাদা প্রোডাক্টের বক্স সংখ্যা, পার্সেন্ট ডিসকাউন্ট, ডিসকাউন্টের পর দাম, নগদ জমা ও বাকি স্বয়ংক্রিয়ভাবে হিসাব হয়।"
+					className: "flex items-center justify-between border-b border-slate-200 px-5 py-3.5",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+						className: "text-base font-semibold text-slate-900",
+						children: "সাম্প্রতিক লেনদেন"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						onClick: onOpenAllReports,
+						className: "inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline whitespace-nowrap shrink-0",
+						children: ["সব দেখুন", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowRight, { className: "h-3.5 w-3.5" })]
 					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-					type: "button",
-					onClick: () => onStartNewSale(),
-					className: "text-sm font-medium text-emerald-700 hover:underline whitespace-nowrap shrink-0",
-					children: "বিল তৈরি করুন →"
+				}), recentFeed.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "p-8 text-center text-sm text-slate-500",
+					children: "এখনও কোনো লেনদেন হয়নি।"
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "divide-y divide-slate-100",
+					children: recentFeed.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-slate-50/70",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "min-w-0",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "flex items-center gap-2",
+								children: entry.sale ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									onClick: () => onOpenSaleDetail(entry.sale),
+									className: "truncate text-sm font-medium text-slate-900 hover:text-emerald-700 hover:underline",
+									children: entry.title
+								}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "truncate text-sm font-medium text-slate-900",
+									children: entry.title
+								})
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "font-mono-num",
+										children: entry.code
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										"aria-hidden": "true",
+										children: "·"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: entry.subtitle }),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										"aria-hidden": "true",
+										children: "·"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: formatDateTimeBn(entry.date) })
+								]
+							})]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "text-right shrink-0",
+							children: entry.type === "sale" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "text-sm font-semibold text-slate-900 font-mono-num",
+								children: formatBDT(entry.amount)
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "text-xs font-mono-num text-slate-500",
+								children: [
+									"জমা ",
+									formatBDT(entry.paid),
+									" ·",
+									" ",
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: entry.due > 0 ? "font-medium text-red-600" : "text-emerald-700",
+										children: entry.due > 0 ? `বাকি ${formatBDT(entry.due)}` : "পরিশোধিত"
+									})
+								]
+							})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "text-sm font-semibold text-emerald-700 font-mono-num",
+								children: ["+", formatBDT(entry.amount)]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "text-xs text-slate-500",
+								children: "বাকি আদায়"
+							})] })
+						})]
+					}, entry.id))
 				})]
-			})
-		]
+			})]
+		})]
 	});
 }
 // src/components/NewSaleView.tsx
@@ -14663,7 +14858,7 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 	const [tierFilter, setTierFilter] = (0, import_react.useState)("All");
 	const [draftRows, setDraftRows] = (0, import_react.useState)([]);
 	const [bulkDiscount, setBulkDiscount] = (0, import_react.useState)("");
-	const [paidInput, setPaidInput] = (0, import_react.useState)("0");
+	const [paidInput, setPaidInput] = (0, import_react.useState)("");
 	const [note, setNote] = (0, import_react.useState)("");
 	const [formError, setFormError] = (0, import_react.useState)("");
 	(0, import_react.useEffect)(() => {
@@ -14686,8 +14881,15 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 		searchQuery,
 		tierFilter
 	]);
-	const computedItems = (0, import_react.useMemo)(() => draftRows.map((row) => calculateLineItem(row)), [draftRows]);
-	const numericPaid = Number(paidInput);
+	const computedItems = (0, import_react.useMemo)(() => draftRows.map((row) => calculateLineItem({
+		productId: row.productId,
+		productName: row.productName,
+		tier: row.tier,
+		boxes: Math.max(0, Number.parseInt(row.boxesInput, 10) || 0),
+		boxPrice: Math.max(0, Number(row.boxPriceInput) || 0),
+		discountPercent: Math.max(0, Math.min(100, Number(row.discountInput) || 0))
+	})), [draftRows]);
+	const numericPaid = paidInput.trim() === "" ? 0 : Number(paidInput);
 	const totals = (0, import_react.useMemo)(() => calculateInvoiceTotals(computedItems, Number.isFinite(numericPaid) ? numericPaid : 0), [computedItems, numericPaid]);
 	const selectedShopSummary = (0, import_react.useMemo)(() => {
 		if (!selectedShopId) return null;
@@ -14700,18 +14902,23 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 	const addProductToCart = (product) => {
 		setFormError("");
 		setDraftRows((prev) => {
-			if (prev.find((r) => r.productId === product.id)) return prev.map((r) => r.productId === product.id ? {
-				...r,
-				boxes: r.boxes + 1
-			} : r);
-			const defaultDisc = Number(bulkDiscount);
+			const existing = prev.find((r) => r.productId === product.id);
+			if (existing) {
+				const currentBoxes = Number.parseInt(existing.boxesInput, 10) || 0;
+				return prev.map((r) => r.productId === product.id ? {
+					...r,
+					boxesInput: String(currentBoxes + 1)
+				} : r);
+			}
+			const trimmedBulk = bulkDiscount.trim();
+			const defaultDisc = Number(trimmedBulk);
 			return [...prev, {
 				productId: product.id,
 				productName: product.name,
 				tier: product.tier,
-				boxes: 1,
-				boxPrice: product.boxPrice,
-				discountPercent: bulkDiscount !== "" && Number.isFinite(defaultDisc) ? defaultDisc : 10
+				boxesInput: "1",
+				boxPriceInput: product.boxPrice > 0 ? String(product.boxPrice) : "",
+				discountInput: trimmedBulk !== "" && Number.isFinite(defaultDisc) ? trimmedBulk : ""
 			}];
 		});
 	};
@@ -14725,11 +14932,19 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 		setDraftRows((prev) => prev.filter((r) => r.productId !== productId));
 	};
 	const applyDiscountToAll = () => {
-		const val = Number(bulkDiscount);
+		const trimmed = bulkDiscount.trim();
+		if (trimmed === "") {
+			setDraftRows((prev) => prev.map((r) => ({
+				...r,
+				discountInput: ""
+			})));
+			return;
+		}
+		const val = Number(trimmed);
 		if (!Number.isFinite(val) || val < 0 || val > 100) return;
 		setDraftRows((prev) => prev.map((r) => ({
 			...r,
-			discountPercent: val
+			discountInput: trimmed
 		})));
 	};
 	const handleSubmit = (e) => {
@@ -14743,7 +14958,7 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 			setFormError("বিক্রয়ের জন্য অন্তত একটি প্রোডাক্ট ও তার বক্স সংখ্যা যোগ করুন।");
 			return;
 		}
-		const rawPaid = Number(paidInput);
+		const rawPaid = paidInput.trim() === "" ? 0 : Number(paidInput);
 		if (!Number.isFinite(rawPaid) || rawPaid < 0) {
 			setFormError("জমা টাকার পরিমাণ ০ বা তার বেশি হতে হবে।");
 			return;
@@ -14760,7 +14975,7 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 		});
 		if (created) {
 			setDraftRows([]);
-			setPaidInput("0");
+			setPaidInput("");
 			setNote("");
 			setFormError("");
 			onSaleCreated(created);
@@ -14903,7 +15118,7 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 									onClick: () => addProductToCart(product),
 									"aria-label": `যোগ করুন: ${product.name}`,
 									className: `inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${inCart ? "bg-emerald-600 text-white hover:bg-emerald-700" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`,
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, { className: "h-3.5 w-3.5" }), inCart ? `আরও (+১) · ${inCart.boxes}` : "যোগ করুন"]
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, { className: "h-3.5 w-3.5" }), inCart ? `আরও (+১) · ${Number.parseInt(inCart.boxesInput, 10) || 0}` : "যোগ করুন"]
 								})]
 							}, product.id);
 						})
@@ -14993,7 +15208,10 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 											children: [
 												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 													type: "button",
-													onClick: () => updateRow(item.productId, { boxes: Math.max(1, rawRow.boxes - 1) }),
+													onClick: () => {
+														const cur = Number.parseInt(rawRow.boxesInput, 10) || 1;
+														updateRow(item.productId, { boxesInput: String(Math.max(1, cur - 1)) });
+													},
 													"aria-label": `বক্স কমান: ${item.productName}`,
 													className: "px-2 py-2 text-slate-600 hover:bg-slate-100",
 													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Minus, { className: "h-3.5 w-3.5" })
@@ -15002,13 +15220,17 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 													id: `boxes-${item.productId}`,
 													type: "number",
 													min: "1",
-													value: rawRow.boxes,
-													onChange: (e) => updateRow(item.productId, { boxes: Math.max(0, parseInt(e.target.value || "0", 10)) }),
+													placeholder: "1",
+													value: rawRow.boxesInput,
+													onChange: (e) => updateRow(item.productId, { boxesInput: e.target.value }),
 													className: "w-full text-center text-sm font-semibold font-mono-num text-slate-900 focus:outline-none"
 												}),
 												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 													type: "button",
-													onClick: () => updateRow(item.productId, { boxes: rawRow.boxes + 1 }),
+													onClick: () => {
+														const cur = Number.parseInt(rawRow.boxesInput, 10) || 0;
+														updateRow(item.productId, { boxesInput: String(cur + 1) });
+													},
 													"aria-label": `বক্স বাড়ান: ${item.productName}`,
 													className: "px-2 py-2 text-slate-600 hover:bg-slate-100",
 													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, { className: "h-3.5 w-3.5" })
@@ -15024,8 +15246,9 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 											type: "number",
 											min: "0",
 											step: "any",
-											value: rawRow.boxPrice,
-											onChange: (e) => updateRow(item.productId, { boxPrice: Math.max(0, Number(e.target.value || 0)) }),
+											placeholder: "দাম লিখুন",
+											value: rawRow.boxPriceInput,
+											onChange: (e) => updateRow(item.productId, { boxPriceInput: e.target.value }),
 											className: "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono-num text-slate-900 focus:border-emerald-600 focus:outline-none"
 										})] }),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
@@ -15038,8 +15261,9 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 											min: "0",
 											max: "100",
 											step: "0.5",
-											value: rawRow.discountPercent,
-											onChange: (e) => updateRow(item.productId, { discountPercent: Math.max(0, Math.min(100, Number(e.target.value || 0))) }),
+											placeholder: "%",
+											value: rawRow.discountInput,
+											onChange: (e) => updateRow(item.productId, { discountInput: e.target.value }),
 											className: "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono-num text-amber-700 font-semibold focus:border-emerald-600 focus:outline-none"
 										})] }),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -15084,6 +15308,7 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 									type: "number",
 									min: "0",
 									step: "any",
+									placeholder: "টাকার পরিমাণ লিখুন",
 									value: paidInput,
 									onChange: (e) => {
 										setPaidInput(e.target.value);
@@ -15112,9 +15337,9 @@ function NewSaleView({ products, shops, sales, payments, preselectedShopId, onRe
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 											type: "button",
-											onClick: () => setPaidInput("0"),
+											onClick: () => setPaidInput(""),
 											className: "rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100",
-											children: "সব বাকি (০)"
+											children: "সব বাকি (ফাঁকা)"
 										})
 									]
 								})
@@ -15776,6 +16001,8 @@ function ReportsView({ products, shops, sales, payments, appVersion, appVersionC
 function ShopkeepersView({ shops, sales, payments, selectedLedgerShop, onSelectLedgerShop, onRequestAddShop, onRequestEditShop, onStartNewSale, onCollectDue, onOpenSaleDetail }) {
 	const [search, setSearch] = (0, import_react.useState)("");
 	const [filter, setFilter] = (0, import_react.useState)("all");
+	const [ledgerTab, setLedgerTab] = (0, import_react.useState)("statement");
+	const [printNotice, setPrintNotice] = (0, import_react.useState)(null);
 	const rows = (0, import_react.useMemo)(() => {
 		const q = search.trim().toLowerCase();
 		return shops.map((shop) => ({
@@ -15823,6 +16050,29 @@ function ShopkeepersView({ shops, sales, payments, selectedLedgerShop, onSelectL
 		sales,
 		payments
 	]);
+	const activeShopStatementRows = (0, import_react.useMemo)(() => {
+		if (!liveLedgerShop) return [];
+		return buildShopLedgerRows(liveLedgerShop.id, sales, payments);
+	}, [
+		liveLedgerShop,
+		sales,
+		payments
+	]);
+	const handlePrintShopStatement = async (shop) => {
+		setPrintNotice(null);
+		const html = buildShopStatementHtml(shop, sales, payments);
+		try {
+			if (isNativeAndroid()) {
+				await AppUpdater.printHtml({
+					html,
+					jobName: `IbnSina-Report-${shop.shopName.replace(/\s+/g, "-")}`
+				});
+				setPrintNotice("রিপোর্ট PDF / প্রিন্ট ডায়ালগ খোলা হয়েছে।");
+			} else printHtmlInBrowser(html);
+		} catch {
+			setPrintNotice("রিপোর্ট প্রিন্ট করা যায়নি। আবার চেষ্টা করুন।");
+		}
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "space-y-6",
 		children: [
@@ -15987,6 +16237,13 @@ function ShopkeepersView({ shops, sales, payments, selectedLedgerShop, onSelectL
 												}),
 												/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 													type: "button",
+													onClick: () => void handlePrintShopStatement(shop),
+													"aria-label": `রিপোর্ট PDF প্রিন্ট: ${shop.shopName}`,
+													className: "inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap",
+													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, { className: "h-3.5 w-3.5" }), "রিপোর্ট PDF"]
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+													type: "button",
 													onClick: () => onRequestEditShop(shop),
 													"aria-label": `তথ্য এডিট: ${shop.shopName}`,
 													className: "inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap",
@@ -15994,10 +16251,13 @@ function ShopkeepersView({ shops, sales, payments, selectedLedgerShop, onSelectL
 												}),
 												/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 													type: "button",
-													onClick: () => onSelectLedgerShop(shop),
+													onClick: () => {
+														setPrintNotice(null);
+														onSelectLedgerShop(shop);
+													},
 													"aria-label": `খাতা দেখুন: ${shop.shopName}`,
 													className: "inline-flex min-h-[36px] items-center gap-0.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 whitespace-nowrap",
-													children: ["খাতা", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronRight, { className: "h-3.5 w-3.5" })]
+													children: ["রিপোর্ট / খাতা", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronRight, { className: "h-3.5 w-3.5" })]
 												})
 											]
 										})
@@ -16029,15 +16289,21 @@ function ShopkeepersView({ shops, sales, payments, selectedLedgerShop, onSelectL
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 										type: "button",
+										onClick: () => void handlePrintShopStatement(liveLedgerShop),
+										className: "inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 whitespace-nowrap",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Printer, { className: "h-3.5 w-3.5" }), "রিপোর্ট / PDF প্রিন্ট"]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+										type: "button",
 										onClick: () => onRequestEditShop(liveLedgerShop),
 										className: "inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pencil, { className: "h-3.5 w-3.5" }), "তথ্য এডিট করুন"]
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pencil, { className: "h-3.5 w-3.5" }), "এডিট"]
 									}),
 									activeShopSummary.totalDue > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 										type: "button",
 										onClick: () => onCollectDue(liveLedgerShop, activeShopSummary.totalDue),
-										className: "inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-medium text-white hover:bg-emerald-700",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Banknote, { className: "h-3.5 w-3.5" }), "বাকি আদায় করুন"]
+										className: "inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Banknote, { className: "h-3.5 w-3.5" }), "বাকি আদায়"]
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 										type: "button",
@@ -16050,6 +16316,11 @@ function ShopkeepersView({ shops, sales, payments, selectedLedgerShop, onSelectL
 									})
 								]
 							})]
+						}),
+						printNotice && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							role: "status",
+							className: "rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-medium text-emerald-800",
+							children: printNotice
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "grid grid-cols-3 gap-3",
@@ -16086,9 +16357,99 @@ function ShopkeepersView({ shops, sales, payments, selectedLedgerShop, onSelectL
 								})
 							]
 						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-center gap-1 rounded-lg bg-slate-100 p-1 w-fit",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+								type: "button",
+								onClick: () => setLedgerTab("statement"),
+								className: `inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium ${ledgerTab === "statement" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"}`,
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileText, { className: "h-3.5 w-3.5" }),
+									"সম্পূর্ণ রিপোর্ট (",
+									activeShopStatementRows.length,
+									")"
+								]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								onClick: () => setLedgerTab("timeline"),
+								className: `rounded-md px-3 py-1.5 text-xs font-medium ${ledgerTab === "timeline" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"}`,
+								children: "পণ্যভিত্তিক তালিকা"
+							})]
+						}),
 						activeShopTimeline.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "py-6 text-center text-sm text-slate-500",
 							children: "এই দোকানে এখনও কোনো বিক্রি বা আদায়ের হিসাব নেই।"
+						}) : ledgerTab === "statement" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "overflow-x-auto rounded-lg border border-slate-200",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+								className: "w-full text-left text-xs",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+									className: "border-b border-slate-200 bg-slate-50 text-slate-600",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-3 py-2.5 font-semibold",
+											children: "তারিখ ও নম্বর"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-3 py-2.5 font-semibold",
+											children: "বিবরণ"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-3 py-2.5 text-right font-semibold",
+											children: "বিল"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-3 py-2.5 text-right font-semibold",
+											children: "জমা/আদায়"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-3 py-2.5 text-right font-semibold",
+											children: "চলমান বাকি"
+										})
+									] })
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", {
+									className: "divide-y divide-slate-100",
+									children: activeShopStatementRows.map((row) => {
+										const matchingSale = row.kind === "sale" ? sales.find((s) => s.id === row.id) ?? null : null;
+										return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+											className: "hover:bg-slate-50/70",
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+													className: "px-3 py-2.5 whitespace-nowrap",
+													children: [matchingSale ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+														type: "button",
+														onClick: () => onOpenSaleDetail(matchingSale),
+														className: "font-semibold font-mono-num text-emerald-700 hover:underline",
+														children: row.code
+													}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+														className: "font-semibold font-mono-num text-slate-800",
+														children: row.code
+													}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+														className: "text-[11px] text-slate-500",
+														children: formatDateTimeBn(row.date)
+													})]
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+													className: "px-3 py-2.5 text-slate-700 max-w-[240px]",
+													children: row.details
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+													className: "px-3 py-2.5 text-right font-mono-num text-slate-900 whitespace-nowrap",
+													children: row.billed > 0 ? formatBDT(row.billed) : "—"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+													className: "px-3 py-2.5 text-right font-semibold font-mono-num text-emerald-700 whitespace-nowrap",
+													children: row.paid > 0 ? formatBDT(row.paid) : "—"
+												}),
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+													className: `px-3 py-2.5 text-right font-bold font-mono-num whitespace-nowrap ${row.runningDue > 0 ? "text-red-600" : "text-emerald-700"}`,
+													children: formatBDT(row.runningDue)
+												})
+											]
+										}, row.id);
+									})
+								})]
+							})
 						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "divide-y divide-slate-200 rounded-lg border border-slate-200",
 							children: activeShopTimeline.map((entry) => entry.kind === "sale" && entry.sale ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -16220,6 +16581,23 @@ function extractVersionCodeFromBody(body) {
 	const code = Number.parseInt(match[1], 10);
 	return Number.isFinite(code) ? code : null;
 }
+function parseReleaseChangelog(body) {
+	if (!body) return [];
+	const lines = body.split(/\r?\n/).map((line) => line.trim()).filter((line) => {
+		if (!line) return false;
+		if (/^versionCode\s*[:=]\s*\d+/i.test(line)) return false;
+		if (/^অটোমেটিক বিল্ড ও রিলিজ/i.test(line)) return false;
+		if (/^#{1,6}\s*/.test(line)) return false;
+		if (/^[-*_]{3,}$/.test(line)) return false;
+		return true;
+	}).map((line) => line.replace(/^[-*•]+\s+/, "").replace(/^\d+[.)]\s+/, "").replace(/\*\*(.+?)\*\*/g, "$1").trim()).filter((line) => line.length > 0);
+	return Array.from(new Set(lines));
+}
+function formatUpdateNotificationBody(version, body) {
+	const items = parseReleaseChangelog(body).slice(0, 4);
+	if (items.length === 0) return `ইবনে সিনা টালিখাতা v${version} ডাউনলোড ও আপডেট করতে ট্যাপ করুন।`;
+	return items.map((item) => `• ${item}`).join("\n");
+}
 function isNewerReleaseAvailable(currentVersion, currentCode, latestTag, latestBody) {
 	const latestCode = extractVersionCodeFromBody(latestBody);
 	if (latestCode !== null && currentCode > 0) {
@@ -16314,26 +16692,33 @@ function UpdateCenterModal({ open, onClose, installedVersion, installedCode, pac
 				latestRelease && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: `rounded-xl border p-4 space-y-3 ${updateAvailable ? "border-emerald-300 bg-emerald-50/70" : "border-slate-200 bg-white"}`,
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "flex flex-wrap items-start justify-between gap-3",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "flex items-center gap-1.5 text-sm font-bold text-slate-900",
 								children: [updateAvailable ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, { className: "h-4 w-4 text-emerald-700" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "h-4 w-4 text-emerald-600" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: updateAvailable ? `নতুন ভার্সন পাওয়া গেছে: v${latestRelease.version}` : `আপনি সর্বশেষ ভার্সন ব্যবহার করছেন (v${latestRelease.version})` })]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 								className: "mt-1 text-xs text-slate-600",
 								children: latestRelease.apkAsset ? `${latestRelease.apkAsset.name} · ${formatBytes(latestRelease.apkAsset.size)}` : "এই রিলিজে কোনো APK ফাইল পাওয়া যায়নি"
-							})] }), latestRelease.htmlUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
-								href: latestRelease.htmlUrl,
-								target: "_blank",
-								rel: "noreferrer",
-								className: "inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900",
-								children: ["Release নোট ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ExternalLink, { className: "h-3 w-3" })]
-							})]
+							})] })
 						}),
-						latestRelease.releaseNotes && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "max-h-28 overflow-y-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 whitespace-pre-line",
-							children: latestRelease.releaseNotes
-						}),
+						(() => {
+							const items = parseReleaseChangelog(latestRelease.releaseNotes);
+							if (items.length === 0) return null;
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "max-h-36 overflow-y-auto rounded-lg border border-slate-200 bg-white px-3.5 py-2.5",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "mb-1.5 text-[11px] font-semibold text-slate-500",
+									children: "এই আপডেটে পরিবর্তনসমূহ"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+									className: "space-y-1 text-xs text-slate-700",
+									children: items.map((item, idx) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+										className: "flex items-start gap-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: item })]
+									}, idx))
+								})]
+							});
+						})(),
 						latestRelease.apkAsset && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 							type: "button",
 							disabled: Boolean(activeDownload),
@@ -16420,10 +16805,6 @@ function UpdateCenterModal({ open, onClose, installedVersion, installedCode, pac
 							]
 						}, task.id))
 					})]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-[11px] leading-relaxed text-slate-500",
-					children: "নিরাপদ আপডেট: প্রতিটি GitHub Release APK একই রিলিজ সিগনেচারে (keystore) তৈরি হয়, তাই আগের ডাটা ও লগইন ঠিক রেখেই সরাসরি অ্যাপের ভেতর থেকে আপডেট ইনস্টল হবে।"
 				})
 			]
 		})
@@ -16536,8 +16917,8 @@ function useAppUpdater(isOnline) {
 			if (hasUpdate && isNativeAndroid()) try {
 				if (window.localStorage.getItem(LAST_NOTIFIED_TAG_KEY) !== payload.tag_name) {
 					await AppUpdater.showUpdateNotification({
-						title: `নতুন আপডেট v${releaseInfo.version} পাওয়া গেছে`,
-						body: "ইবনে সিনা টালিখাতা অ্যাপের নতুন ভার্সন ডাউনলোড ও আপডেট করতে ট্যাপ করুন।",
+						title: `নতুন আপডেট v${releaseInfo.version}`,
+						body: formatUpdateNotificationBody(releaseInfo.version, payload.body),
 						version: releaseInfo.version
 					});
 					window.localStorage.setItem(LAST_NOTIFIED_TAG_KEY, payload.tag_name);
@@ -59359,7 +59740,11 @@ function App() {
 		open: false,
 		editing: null
 	});
+	const [selectedFontId, setSelectedFontId] = (0, import_react.useState)(() => loadSavedFontId());
 	const menuContainerRef = (0, import_react.useRef)(null);
+	(0, import_react.useEffect)(() => {
+		saveAndApplyAppFont(selectedFontId);
+	}, [selectedFontId]);
 	(0, import_react.useEffect)(() => {
 		window.scrollTo({
 			top: 0,
@@ -59511,7 +59896,7 @@ function App() {
 									}), menuOpen && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 										role: "menu",
 										"aria-label": "অতিরিক্ত অপশন মেনু",
-										className: "absolute right-0 mt-2 w-72 origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl z-40",
+										className: "absolute right-0 mt-2 w-72 max-h-[82vh] overflow-y-auto origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl z-40",
 										children: [
 											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 												type: "button",
@@ -59558,6 +59943,41 @@ function App() {
 												className: "flex w-full min-h-[44px] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-slate-50",
 												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChartColumn, { className: "h-4 w-4 text-slate-600 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "ডাটা ব্যাকআপ ও রিপোর্ট" })]
 											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "my-1.5 border-t border-slate-100" }),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												className: "px-3 py-1.5",
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+													className: "mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-500",
+													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Type, { className: "h-3.5 w-3.5 text-emerald-600" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "লেখার ফন্ট পরিবর্তন" })]
+												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+													className: "grid grid-cols-1 gap-1",
+													children: APP_FONT_OPTIONS.map((font) => {
+														const active = selectedFontId === font.id;
+														return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+															type: "button",
+															role: "menuitemradio",
+															"aria-checked": active,
+															onClick: () => {
+																setSelectedFontId(font.id);
+																saveAndApplyAppFont(font.id);
+															},
+															style: { fontFamily: font.fontFamily },
+															className: `flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${active ? "bg-emerald-50 font-semibold text-emerald-800" : "text-slate-700 hover:bg-slate-50"}`,
+															children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+																className: "flex items-center gap-2",
+																children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: font.label }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+																	className: "text-[11px] text-slate-400",
+																	children: [
+																		"(",
+																		font.sample,
+																		")"
+																	]
+																})]
+															}), active && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Check, { className: "h-3.5 w-3.5 text-emerald-600 shrink-0" })]
+														}, font.id);
+													})
+												})]
+											}),
 											store.user && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "my-1 border-t border-slate-100" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 												type: "button",
 												role: "menuitem",
@@ -59583,41 +60003,57 @@ function App() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
 				className: "mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8",
 				children: [
-					showUpdateBanner && updater.latestRelease && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						role: "status",
-						className: "no-print mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center gap-2.5 min-w-0",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, { className: "h-4 w-4 text-emerald-700 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "text-xs sm:text-sm text-emerald-950",
-								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("strong", { children: [
-										"নতুন অ্যাপ আপডেট v",
-										updater.latestRelease.version,
-										" পাওয়া গেছে!"
-									] }),
-									" ",
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "text-emerald-800",
-										children: "ডাউনলোড ম্যানেজার থেকে এক ক্লিকে আপডেট করুন।"
-									})
-								]
-							})]
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center gap-2 shrink-0",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-								type: "button",
-								onClick: () => setDismissedUpdateTag(updater.latestRelease?.tagName ?? null),
-								className: "min-h-[36px] rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100",
-								children: "পরে"
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-								type: "button",
-								onClick: () => setUpdateModalOpen(true),
-								className: "inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 whitespace-nowrap",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, { className: "h-3.5 w-3.5" }), "আপডেট দেখুন"]
-							})]
-						})]
-					}),
+					showUpdateBanner && updater.latestRelease && (() => {
+						const changelogItems = parseReleaseChangelog(updater.latestRelease.releaseNotes);
+						const visibleChanges = changelogItems.slice(0, 3);
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							role: "status",
+							className: "no-print mb-4 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex flex-wrap items-start justify-between gap-3",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-start gap-2.5 min-w-0 flex-1",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, { className: "mt-0.5 h-4 w-4 text-emerald-700 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "min-w-0 space-y-1 text-xs sm:text-sm text-emerald-950",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "font-bold",
+											children: [
+												"নতুন আপডেট v",
+												updater.latestRelease.version,
+												" এসেছে"
+											]
+										}), visibleChanges.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+											className: "space-y-0.5 text-xs text-emerald-900",
+											children: [visibleChanges.map((item, idx) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+												className: "flex items-start gap-1.5",
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: item })]
+											}, idx)), changelogItems.length > visibleChanges.length && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+												className: "text-[11px] font-medium text-emerald-700",
+												children: [
+													"+ আরও ",
+													changelogItems.length - visibleChanges.length,
+													"টি পরিবর্তন"
+												]
+											})]
+										})]
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-center gap-2 shrink-0",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+										type: "button",
+										onClick: () => setDismissedUpdateTag(updater.latestRelease?.tagName ?? null),
+										className: "min-h-[36px] rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100",
+										children: "পরে"
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+										type: "button",
+										onClick: () => setUpdateModalOpen(true),
+										className: "inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 whitespace-nowrap",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, { className: "h-3.5 w-3.5" }), "আপডেট করুন"]
+									})]
+								})]
+							})
+						});
+					})(),
 					(store.syncStatus.state === "offline" || store.syncStatus.state === "syncing" || store.justSyncedNotice || store.authError) && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "no-print mb-5 space-y-2",
 						children: [

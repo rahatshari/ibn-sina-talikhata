@@ -490,8 +490,12 @@ public class AppUpdaterPlugin extends Plugin {
             shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
             Intent chooser = Intent.createChooser(shareIntent, title);
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            getContext().startActivity(chooser);
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> getActivity().startActivity(chooser));
+            } else {
+                chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(chooser);
+            }
 
             JSObject ret = new JSObject();
             ret.put("shared", true);

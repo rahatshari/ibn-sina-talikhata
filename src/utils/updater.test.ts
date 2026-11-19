@@ -5,7 +5,9 @@ import {
   computeSyncStatus,
   extractVersionCodeFromBody,
   formatBytes,
+  formatUpdateNotificationBody,
   isNewerReleaseAvailable,
+  parseReleaseChangelog,
   pickBestApkAsset,
 } from './updater.ts';
 
@@ -50,6 +52,28 @@ describe('updater & sync utilities', () => {
       },
     ]);
     assert.equal(picked?.name, 'IbnSina-TallyKhata-v1.0.12.apk');
+  });
+
+  it('parses release changelog bullets while filtering metadata lines', () => {
+    const rawBody = `
+অটোমেটিক বিল্ড ও রিলিজ (v1.0.14)
+versionCode: 114
+
+## পরিবর্তনসমূহ
+- রসিদ ডাউনলোড ও শেয়ার বাগ ফিক্স করা হয়েছে
+* দোকানদারের তথ্য এডিট ফিচার যুক্ত হয়েছে
+1. অ্যাপের ডিজাইন আরও সহজ করা হয়েছে
+`;
+    const items = parseReleaseChangelog(rawBody);
+    assert.deepEqual(items, [
+      'রসিদ ডাউনলোড ও শেয়ার বাগ ফিক্স করা হয়েছে',
+      'দোকানদারের তথ্য এডিট ফিচার যুক্ত হয়েছে',
+      'অ্যাপের ডিজাইন আরও সহজ করা হয়েছে',
+    ]);
+
+    const notif = formatUpdateNotificationBody('1.0.14', rawBody);
+    assert.ok(notif.includes('• রসিদ ডাউনলোড ও শেয়ার বাগ ফিক্স করা হয়েছে'));
+    assert.ok(!notif.includes('versionCode'));
   });
 
   it('formats byte sizes and computes offline/sync statuses accurately', () => {

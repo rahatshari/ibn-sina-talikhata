@@ -6,7 +6,8 @@ import { formatBDT, formatDateTimeBn } from '../utils/ledger';
 import {
   buildPrintableReceiptHtml,
   buildReceiptSummaryText,
-  renderReceiptPng,
+  getCachedReceiptPng,
+  printHtmlInBrowser,
 } from '../utils/receiptGenerator';
 
 interface ModalShellProps {
@@ -227,12 +228,12 @@ export function CollectPaymentModal({
 
   useEffect(() => {
     if (open) {
-      setAmount(currentDue > 0 ? String(currentDue) : '');
+      setAmount('');
       setMethod('Cash');
       setNote('');
       setError('');
     }
-  }, [open, currentDue]);
+  }, [open]);
 
   if (!shop) return null;
 
@@ -360,7 +361,12 @@ export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
   useEffect(() => {
     setActionNotice(null);
     setActionBusy(null);
-  }, [sale?.id]);
+    if (sale) {
+      void getCachedReceiptPng(sale).catch(() => {
+        // Pre-warm cache in background so Share & Download feel instant
+      });
+    }
+  }, [sale]);
 
   if (!sale) return null;
 
@@ -368,7 +374,7 @@ export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
     setActionBusy('download');
     setActionNotice(null);
     try {
-      const { blob, base64, fileName } = await renderReceiptPng(sale);
+      const { blob, base64, fileName } = await getCachedReceiptPng(sale);
       if (isNativeAndroid()) {
         await AppUpdater.saveFileToDownloads({
           base64Data: base64,
@@ -402,7 +408,7 @@ export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
     setActionBusy('share');
     setActionNotice(null);
     try {
-      const { blob, base64, fileName } = await renderReceiptPng(sale);
+      const { blob, base64, fileName } = await getCachedReceiptPng(sale);
       const summaryText = buildReceiptSummaryText(sale);
 
       if (isNativeAndroid()) {
@@ -467,15 +473,15 @@ export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
     setActionBusy('print');
     setActionNotice(null);
     try {
+      const html = buildPrintableReceiptHtml(sale);
       if (isNativeAndroid()) {
-        const html = buildPrintableReceiptHtml(sale);
         await AppUpdater.printHtml({
           html,
           jobName: `IbnSina-${sale.invoiceNo}`,
         });
         setActionNotice({ type: 'ok', text: 'প্রিন্ট / PDF ডায়ালগ খোলা হয়েছে।' });
       } else {
-        window.print();
+        printHtmlInBrowser(html);
       }
     } catch {
       setActionNotice({ type: 'err', text: 'প্রিন্ট শুরু করা যায়নি। ছবি ডাউনলোড করে প্রিন্ট করুন।' });

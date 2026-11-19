@@ -1,7 +1,6 @@
 import {
   CheckCircle2,
   Download,
-  ExternalLink,
   FolderDown,
   RefreshCw,
   ShieldCheck,
@@ -10,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { DownloadTask, ReleaseInfo } from '../hooks/useAppUpdater';
 import { formatDateTimeBn } from '../utils/ledger';
-import { formatBytes } from '../utils/updater';
+import { formatBytes, parseReleaseChangelog } from '../utils/updater';
 import { ModalShell } from './Modals';
 
 interface UpdateCenterModalProps {
@@ -132,23 +131,27 @@ export function UpdateCenterModal({
                     : 'এই রিলিজে কোনো APK ফাইল পাওয়া যায়নি'}
                 </div>
               </div>
-              {latestRelease.htmlUrl && (
-                <a
-                  href={latestRelease.htmlUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900"
-                >
-                  Release নোট <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
             </div>
 
-            {latestRelease.releaseNotes && (
-              <div className="max-h-28 overflow-y-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 whitespace-pre-line">
-                {latestRelease.releaseNotes}
-              </div>
-            )}
+            {(() => {
+              const items = parseReleaseChangelog(latestRelease.releaseNotes);
+              if (items.length === 0) return null;
+              return (
+                <div className="max-h-36 overflow-y-auto rounded-lg border border-slate-200 bg-white px-3.5 py-2.5">
+                  <div className="mb-1.5 text-[11px] font-semibold text-slate-500">
+                    এই আপডেটে পরিবর্তনসমূহ
+                  </div>
+                  <ul className="space-y-1 text-xs text-slate-700">
+                    {items.map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
 
             {latestRelease.apkAsset && (
               <button
@@ -263,10 +266,6 @@ export function UpdateCenterModal({
             </div>
           )}
         </div>
-
-        <p className="text-[11px] leading-relaxed text-slate-500">
-          নিরাপদ আপডেট: প্রতিটি GitHub Release APK একই রিলিজ সিগনেচারে (keystore) তৈরি হয়, তাই আগের ডাটা ও লগইন ঠিক রেখেই সরাসরি অ্যাপের ভেতর থেকে আপডেট ইনস্টল হবে।
-        </p>
       </div>
     </ModalShell>
   );

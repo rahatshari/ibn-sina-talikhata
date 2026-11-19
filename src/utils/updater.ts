@@ -47,6 +47,39 @@ export function extractVersionCodeFromBody(body?: string): number | null {
   return Number.isFinite(code) ? code : null;
 }
 
+export function parseReleaseChangelog(body?: string): string[] {
+  if (!body) return [];
+  const lines = body
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => {
+      if (!line) return false;
+      if (/^versionCode\s*[:=]\s*\d+/i.test(line)) return false;
+      if (/^অটোমেটিক বিল্ড ও রিলিজ/i.test(line)) return false;
+      if (/^#{1,6}\s*/.test(line)) return false;
+      if (/^[-*_]{3,}$/.test(line)) return false;
+      return true;
+    })
+    .map((line) =>
+      line
+        .replace(/^[-*•]+\s+/, '')
+        .replace(/^\d+[.)]\s+/, '')
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .trim(),
+    )
+    .filter((line) => line.length > 0);
+
+  return Array.from(new Set(lines));
+}
+
+export function formatUpdateNotificationBody(version: string, body?: string): string {
+  const items = parseReleaseChangelog(body).slice(0, 4);
+  if (items.length === 0) {
+    return `ইবনে সিনা টালিখাতা v${version} ডাউনলোড ও আপডেট করতে ট্যাপ করুন।`;
+  }
+  return items.map((item) => `• ${item}`).join('\n');
+}
+
 export function isNewerReleaseAvailable(
   currentVersion: string,
   currentCode: number,

@@ -12,9 +12,9 @@ interface DraftRow {
   productId: string;
   productName: string;
   tier: ProductTier;
-  boxes: number;
-  boxPrice: number;
-  discountPercent: number;
+  boxesInput: string;
+  boxPriceInput: string;
+  discountInput: string;
 }
 
 interface NewSaleViewProps {
@@ -60,7 +60,7 @@ export function NewSaleView({
   const [tierFilter, setTierFilter] = useState<'All' | ProductTier>('All');
   const [draftRows, setDraftRows] = useState<DraftRow[]>([]);
   const [bulkDiscount, setBulkDiscount] = useState<string>('');
-  const [paidInput, setPaidInput] = useState<string>('0');
+  const [paidInput, setPaidInput] = useState<string>('');
   const [note, setNote] = useState('');
   const [formError, setFormError] = useState('');
 
@@ -82,11 +82,21 @@ export function NewSaleView({
   }, [products, searchQuery, tierFilter]);
 
   const computedItems = useMemo(
-    () => draftRows.map((row) => calculateLineItem(row)),
+    () =>
+      draftRows.map((row) =>
+        calculateLineItem({
+          productId: row.productId,
+          productName: row.productName,
+          tier: row.tier,
+          boxes: Math.max(0, Number.parseInt(row.boxesInput, 10) || 0),
+          boxPrice: Math.max(0, Number(row.boxPriceInput) || 0),
+          discountPercent: Math.max(0, Math.min(100, Number(row.discountInput) || 0)),
+        }),
+      ),
     [draftRows],
   );
 
-  const numericPaid = Number(paidInput);
+  const numericPaid = paidInput.trim() === '' ? 0 : Number(paidInput);
   const totals = useMemo(
     () => calculateInvoiceTotals(computedItems, Number.isFinite(numericPaid) ? numericPaid : 0),
     [computedItems, numericPaid],
@@ -102,21 +112,23 @@ export function NewSaleView({
     setDraftRows((prev) => {
       const existing = prev.find((r) => r.productId === product.id);
       if (existing) {
+        const currentBoxes = Number.parseInt(existing.boxesInput, 10) || 0;
         return prev.map((r) =>
-          r.productId === product.id ? { ...r, boxes: r.boxes + 1 } : r,
+          r.productId === product.id ? { ...r, boxesInput: String(currentBoxes + 1) } : r,
         );
       }
-      const defaultDisc = Number(bulkDiscount);
+      const trimmedBulk = bulkDiscount.trim();
+      const defaultDisc = Number(trimmedBulk);
       return [
         ...prev,
         {
           productId: product.id,
           productName: product.name,
           tier: product.tier,
-          boxes: 1,
-          boxPrice: product.boxPrice,
-          discountPercent:
-            bulkDiscount !== '' && Number.isFinite(defaultDisc) ? defaultDisc : 10,
+          boxesInput: '1',
+          boxPriceInput: product.boxPrice > 0 ? String(product.boxPrice) : '',
+          discountInput:
+            trimmedBulk !== '' && Number.isFinite(defaultDisc) ? trimmedBulk : '',
         },
       ];
     });
@@ -133,9 +145,14 @@ export function NewSaleView({
   };
 
   const applyDiscountToAll = () => {
-    const val = Number(bulkDiscount);
+    const trimmed = bulkDiscount.trim();
+    if (trimmed === '') {
+      setDraftRows((prev) => prev.map((r) => ({ ...r, discountInput: '' })));
+      return;
+    }
+    const val = Number(trimmed);
     if (!Number.isFinite(val) || val < 0 || val > 100) return;
-    setDraftRows((prev) => prev.map((r) => ({ ...r, discountPercent: val })));
+    setDraftRows((prev) => prev.map((r) => ({ ...r, discountInput: trimmed })));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -149,7 +166,7 @@ export function NewSaleView({
       setFormError('বিক্রয়ের জন্য অন্তত একটি প্রোডাক্ট ও তার বক্স সংখ্যা যোগ করুন।');
       return;
     }
-    const rawPaid = Number(paidInput);
+    const rawPaid = paidInput.trim() === '' ? 0 : Number(paidInput);
     if (!Number.isFinite(rawPaid) || rawPaid < 0) {
       setFormError('জমা টাকার পরিমাণ ০ বা তার বেশি হতে হবে।');
       return;
@@ -168,7 +185,7 @@ export function NewSaleView({
 
     if (created) {
       setDraftRows([]);
-      setPaidInput('0');
+      setPaidInput('');
       setNote('');
       setFormError('');
       onSaleCreated(created);
@@ -306,7 +323,7 @@ export function NewSaleView({
                         }`}
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        {inCart ? `আরও (+১) · ${inCart.boxes}` : 'যোগ করুন'}
+                        {inCart ? `আরও (+১) · ${Number.parseInt(inCart.boxesInput, 10) || 0}` : 'যোগ করুন'}
                       </button>
                     </div>
                   );
@@ -403,11 +420,12 @@ export function NewSaleView({
                         <div className="flex items-center rounded-lg border border-slate-300 bg-white">
                           <button
                             type="button"
-                            onClick={() =>
+                            onClick={() => {
+                              const cur = Number.parseInt(rawRow.boxesInput, 10) || 1;
                               updateRow(item.productId, {
-                                boxes: Math.max(1, rawRow.boxes - 1),
-                              })
-                            }
+                                boxesInput: String(Math.max(1, cur - 1)),
+                              });
+                            }}
                             aria-label={`বক্স কমান: ${item.productName}`}
                             className="px-2 py-2 text-slate-600 hover:bg-slate-100"
                           >
@@ -417,19 +435,21 @@ export function NewSaleView({
                             id={`boxes-${item.productId}`}
                             type="number"
                             min="1"
-                            value={rawRow.boxes}
+                            placeholder="1"
+                            value={rawRow.boxesInput}
                             onChange={(e) =>
                               updateRow(item.productId, {
-                                boxes: Math.max(0, parseInt(e.target.value || '0', 10)),
+                                boxesInput: e.target.value,
                               })
                             }
                             className="w-full text-center text-sm font-semibold font-mono-num text-slate-900 focus:outline-none"
                           />
                           <button
                             type="button"
-                            onClick={() =>
-                              updateRow(item.productId, { boxes: rawRow.boxes + 1 })
-                            }
+                            onClick={() => {
+                              const cur = Number.parseInt(rawRow.boxesInput, 10) || 0;
+                              updateRow(item.productId, { boxesInput: String(cur + 1) });
+                            }}
                             aria-label={`বক্স বাড়ান: ${item.productName}`}
                             className="px-2 py-2 text-slate-600 hover:bg-slate-100"
                           >
@@ -450,10 +470,11 @@ export function NewSaleView({
                           type="number"
                           min="0"
                           step="any"
-                          value={rawRow.boxPrice}
+                          placeholder="দাম লিখুন"
+                          value={rawRow.boxPriceInput}
                           onChange={(e) =>
                             updateRow(item.productId, {
-                              boxPrice: Math.max(0, Number(e.target.value || 0)),
+                              boxPriceInput: e.target.value,
                             })
                           }
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono-num text-slate-900 focus:border-emerald-600 focus:outline-none"
@@ -473,13 +494,11 @@ export function NewSaleView({
                           min="0"
                           max="100"
                           step="0.5"
-                          value={rawRow.discountPercent}
+                          placeholder="%"
+                          value={rawRow.discountInput}
                           onChange={(e) =>
                             updateRow(item.productId, {
-                              discountPercent: Math.max(
-                                0,
-                                Math.min(100, Number(e.target.value || 0)),
-                              ),
+                              discountInput: e.target.value,
                             })
                           }
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono-num text-amber-700 font-semibold focus:border-emerald-600 focus:outline-none"
@@ -517,6 +536,7 @@ export function NewSaleView({
                   type="number"
                   min="0"
                   step="any"
+                  placeholder="টাকার পরিমাণ লিখুন"
                   value={paidInput}
                   onChange={(e) => {
                     setPaidInput(e.target.value);
@@ -541,10 +561,10 @@ export function NewSaleView({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaidInput('0')}
+                    onClick={() => setPaidInput('')}
                     className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                   >
-                    সব বাকি (০)
+                    সব বাকি (ফাঁকা)
                   </button>
                 </div>
               </div>

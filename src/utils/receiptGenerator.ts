@@ -1,5 +1,6 @@
-import type { SaleRecord } from '../types/tally';
-import { formatBDT, formatDateTimeBn } from './ledger';
+import type { PaymentRecord, SaleRecord, Shopkeeper } from '../types/tally';
+import { getActiveFontOption } from './fontPreferences';
+import { computeShopSummary, formatBDT, formatDateTimeBn } from './ledger';
 
 export function escapeHtml(raw: string): string {
   return raw
@@ -119,6 +120,183 @@ export function buildPrintableReceiptHtml(sale: SaleRecord): string {
 </html>`;
 }
 
+export interface ShopLedgerRow {
+  id: string;
+  kind: 'sale' | 'payment';
+  date: string;
+  code: string;
+  details: string;
+  boxes: number;
+  billed: number;
+  paid: number;
+  runningDue: number;
+}
+
+export function buildShopLedgerRows(
+  shopId: string,
+  sales: SaleRecord[],
+  payments: PaymentRecord[],
+): ShopLedgerRow[] {
+  const combined = [
+    ...sales
+      .filter((s) => s.shopId === shopId)
+      .map((s) => ({
+        id: s.id,
+        kind: 'sale' as const,
+        date: s.date,
+        code: s.invoiceNo,
+        details: s.items
+          .map((item) => `${item.productName} (${item.boxes} বক্স, ${item.discountPercent}% ছাড়)`)
+          .join(', '),
+        boxes: s.totalBoxes,
+        billed: s.netTotal,
+        paid: s.paidAmount,
+      })),
+    ...payments
+      .filter((p) => p.shopId === shopId)
+      .map((p) => ({
+        id: p.id,
+        kind: 'payment' as const,
+        date: p.date,
+        code: p.receiptNo,
+        details: `বাকি আদায় · ${p.method}${p.note ? ` (${p.note})` : ''}`,
+        boxes: 0,
+        billed: 0,
+        paid: p.amount,
+      })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
+
+  let running = 0;
+  return combined.map((entry) => {
+    running = Math.round((running + entry.billed - entry.paid) * 100) / 100;
+    return {
+      ...entry,
+      runningDue: running,
+    };
+  });
+}
+
+export function buildShopStatementHtml(
+  shop: Shopkeeper,
+  sales: SaleRecord[],
+  payments: PaymentRecord[],
+): string {
+  const summary = computeShopSummary(shop.id, sales, payments);
+  const rows = buildShopLedgerRows(shop.id, sales, payments);
+  const fontFamily = getActiveFontOption().fontFamily;
+
+  const tableRows =
+    rows.length === 0
+      ? `<tr><td colspan="6" style="padding:18px;text-align:center;color:#64748b;">এই দোকানদারের কোনো লেনদেন পাওয়া যায়নি।</td></tr>`
+      : rows
+          .map(
+            (row, idx) => `
+      <tr style="background:${idx % 2 === 1 ? '#f8fafc' : '#ffffff'};">
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;white-space:nowrap;">${escapeHtml(formatDateTimeBn(row.date))}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;white-space:nowrap;">${escapeHtml(row.code)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;color:#334155;">${escapeHtml(row.details)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap;">${row.billed > 0 ? escapeHtml(formatBDT(row.billed)) : '—'}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;color:#047857;font-weight:600;white-space:nowrap;">${row.paid > 0 ? escapeHtml(formatBDT(row.paid)) : '—'}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;color:${row.runningDue > 0 ? '#dc2626' : '#047857'};white-space:nowrap;">${escapeHtml(formatBDT(row.runningDue))}</td>
+      </tr>`,
+          )
+          .join('');
+
+  return `<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <title>লেনদেন রিপোর্ট — ${escapeHtml(shop.shopName)}</title>
+  <style>
+    @page { size: A4; margin: 14mm; }
+    body { font-family: ${fontFamily}; color: #0f172a; margin: 0; padding: 18px; }
+    .header { border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+    .brand { font-size: 12px; font-weight: 700; color: #047857; }
+    .shop { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
+    .meta { font-size: 12px; color: #475569; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+    .kpi { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; background: #f8fafc; }
+    .kpi-label { font-size: 11px; color: #64748b; }
+    .kpi-val { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { background: #f1f5f9; text-align: left; padding: 8px 10px; border-bottom: 1px solid #cbd5e1; font-size: 11px; color: #475569; }
+    th.num { text-align: right; }
+    .footer { margin-top: 18px; font-size: 11px; color: #64748b; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="brand">THE IBN SINA'S Production — সম্পূর্ণ লেনদেনের রিপোর্ট</div>
+      <div class="shop">${escapeHtml(shop.shopName)}</div>
+      <div class="meta">মালিক: ${escapeHtml(shop.ownerName || '—')} · এলাকা: ${escapeHtml(shop.area || '—')}${shop.phone ? ` · ফোন: ${escapeHtml(shop.phone)}` : ''}</div>
+    </div>
+    <div class="meta" style="text-align:right;">
+      <div>রিপোর্ট তারিখ</div>
+      <div style="font-weight:600;color:#0f172a;">${escapeHtml(formatDateTimeBn(new Date().toISOString()))}</div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-label">মোট বক্স</div><div class="kpi-val">${summary.totalBoxes} বক্স</div></div>
+    <div class="kpi"><div class="kpi-label">মোট বিল</div><div class="kpi-val">${escapeHtml(formatBDT(summary.totalBilled))}</div></div>
+    <div class="kpi"><div class="kpi-label">মোট জমা / আদায়</div><div class="kpi-val" style="color:#047857;">${escapeHtml(formatBDT(summary.totalPaid))}</div></div>
+    <div class="kpi"><div class="kpi-label">বর্তমান মোট বাকি</div><div class="kpi-val" style="color:${summary.totalDue > 0 ? '#dc2626' : '#047857'};">${escapeHtml(formatBDT(summary.totalDue))}</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>তারিখ</th>
+        <th>নম্বর</th>
+        <th>বিবরণ</th>
+        <th class="num">বিল</th>
+        <th class="num">জমা/আদায়</th>
+        <th class="num">চলমান বাকি</th>
+      </tr>
+    </thead>
+    <tbody>${tableRows}</tbody>
+  </table>
+
+  <div class="footer">ইবনে সিনা টালিখাতা অ্যাপ থেকে তৈরি দোকানদারের সম্পূর্ণ হিসাব বিবরণী</div>
+</body>
+</html>`;
+}
+
+export function printHtmlInBrowser(html: string): void {
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    iframe.remove();
+    window.print();
+    return;
+  }
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const cleanup = () => {
+    window.setTimeout(() => iframe.remove(), 1200);
+  };
+
+  window.setTimeout(() => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } finally {
+      cleanup();
+    }
+  }, 180);
+}
+
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -170,21 +348,23 @@ export async function renderReceiptPng(
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
 
+  const fontFamily = getActiveFontOption().canvasFont;
+
   // Top Emerald Accent Banner
   drawRoundedRect(ctx, padding, padding, width - padding * 2, 132, 16);
   ctx.fillStyle = '#059669';
   ctx.fill();
 
   ctx.fillStyle = '#D1FAE5';
-  ctx.font = '600 18px "Hind Siliguri", system-ui, sans-serif';
+  ctx.font = `600 18px ${fontFamily}`;
   ctx.fillText("THE IBN SINA'S Production · ইবনে সিনা টালিখাতা", padding + 28, padding + 42);
 
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '700 32px "Hind Siliguri", system-ui, sans-serif';
+  ctx.font = `700 32px ${fontFamily}`;
   ctx.fillText(sale.shopName, padding + 28, padding + 84);
 
   ctx.fillStyle = '#ECFDF5';
-  ctx.font = '500 18px "Hind Siliguri", system-ui, sans-serif';
+  ctx.font = `500 18px ${fontFamily}`;
   ctx.fillText(
     `রসিদ নং: ${sale.invoiceNo}   |   তারিখ: ${formatDateTimeBn(sale.date)}   |   মোট: ${sale.totalBoxes} বক্স`,
     padding + 28,
@@ -317,10 +497,13 @@ export async function renderReceiptPng(
   );
 
   const dataUrl = canvas.toDataURL('image/png');
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG export failed'))), 'image/png');
-  });
   const base64 = dataUrl.split(',')[1] || '';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const blob = new Blob([bytes], { type: 'image/png' });
 
   return {
     blob,
@@ -328,4 +511,32 @@ export async function renderReceiptPng(
     dataUrl,
     fileName: buildReceiptFileName(sale),
   };
+}
+
+export interface RenderedReceiptResult {
+  blob: Blob;
+  base64: string;
+  fileName: string;
+  dataUrl: string;
+}
+
+const receiptRenderCache = new Map<string, Promise<RenderedReceiptResult>>();
+
+export function getCachedReceiptPng(sale: SaleRecord): Promise<RenderedReceiptResult> {
+  const fontId = getActiveFontOption().id;
+  const cacheKey = `${sale.id}:${sale.netTotal}:${sale.paidAmount}:${sale.items.length}:${fontId}`;
+  const cached = receiptRenderCache.get(cacheKey);
+  if (cached) return cached;
+
+  if (receiptRenderCache.size >= 12) {
+    const firstKey = receiptRenderCache.keys().next().value;
+    if (firstKey) receiptRenderCache.delete(firstKey);
+  }
+
+  const promise = renderReceiptPng(sale).catch((err) => {
+    receiptRenderCache.delete(cacheKey);
+    throw err;
+  });
+  receiptRenderCache.set(cacheKey, promise);
+  return promise;
 }
