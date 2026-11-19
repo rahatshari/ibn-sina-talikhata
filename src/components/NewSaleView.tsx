@@ -79,8 +79,16 @@ export function NewSaleView({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setShopPickerOpen(false);
     };
+    const onBack = (e: Event) => {
+      e.preventDefault();
+      setShopPickerOpen(false);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('talikhata:back', onBack);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('talikhata:back', onBack);
+    };
   }, [shopPickerOpen]);
 
   const selectedShop = useMemo(

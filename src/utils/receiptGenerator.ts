@@ -164,16 +164,28 @@ export function buildShopLedgerRows(
         billed: 0,
         paid: p.amount,
       })),
-  ].sort((a, b) => a.date.localeCompare(b.date));
+  ].sort((a, b) => {
+    const timeA = Date.parse(a.date);
+    const timeB = Date.parse(b.date);
+    if (Number.isFinite(timeA) && Number.isFinite(timeB) && timeA !== timeB) {
+      return timeA - timeB;
+    }
+    const cmp = a.date.localeCompare(b.date);
+    if (cmp !== 0) return cmp;
+    if (a.kind !== b.kind) return a.kind === 'sale' ? -1 : 1;
+    return a.code.localeCompare(b.code);
+  });
 
   let running = 0;
-  return combined.map((entry) => {
+  const chronologicalRows = combined.map((entry) => {
     running = Math.round((running + entry.billed - entry.paid) * 100) / 100;
     return {
       ...entry,
       runningDue: running,
     };
   });
+
+  return chronologicalRows.reverse();
 }
 
 export function buildShopStatementHtml(

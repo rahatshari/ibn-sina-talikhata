@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft,
-  Banknote,
   BarChart3,
+  CalendarDays,
   Check,
   CheckCircle2,
   Cloud,
   CloudOff,
   Download,
   FolderDown,
+  LayoutDashboard,
   LogIn,
   LogOut,
   MoreVertical,
@@ -37,7 +37,17 @@ import { UpdateCenterModal } from './components/UpdateCenterModal';
 import { useAppUpdater } from './hooks/useAppUpdater';
 import { useTallyStore } from './hooks/useTallyStore';
 import type { Product, SaleRecord, Shopkeeper } from './types/tally';
-import { computeDashboardMetrics } from './utils/ledger';
+import {
+  computeDashboardMetrics,
+  loadKpiPeriodMode,
+  saveKpiPeriodMode,
+  type KpiPeriodMode,
+} from './utils/ledger';
+import {
+  resolveBackNavigation,
+  type AppView,
+  type LedgerOrigin,
+} from './utils/navigation';
 import {
   APP_FONT_OPTIONS,
   applyAppFont,
@@ -47,7 +57,11 @@ import {
 } from './utils/fontPreferences';
 import { parseReleaseChangelog } from './utils/updater';
 
-type AppView = 'dashboard' | 'new-sale' | 'shops' | 'due' | 'products' | 'reports';
+declare global {
+  interface Window {
+    __handleAndroidBack?: () => 'handled' | 'exit';
+  }
+}
 
 export default function App() {
   const store = useTallyStore();
@@ -56,6 +70,8 @@ export default function App() {
   const [activeView, setActiveView] = useState<AppView>('dashboard');
   const [preselectedShopId, setPreselectedShopId] = useState<string | undefined>(undefined);
   const [selectedLedgerShop, setSelectedLedgerShop] = useState<Shopkeeper | null>(null);
+  const [ledgerOrigin, setLedgerOrigin] = useState<LedgerOrigin>('shops');
+  const [periodMode, setPeriodMode] = useState<KpiPeriodMode>(() => loadKpiPeriodMode());
 
   const [shopModalState, setShopModalState] = useState<{
     open: boolean;
@@ -106,53 +122,158 @@ export default function App() {
     [store.shops, store.sales, store.payments],
   );
 
+  const pushViewHistory = (view: AppView, shopId?: string) => {
+    if (view === 'dashboard') return;
+    if (activeView === 'dashboard') {
+      window.history.pushState({ appView: view, shopId: shopId ?? null }, '');
+    } else if (shopId && !window.history.state?.shopId) {
+      window.history.pushState({ appView: view, shopId }, '');
+    } else {
+      window.history.replaceState({ appView: view, shopId: shopId ?? null }, '');
+    }
+  };
+
   const openNewSale = (shopId?: string) => {
     setPreselectedShopId(shopId);
-    if (activeView === 'dashboard') {
-      window.history.pushState({ appView: 'new-sale' }, '');
-    }
+    pushViewHistory('new-sale');
     setActiveView('new-sale');
   };
 
   const navItems: Array<{
-    id: Exclude<AppView, 'dashboard'>;
+    id: AppView;
     label: string;
     mobileLabel: string;
     icon: typeof Plus;
   }> = [
+    { id: 'dashboard', label: 'ড্যাশবোর্ড', mobileLabel: 'ড্যাশবোর্ড', icon: LayoutDashboard },
     { id: 'new-sale', label: 'নতুন বিক্রি', mobileLabel: 'বিক্রি', icon: Plus },
     { id: 'shops', label: 'দোকানদার', mobileLabel: 'দোকানদার', icon: Store },
-    { id: 'due', label: 'বাকি', mobileLabel: 'বাকি', icon: Banknote },
     { id: 'products', label: 'প্রোডাক্ট', mobileLabel: 'প্রোডাক্ট', icon: Package },
     { id: 'reports', label: 'রিপোর্ট', mobileLabel: 'রিপোর্ট', icon: BarChart3 },
   ];
 
   const handleSelectNav = (id: AppView) => {
-    if (id !== 'new-sale') setPreselectedShopId(undefined);
-    if (id === 'shops') setSelectedLedgerShop(null);
-    if (id !== 'dashboard' && activeView === 'dashboard') {
-      window.history.pushState({ appView: id }, '');
+    if (id === 'dashboard') {
+      handleBackToDashboard();
+      return;
     }
+    if (id !== 'new-sale') setPreselectedShopId(undefined);
+    if (id === 'shops') {
+      setSelectedLedgerShop(null);
+      setLedgerOrigin('shops');
+    }
+    pushViewHistory(id);
     setActiveView(id);
+  };
+
+  const handleOpenShopLedger = (shop: Shopkeeper, origin: LedgerOrigin) => {
+    setLedgerOrigin(origin);
+    setSelectedLedgerShop(shop);
+    pushViewHistory('shops', shop.id);
+    setActiveView('shops');
   };
 
   const handleBackToDashboard = () => {
     setPreselectedShopId(undefined);
     setSelectedLedgerShop(null);
+    setLedgerOrigin('shops');
     setActiveView('dashboard');
     if (window.history.state?.appView) {
       window.history.replaceState(null, '');
     }
   };
 
+  const handleSelectPeriodMode = (nextMode: KpiPeriodMode) => {
+    setPeriodMode(nextMode);
+    saveKpiPeriodMode(nextMode);
+  };
+
+  const closeTopMostModal = () => {
+    if (detailSale) {
+      setDetailSale(null);
+    } else if (collectTarget) {
+      setCollectTarget(null);
+    } else if (shopModalState.open) {
+      setShopModalState({ open: false, editing: null });
+    } else if (productModalState.open) {
+      setProductModalState({ open: false, editing: null });
+    } else if (updateModalOpen) {
+      setUpdateModalOpen(false);
+    } else if (accountModalOpen) {
+      setAccountModalOpen(false);
+    }
+  };
+
+  const backHandlerRef = useRef<() => 'handled' | 'exit'>(() => 'exit');
+  backHandlerRef.current = () => {
+    // Allow inner overlays (such as searchable Shopkeeper Picker in NewSaleView) to intercept first
+    const innerBackEvent = new CustomEvent('talikhata:back', { cancelable: true });
+    if (!window.dispatchEvent(innerBackEvent)) {
+      return 'handled';
+    }
+
+    const hasOpenModal = Boolean(
+      detailSale ||
+        collectTarget ||
+        shopModalState.open ||
+        productModalState.open ||
+        updateModalOpen ||
+        accountModalOpen,
+    );
+
+    const action = resolveBackNavigation({
+      activeView,
+      hasLedgerShop: selectedLedgerShop !== null,
+      ledgerOrigin,
+      hasOpenMenu: menuOpen,
+      hasOpenModal,
+    });
+
+    switch (action.type) {
+      case 'close-menu':
+        setMenuOpen(false);
+        return 'handled';
+      case 'close-modal':
+        closeTopMostModal();
+        return 'handled';
+      case 'close-ledger-to-origin':
+        setSelectedLedgerShop(null);
+        setActiveView(action.targetView);
+        if (action.targetView === 'dashboard') {
+          setPreselectedShopId(undefined);
+          window.history.replaceState(null, '');
+        } else {
+          window.history.replaceState({ appView: action.targetView, shopId: null }, '');
+        }
+        return 'handled';
+      case 'back-to-dashboard':
+        handleBackToDashboard();
+        return 'handled';
+      case 'exit':
+        return 'exit';
+    }
+  };
+
+  useEffect(() => {
+    window.__handleAndroidBack = () => backHandlerRef.current();
+    return () => {
+      delete window.__handleAndroidBack;
+    };
+  }, []);
+
   useEffect(() => {
     const onPopState = (e: PopStateEvent) => {
       const targetView = e.state?.appView as AppView | undefined;
+      const targetShopId = e.state?.shopId as string | null | undefined;
       if (!targetView || targetView === 'dashboard') {
         setPreselectedShopId(undefined);
         setSelectedLedgerShop(null);
+        setLedgerOrigin('shops');
         setActiveView('dashboard');
       } else {
+        if (targetView !== 'shops' || !targetShopId) {
+          setSelectedLedgerShop(null);
+        }
         setActiveView(targetView);
       }
     };
@@ -354,13 +475,74 @@ export default function App() {
                     role="menuitem"
                     onClick={() => {
                       setMenuOpen(false);
-                      setActiveView('reports');
+                      handleSelectNav('reports');
                     }}
                     className="flex w-full min-h-[48px] items-center gap-3 rounded-xl px-3.5 py-3 text-left text-[15px] sm:text-base font-medium text-slate-800 hover:bg-slate-50"
                   >
                     <BarChart3 className="h-5 w-5 text-slate-600 shrink-0" />
                     <span>ডাটা ব্যাকআপ ও রিপোর্ট</span>
                   </button>
+
+                  <div className="my-2 border-t border-slate-100" />
+                  <div className="px-3 py-2" data-testid="menu-kpi-period-section">
+                    <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-slate-600">
+                      <CalendarDays className="h-4 w-4 text-emerald-600" />
+                      <span>ড্যাশবোর্ড হিসাবের ধরন</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {(
+                        [
+                          {
+                            id: 'all' as const,
+                            label: 'সর্বমোট হিসাব',
+                            desc: 'শুরু থেকে মোট বিক্রি ও আদায়',
+                          },
+                          {
+                            id: 'monthly' as const,
+                            label: 'মাসিক হিসাব',
+                            desc: 'নির্বাচিত মাসের বিক্রি ও আদায়',
+                          },
+                        ] as const
+                      ).map((option) => {
+                        const active = periodMode === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={active}
+                            data-testid={`menu-kpi-mode-${option.id}`}
+                            onClick={() => {
+                              handleSelectPeriodMode(option.id);
+                              setMenuOpen(false);
+                            }}
+                            className={`flex w-full min-h-[48px] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                              active
+                                ? 'bg-emerald-50 font-semibold text-emerald-900 ring-1 ring-emerald-200'
+                                : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-[15px] leading-snug">{option.label}</span>
+                              <span className="block text-[11px] font-normal text-slate-500">
+                                {option.desc}
+                              </span>
+                            </span>
+                            {active ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white shrink-0">
+                                <Check className="h-3 w-3" />
+                                চালু
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-medium text-slate-400 shrink-0">
+                                বন্ধ
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   <div className="my-2 border-t border-slate-100" />
                   <div className="px-3 py-2">
@@ -529,36 +711,19 @@ export default function App() {
           </div>
         )}
 
-        {/* In-Page Back Button inside sub-pages (returns to Dashboard) */}
-        {activeView !== 'dashboard' && !(activeView === 'shops' && selectedLedgerShop !== null) && (
-          <div className="no-print mb-3.5 flex items-center">
-            <button
-              type="button"
-              onClick={handleBackToDashboard}
-              data-testid="in-page-back-btn"
-              aria-label="ড্যাশবোর্ডে ফিরে যান"
-              className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-800 shadow-xs transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 active:scale-[0.97]"
-            >
-              <ArrowLeft className="h-4 w-4 shrink-0" />
-              <span>ব্যাক</span>
-            </button>
-          </div>
-        )}
-
         {activeView === 'dashboard' && (
           <DashboardView
             metrics={metrics}
+            periodMode={periodMode}
             shops={store.shops}
             sales={store.sales}
             payments={store.payments}
             onStartNewSale={openNewSale}
             onCollectDue={(shop, due) => setCollectTarget({ shop, due })}
-            onOpenShopLedger={(shop) => {
-              handleSelectNav('shops');
-              setSelectedLedgerShop(shop);
-            }}
+            onOpenShopLedger={(shop) => handleOpenShopLedger(shop, 'dashboard')}
             onOpenSaleDetail={(sale) => setDetailSale(sale)}
             onOpenAllReports={() => handleSelectNav('reports')}
+            onOpenDueList={() => handleSelectNav('due')}
           />
         )}
 
@@ -574,6 +739,7 @@ export default function App() {
             onSaleCreated={(sale) => {
               setDetailSale(sale);
               setActiveView('dashboard');
+              window.history.replaceState(null, '');
             }}
           />
         )}
@@ -584,7 +750,15 @@ export default function App() {
             sales={store.sales}
             payments={store.payments}
             selectedLedgerShop={selectedLedgerShop}
-            onSelectLedgerShop={setSelectedLedgerShop}
+            onSelectLedgerShop={(shop) => {
+              if (shop) {
+                handleOpenShopLedger(shop, 'shops');
+              } else {
+                setSelectedLedgerShop(null);
+                setLedgerOrigin('shops');
+                window.history.replaceState({ appView: 'shops', shopId: null }, '');
+              }
+            }}
             onRequestAddShop={() => setShopModalState({ open: true, editing: null })}
             onRequestEditShop={(shop) => setShopModalState({ open: true, editing: shop })}
             onStartNewSale={openNewSale}
@@ -598,10 +772,7 @@ export default function App() {
             shops={store.shops}
             sales={store.sales}
             payments={store.payments}
-            onOpenShopLedger={(shop) => {
-              setSelectedLedgerShop(shop);
-              setActiveView('shops');
-            }}
+            onOpenShopLedger={(shop) => handleOpenShopLedger(shop, 'due')}
             onCollectDue={(shop, due) => setCollectTarget({ shop, due })}
           />
         )}
@@ -632,7 +803,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation (5 Primary Tabs Only: বিক্রি, দোকানদার, বাকি, প্রোডাক্ট, রিপোর্ট) */}
+      {/* Mobile Bottom Navigation (5 Primary Tabs: ড্যাশবোর্ড, বিক্রি, দোকানদার, প্রোডাক্ট, রিপোর্ট) */}
       <nav
         aria-label="মোবাইল নেভিগেশন"
         className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 min-h-[64px] pb-safe items-center border-t border-slate-200 bg-white md:hidden"

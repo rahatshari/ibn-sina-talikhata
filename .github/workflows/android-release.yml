@@ -67,7 +67,7 @@ jobs:
 
       - name: Run unit tests & lint
         run: |
-          npx --no-install tsx --test src/utils/ledger.test.ts src/utils/updater.test.ts src/utils/receiptGenerator.test.ts
+          npx --no-install tsx --test src/utils/ledger.test.ts src/utils/updater.test.ts src/utils/receiptGenerator.test.ts src/utils/navigation.test.ts src/utils/fontPreferences.test.ts
           npm run lint
 
       - name: Build web bundle with baked release metadata
@@ -141,13 +141,13 @@ jobs:
             echo ""
             if [ -s RELEASE_NOTES.md ]; then
               cat RELEASE_NOTES.md
-              echo ""
-            fi
-            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
-            if [ -n "$PREV_TAG" ]; then
-              git log "${PREV_TAG}..HEAD" --no-merges --pretty=format:"- %s"
             else
-              git log -n 5 --no-merges --pretty=format:"- %s"
+              PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+              if [ -n "$PREV_TAG" ]; then
+                git log "${PREV_TAG}..HEAD" --no-merges --pretty=format:"- %s"
+              else
+                git log -n 5 --no-merges --pretty=format:"- %s"
+              fi
             fi
             echo ""
           } > release_notes.txt
@@ -156,7 +156,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag_name }}
-          name: ইবনে সিনা টালিখাতা ${{ steps.version.outputs.tag_name }}
+          name: ব্যক্তিগত টালিখাতা ${{ steps.version.outputs.tag_name }}
           draft: false
           prerelease: false
           body_path: release_notes.txt

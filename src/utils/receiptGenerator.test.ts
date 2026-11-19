@@ -92,13 +92,13 @@ test('textToBase64 encodes UTF-8 Bengali text cleanly', () => {
   assert.equal(decoded, 'ইবনে সিনা টালিখাতা');
 });
 
-test('buildShopLedgerRows computes chronological running due across sales and payments', () => {
+test('buildShopLedgerRows computes running due chronologically and returns newest first', () => {
   const rows = buildShopLedgerRows('shop-1', [sampleSale], samplePayments);
   assert.equal(rows.length, 2);
-  assert.equal(rows[0].code, 'INV-0042');
-  assert.equal(rows[0].runningDue, 364);
-  assert.equal(rows[1].code, 'REC-0010');
-  assert.equal(rows[1].runningDue, 164);
+  assert.equal(rows[0].code, 'REC-0010');
+  assert.equal(rows[0].runningDue, 164);
+  assert.equal(rows[1].code, 'INV-0042');
+  assert.equal(rows[1].runningDue, 364);
 });
 
 test('buildShopStatementHtml escapes shop info and includes statement rows', () => {

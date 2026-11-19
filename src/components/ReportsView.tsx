@@ -1,8 +1,15 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Download, FolderDown, RotateCcw, Search, Trash2, Upload } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Download, FolderDown, RotateCcw, Search, Trash2, Upload } from 'lucide-react';
 import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import type { PaymentRecord, Product, SaleRecord, Shopkeeper } from '../types/tally';
-import { formatBDT, formatDateTimeBn } from '../utils/ledger';
+import {
+  computeMonthlySalesAndCollection,
+  formatBDT,
+  formatDateTimeBn,
+  formatMonthYearBn,
+  getAvailableMonthKeys,
+  getMonthKeyFromIso,
+} from '../utils/ledger';
 import { textToBase64 } from '../utils/receiptGenerator';
 
 interface ReportsViewProps {
@@ -35,9 +42,20 @@ export function ReportsView({
   onResetDemoData,
 }: ReportsViewProps) {
   const [tab, setTab] = useState<'all' | 'sales' | 'payments'>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [backupNotice, setBackupNotice] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const availableMonths = useMemo(
+    () => getAvailableMonthKeys(sales, payments),
+    [sales, payments],
+  );
+
+  const selectedMonthMetrics = useMemo(() => {
+    if (monthFilter === 'all') return null;
+    return computeMonthlySalesAndCollection(sales, payments, monthFilter);
+  }, [sales, payments, monthFilter]);
 
   const entries = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -73,6 +91,7 @@ export function ReportsView({
       .filter((entry) => {
         if (tab === 'sales' && entry.kind !== 'sale') return false;
         if (tab === 'payments' && entry.kind !== 'payment') return false;
+        if (monthFilter !== 'all' && getMonthKeyFromIso(entry.date) !== monthFilter) return false;
         if (!q) return true;
         return (
           entry.shopName.toLowerCase().includes(q) ||
@@ -81,7 +100,7 @@ export function ReportsView({
         );
       })
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [sales, payments, tab, search]);
+  }, [sales, payments, tab, monthFilter, search]);
 
   const handleDownloadBackup = async () => {
     const fileName = `ibn-sina-tally-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -152,20 +171,40 @@ export function ReportsView({
       </div>
 
       {/* Filter & Search */}
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            aria-label="লেনদেন খুঁজুন"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ইনভয়েস নম্বর বা দোকানের নাম লিখে খুঁজুন..."
-            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
-          />
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              aria-label="লেনদেন খুঁজুন"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="ইনভয়েস নম্বর বা দোকানের নাম লিখে খুঁজুন..."
+              className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+            <select
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              aria-label="মাস অনুযায়ী রিপোর্ট দেখুন"
+              data-testid="reports-month-select"
+              className="min-h-[38px] w-full sm:w-auto rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-800 focus:border-emerald-600 focus:outline-none"
+            >
+              <option value="all">সকল মাস</option>
+              {availableMonths.map((monthKey) => (
+                <option key={monthKey} value={monthKey}>
+                  {formatMonthYearBn(monthKey)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 sm:inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+        <div className="grid grid-cols-3 sm:inline-flex sm:self-start items-center gap-1 rounded-lg bg-slate-100 p-1">
           <button
             type="button"
             onClick={() => setTab('all')}
@@ -173,7 +212,7 @@ export function ReportsView({
               tab === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            সব ({sales.length + payments.length})
+            সব ({entries.length})
           </button>
           <button
             type="button"
@@ -182,7 +221,7 @@ export function ReportsView({
               tab === 'sales' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            বিক্রয় ({sales.length})
+            বিক্রয়
           </button>
           <button
             type="button"
@@ -191,9 +230,35 @@ export function ReportsView({
               tab === 'payments' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            আদায় ({payments.length})
+            আদায়
           </button>
         </div>
+
+        {selectedMonthMetrics && (
+          <div
+            data-testid="reports-month-summary"
+            className="grid grid-cols-3 gap-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-xs"
+          >
+            <div>
+              <div className="text-[11px] text-slate-500">মাসের বিক্রি</div>
+              <div className="font-bold font-mono-num text-slate-900">
+                {formatBDT(selectedMonthMetrics.totalSales)}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] text-slate-500">মাসের আদায়</div>
+              <div className="font-bold font-mono-num text-emerald-700">
+                {formatBDT(selectedMonthMetrics.totalCollected)}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[11px] text-slate-500">চালান ও বক্স</div>
+              <div className="font-bold font-mono-num text-slate-800">
+                {selectedMonthMetrics.invoiceCount}টি · {selectedMonthMetrics.totalBoxesSold} বক্স
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Ledger Table / Mobile Cards */}
