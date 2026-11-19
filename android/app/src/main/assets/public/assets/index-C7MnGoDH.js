@@ -17089,6 +17089,71 @@ function canDownloadRelease(params) {
 	return isNewerReleaseAvailable(params.currentVersion, params.currentCode, params.latestTag, params.latestBody);
 }
 var AUTO_UPDATE_ENABLED_KEY = "ibn_sina_auto_update_enabled_v1";
+var AUTO_CHECK_COOLDOWN_MS = 6e4;
+function shouldRunAutoCheck(lastSuccessfulCheckMs, nowMs, cooldownMs = AUTO_CHECK_COOLDOWN_MS) {
+	if (lastSuccessfulCheckMs <= 0) return true;
+	return nowMs - lastSuccessfulCheckMs >= cooldownMs;
+}
+function decodeXmlEntities(raw) {
+	return raw.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, "&");
+}
+function htmlToPlainLines(html) {
+	return decodeXmlEntities(html).replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|li|h[1-6]|div|tr)>/gi, "\n").replace(/<li[^>]*>/gi, "- ").replace(/<[^>]+>/g, "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean).join("\n");
+}
+function parseReleaseAtomLatest(xml, expectedTag) {
+	if (!xml) return null;
+	const entryMatches = xml.match(/<entry\b[\s\S]*?<\/entry>/gi);
+	if (!entryMatches || entryMatches.length === 0) return null;
+	for (const entry of entryMatches) {
+		const hrefMatch = entry.match(/<link[^>]*href="([^"]*\/releases\/tag\/([^"/]+))"/i);
+		const idMatch = entry.match(/<id>[^<]*\/([^</]+)<\/id>/i);
+		const tagName = hrefMatch?.[2] || idMatch?.[1] || "";
+		if (!tagName) continue;
+		if (expectedTag && normalizeVersionString(tagName) !== normalizeVersionString(expectedTag)) continue;
+		const titleMatch = entry.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+		const updatedMatch = entry.match(/<updated>([\s\S]*?)<\/updated>/i);
+		const contentMatch = entry.match(/<content[^>]*>([\s\S]*?)<\/content>/i);
+		const body = contentMatch ? htmlToPlainLines(contentMatch[1]) : "";
+		return {
+			tag_name: tagName,
+			name: titleMatch ? decodeXmlEntities(titleMatch[1]).trim() : tagName,
+			body,
+			published_at: updatedMatch ? updatedMatch[1].trim() : void 0,
+			html_url: hrefMatch ? hrefMatch[1] : void 0,
+			assets: []
+		};
+	}
+	return null;
+}
+function parseExpandedAssetsApk(html, tagName, repo) {
+	const cleanRepo = repo.trim().replace(/^\/+|\/+$/g, "");
+	if (html) {
+		const hrefRegex = /href="([^"]*\/releases\/download\/[^"]+\.apk)"/gi;
+		const candidates = [];
+		let match;
+		while ((match = hrefRegex.exec(html)) !== null) {
+			const rawHref = match[1];
+			const fullUrl = rawHref.startsWith("http") ? rawHref : `https://github.com${rawHref}`;
+			const name = decodeURIComponent(fullUrl.split("/").pop() || `IbnSina-TallyKhata-${tagName}.apk`);
+			candidates.push({
+				name,
+				browser_download_url: fullUrl,
+				size: 0
+			});
+		}
+		const picked = pickBestApkAsset(candidates);
+		if (picked) return picked;
+	}
+	if (cleanRepo && tagName) {
+		const fallbackName = `IbnSina-TallyKhata-${tagName}.apk`;
+		return {
+			name: fallbackName,
+			browser_download_url: `https://github.com/${cleanRepo}/releases/download/${tagName}/${fallbackName}`,
+			size: 0
+		};
+	}
+	return null;
+}
 function loadAutoUpdateEnabled() {
 	if (typeof window === "undefined") return true;
 	try {
@@ -17143,6 +17208,11 @@ function computeSyncStatus(args) {
 // src/components/UpdateCenterModal.tsx
 function UpdateCenterModal({ open, onClose, installedVersion, installedCode, packageName, autoUpdateEnabled, onToggleAutoUpdate, isNativeApp, isOnline, checking, checkError, lastCheckedAt, latestRelease, updateAvailable, downloads, onCheckNow, onStartDownload, onInstallTask, onOpenInstallPermission, onClearHistory }) {
 	const activeDownload = downloads.find((d) => d.status === "downloading");
+	const checkNowRef = (0, import_react.useRef)(onCheckNow);
+	checkNowRef.current = onCheckNow;
+	(0, import_react.useEffect)(() => {
+		if (open && isOnline) checkNowRef.current();
+	}, [open, isOnline]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ModalShell, {
 		open,
 		onClose,
@@ -17397,7 +17467,14 @@ function useAppUpdater(isOnline) {
 	const activeTaskIdRef = (0, import_react.useRef)(null);
 	const nativePollRef = (0, import_react.useRef)(null);
 	const autoInstalledIdsRef = (0, import_react.useRef)(/* @__PURE__ */ new Set());
-	const lastAutoCheckMsRef = (0, import_react.useRef)(0);
+	const lastSuccessfulCheckMsRef = (0, import_react.useRef)(0);
+	const inFlightCheckRef = (0, import_react.useRef)(false);
+	const installedVersionRef = (0, import_react.useRef)(installedVersion);
+	const installedCodeRef = (0, import_react.useRef)(installedCode);
+	(0, import_react.useEffect)(() => {
+		installedVersionRef.current = installedVersion;
+		installedCodeRef.current = installedCode;
+	}, [installedVersion, installedCode]);
 	const updateAvailable = (0, import_react.useMemo)(() => {
 		if (!latestRelease) return false;
 		return isNewerReleaseAvailable(installedVersion, installedCode, latestRelease.tagName, latestRelease.releaseNotes);
@@ -17419,7 +17496,12 @@ function useAppUpdater(isOnline) {
 				if (info.versionName) setInstalledVersion(info.versionName);
 				if (info.versionCode) setInstalledCode(info.versionCode);
 				if (info.packageName) setPackageName(info.packageName);
-				if (info.githubRepo) setGithubRepoState((prev) => prev || info.githubRepo);
+				if (info.githubRepo && info.githubRepo.includes("/")) {
+					setGithubRepoState(info.githubRepo);
+					try {
+						window.localStorage.setItem(GITHUB_REPO_STORAGE_KEY, info.githubRepo);
+					} catch {}
+				}
 				if (typeof info.canInstallPackages === "boolean") setCanInstallPackages(info.canInstallPackages);
 			}).catch(() => {});
 		};
@@ -17440,7 +17522,7 @@ function useAppUpdater(isOnline) {
 	const setAutoUpdateEnabled = (0, import_react.useCallback)((enabled) => {
 		setAutoUpdateEnabledState(enabled);
 		saveAutoUpdateEnabled(enabled);
-		if (enabled) lastAutoCheckMsRef.current = 0;
+		if (enabled) lastSuccessfulCheckMsRef.current = 0;
 	}, []);
 	const updateTask = (0, import_react.useCallback)((taskId, patch) => {
 		setDownloads((prev) => prev.map((item) => item.id === taskId ? {
@@ -17452,24 +17534,56 @@ function useAppUpdater(isOnline) {
 	const checkForUpdates = (0, import_react.useCallback)(async (options) => {
 		const repo = githubRepo.trim();
 		if (!repo) {
-			if (!options?.silent) setCheckError("গিটহাব রিপোজিটরি (যেমন: username/ibn-sina-tally) সেট করা নেই। রিলিজ চেক করতে রিপোর নাম লিখুন।");
+			if (!options?.silent) setCheckError("গিটহাব রিপোজিটরি (যেমন: username/ibn-sina-talikhata) সেট করা নেই। রিলিজ চেক করতে রিপোর নাম লিখুন।");
 			return;
 		}
 		if (!navigator.onLine) {
 			if (!options?.silent) setCheckError("আপডেট চেক করার জন্য ইন্টারনেট সংযোগ প্রয়োজন।");
 			return;
 		}
+		if (inFlightCheckRef.current && !options?.force) return;
+		inFlightCheckRef.current = true;
 		setChecking(true);
 		setCheckError(null);
 		try {
-			const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers: { Accept: "application/vnd.github+json" } });
-			if (response.status === 404) {
+			let payload = null;
+			let notFound = false;
+			if (isNativeAndroid()) try {
+				const nativeRes = await AppUpdater.fetchLatestRelease({ repo });
+				if (nativeRes.status === 404) notFound = true;
+				else if (nativeRes.source === "api" && nativeRes.jsonBody) payload = JSON.parse(nativeRes.jsonBody);
+				else if (nativeRes.source === "web") {
+					const atomParsed = nativeRes.atomXml ? parseReleaseAtomLatest(nativeRes.atomXml, nativeRes.tagName || void 0) : null;
+					const resolvedTag = nativeRes.tagName || atomParsed?.tag_name || "";
+					if (resolvedTag) {
+						const apk = parseExpandedAssetsApk(nativeRes.assetsHtml || "", resolvedTag, repo);
+						payload = {
+							tag_name: resolvedTag,
+							name: atomParsed?.name || resolvedTag,
+							body: atomParsed?.body || "",
+							published_at: atomParsed?.published_at,
+							html_url: atomParsed?.html_url || `https://github.com/${repo}/releases/tag/${resolvedTag}`,
+							assets: apk ? [apk] : []
+						};
+					}
+				}
+			} catch {}
+			if (!payload && !notFound) {
+				const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+					cache: "no-store",
+					headers: { Accept: "application/vnd.github+json" }
+				});
+				if (response.status === 404) notFound = true;
+				else if (!response.ok) throw new Error(`HTTP ${response.status}`);
+				else payload = await response.json();
+			}
+			if (notFound) {
 				setLatestRelease(null);
+				lastSuccessfulCheckMsRef.current = Date.now();
 				if (!options?.silent) setCheckError("এই রিপোজিটরিতে এখনো কোনো GitHub Release তৈরি হয়নি।");
 				return;
 			}
-			if (!response.ok) throw new Error(`HTTP ${response.status}`);
-			const payload = await response.json();
+			if (!payload) throw new Error("Empty release payload");
 			const apkAsset = pickBestApkAsset(payload.assets);
 			const releaseInfo = {
 				version: normalizeVersionString(payload.tag_name),
@@ -17480,9 +17594,10 @@ function useAppUpdater(isOnline) {
 				htmlUrl: payload.html_url || `https://github.com/${repo}/releases`,
 				apkAsset
 			};
+			lastSuccessfulCheckMsRef.current = Date.now();
 			setLatestRelease(releaseInfo);
 			setLastCheckedAt((/* @__PURE__ */ new Date()).toISOString());
-			if (isNewerReleaseAvailable(installedVersion, installedCode, payload.tag_name, payload.body) && isNativeAndroid()) try {
+			if (isNewerReleaseAvailable(installedVersionRef.current, installedCodeRef.current, payload.tag_name, payload.body) && isNativeAndroid()) try {
 				if (window.localStorage.getItem(LAST_NOTIFIED_TAG_KEY) !== payload.tag_name) {
 					await AppUpdater.showUpdateNotification({
 						title: `নতুন আপডেট v${releaseInfo.version}`,
@@ -17492,34 +17607,48 @@ function useAppUpdater(isOnline) {
 					window.localStorage.setItem(LAST_NOTIFIED_TAG_KEY, payload.tag_name);
 				}
 			} catch {}
-		} catch {
-			if (!options?.silent) setCheckError("গিটহাব থেকে আপডেট তথ্য আনা যায়নি। একটু পর আবার চেষ্টা করুন।");
+		} catch (err) {
+			if (!options?.silent) {
+				const msg = err instanceof Error ? err.message : "";
+				if (msg.includes("403") || msg.includes("429")) setCheckError("গিটহাব সার্ভার সাময়িকভাবে সীমা পূর্ণ করেছে। কয়েক মিনিট পর আবার চেষ্টা করুন।");
+				else setCheckError("গিটহাব থেকে আপডেট তথ্য আনা যায়নি। একটু পর আবার চেষ্টা করুন।");
+			}
 		} finally {
+			inFlightCheckRef.current = false;
 			setChecking(false);
 		}
-	}, [
-		githubRepo,
-		installedVersion,
-		installedCode
-	]);
+	}, [githubRepo]);
 	(0, import_react.useEffect)(() => {
 		if (!autoUpdateEnabled || !isOnline || !githubRepo) return;
 		const triggerAutoCheck = () => {
 			const now = Date.now();
-			if (now - lastAutoCheckMsRef.current < 9e5) return;
-			lastAutoCheckMsRef.current = now;
+			if (!shouldRunAutoCheck(lastSuccessfulCheckMsRef.current, now, 6e4)) return;
 			checkForUpdates({ silent: true });
 		};
-		const startupTimer = window.setTimeout(triggerAutoCheck, 1200);
-		const intervalId = window.setInterval(triggerAutoCheck, 18e5);
+		const startupTimer = window.setTimeout(triggerAutoCheck, 900);
+		const intervalId = window.setInterval(triggerAutoCheck, 6e5);
 		const onVisible = () => {
 			if (document.visibilityState === "visible") triggerAutoCheck();
 		};
+		const onFocus = () => {
+			triggerAutoCheck();
+		};
 		document.addEventListener("visibilitychange", onVisible);
+		window.addEventListener("focus", onFocus);
+		let removeResumeListener = null;
+		if (isNativeAndroid()) AppUpdater.addListener("appResumed", () => {
+			triggerAutoCheck();
+		}).then((handle) => {
+			removeResumeListener = () => {
+				handle.remove();
+			};
+		}).catch(() => {});
 		return () => {
 			window.clearTimeout(startupTimer);
 			window.clearInterval(intervalId);
 			document.removeEventListener("visibilitychange", onVisible);
+			window.removeEventListener("focus", onFocus);
+			removeResumeListener?.();
 		};
 	}, [
 		autoUpdateEnabled,
@@ -60928,7 +61057,7 @@ function App() {
 				latestRelease: updater.latestRelease,
 				updateAvailable: updater.updateAvailable,
 				downloads: updater.downloads,
-				onCheckNow: () => void updater.checkForUpdates(),
+				onCheckNow: () => void updater.checkForUpdates({ force: true }),
 				onStartDownload: (release) => void updater.startApkDownload(release),
 				onInstallTask: (task) => void updater.installDownloadedTask(task),
 				onOpenInstallPermission: () => void updater.openInstallPermissionSettings(),

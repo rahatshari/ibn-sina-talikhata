@@ -35,10 +35,16 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -73,6 +79,7 @@ public class AppUpdaterPlugin extends Plugin {
     @Override
     protected void handleOnResume() {
         super.handleOnResume();
+        notifyListeners("appResumed", new JSObject());
         SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         long pendingId = prefs.getLong(KEY_PENDING_DL_ID, -1L);
         String pendingFile = prefs.getString(KEY_PENDING_FILE_NAME, null);
@@ -231,6 +238,149 @@ public class AppUpdaterPlugin extends Plugin {
         ret.put("githubRepo", BuildConfig.GITHUB_REPO);
         ret.put("canInstallPackages", canInstallUnknownApps());
         call.resolve(ret);
+    }
+
+    private String readHttpText(String urlStr, String acceptHeader) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
+        conn.setInstanceFollowRedirects(true);
+        conn.setUseCaches(false);
+        conn.setConnectTimeout(12000);
+        conn.setReadTimeout(12000);
+        conn.setRequestProperty("User-Agent", "IbnSinaTallyKhata-Android");
+        conn.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate");
+        conn.setRequestProperty("Pragma", "no-cache");
+        if (acceptHeader != null) {
+            conn.setRequestProperty("Accept", acceptHeader);
+        }
+        try {
+            int status = conn.getResponseCode();
+            if (status < 200 || status >= 300) {
+                throw new IOException("HTTP " + status);
+            }
+            try (InputStream is = conn.getInputStream();
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append('\n');
+                }
+                return sb.toString();
+            }
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    private String resolveLatestTagViaRedirect(String repo) {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL("https://github.com/" + repo + "/releases/latest").openConnection();
+            conn.setInstanceFollowRedirects(false);
+            conn.setUseCaches(false);
+            conn.setConnectTimeout(12000);
+            conn.setReadTimeout(12000);
+            conn.setRequestProperty("User-Agent", "IbnSinaTallyKhata-Android");
+            conn.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate");
+            int code = conn.getResponseCode();
+            if (code >= 300 && code < 400) {
+                String loc = conn.getHeaderField("Location");
+                if (loc != null && loc.contains("/releases/tag/")) {
+                    int idx = loc.lastIndexOf("/releases/tag/");
+                    return loc.substring(idx + "/releases/tag/".length()).trim();
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+        return "";
+    }
+
+    @PluginMethod
+    public void fetchLatestRelease(PluginCall call) {
+        String rawRepo = call.getString("repo", BuildConfig.GITHUB_REPO);
+        String repo = rawRepo == null ? "" : rawRepo.trim().replaceFirst("^https?://github\\.com/", "").replaceAll("/+$", "");
+        if (repo.isEmpty()) {
+            call.reject("Repository slug is required");
+            return;
+        }
+
+        new Thread(() -> {
+            HttpURLConnection apiConn = null;
+            try {
+                apiConn = (HttpURLConnection) new URL("https://api.github.com/repos/" + repo + "/releases/latest").openConnection();
+                apiConn.setUseCaches(false);
+                apiConn.setConnectTimeout(12000);
+                apiConn.setReadTimeout(12000);
+                apiConn.setRequestProperty("Accept", "application/vnd.github+json");
+                apiConn.setRequestProperty("User-Agent", "IbnSinaTallyKhata-Android");
+                apiConn.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate");
+                apiConn.setRequestProperty("Pragma", "no-cache");
+                int status = apiConn.getResponseCode();
+                if (status == 200) {
+                    try (InputStream is = apiConn.getInputStream();
+                         BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            sb.append(line).append('\n');
+                        }
+                        JSObject ret = new JSObject();
+                        ret.put("source", "api");
+                        ret.put("status", 200);
+                        ret.put("jsonBody", sb.toString());
+                        call.resolve(ret);
+                        return;
+                    }
+                }
+                if (status == 404) {
+                    JSObject ret = new JSObject();
+                    ret.put("source", "api");
+                    ret.put("status", 404);
+                    call.resolve(ret);
+                    return;
+                }
+            } catch (Exception ignored) {
+            } finally {
+                if (apiConn != null) {
+                    apiConn.disconnect();
+                }
+            }
+
+            // Fallback to rate-limit-free GitHub web endpoints (releases/latest + releases.atom + expanded_assets)
+            try {
+                String tagName = resolveLatestTagViaRedirect(repo);
+                String atomXml = "";
+                try {
+                    atomXml = readHttpText("https://github.com/" + repo + "/releases.atom", "application/atom+xml");
+                } catch (Exception ignored) {
+                }
+                String assetsHtml = "";
+                if (!tagName.isEmpty()) {
+                    try {
+                        assetsHtml = readHttpText("https://github.com/" + repo + "/releases/expanded_assets/" + tagName, "text/html");
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                if (tagName.isEmpty() && atomXml.isEmpty()) {
+                    call.reject("Could not fetch latest release from GitHub");
+                    return;
+                }
+
+                JSObject ret = new JSObject();
+                ret.put("source", "web");
+                ret.put("status", 200);
+                ret.put("tagName", tagName);
+                ret.put("atomXml", atomXml);
+                ret.put("assetsHtml", assetsHtml);
+                call.resolve(ret);
+            } catch (Exception e) {
+                call.reject("Release check failed: " + e.getMessage());
+            }
+        }).start();
     }
 
     @PluginMethod

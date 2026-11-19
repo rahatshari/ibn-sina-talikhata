@@ -37,8 +37,18 @@ export interface InstallApkResult {
   needsPermission?: boolean;
 }
 
+export interface NativeReleaseFetchResult {
+  source: 'api' | 'web';
+  status: number;
+  jsonBody?: string;
+  tagName?: string;
+  atomXml?: string;
+  assetsHtml?: string;
+}
+
 export interface AppUpdaterPlugin {
   getAppInfo(): Promise<NativeAppInfo>;
+  fetchLatestRelease(options: { repo: string }): Promise<NativeReleaseFetchResult>;
   showUpdateNotification(options: {
     title: string;
     body: string;
@@ -78,6 +88,10 @@ export interface AppUpdaterPlugin {
   addListener(
     eventName: 'installStateChanged',
     listenerFunc: (data: InstallApkResult & { downloadId: number }) => void,
+  ): Promise<PluginListenerHandle>;
+  addListener(
+    eventName: 'appResumed',
+    listenerFunc: () => void,
   ): Promise<PluginListenerHandle>;
 }
 

@@ -7,6 +7,7 @@ import {
   DEFAULT_GITHUB_REPO,
 } from '../version';
 import {
+  AUTO_CHECK_COOLDOWN_MS,
   canDownloadRelease,
   compareVersions,
   extractVersionCodeFromBody,
@@ -14,8 +15,11 @@ import {
   isNewerReleaseAvailable,
   loadAutoUpdateEnabled,
   normalizeVersionString,
+  parseExpandedAssetsApk,
+  parseReleaseAtomLatest,
   pickBestApkAsset,
   saveAutoUpdateEnabled,
+  shouldRunAutoCheck,
   type GitHubReleaseAsset,
   type GitHubReleasePayload,
 } from '../utils/updater';
@@ -97,7 +101,15 @@ export function useAppUpdater(isOnline: boolean) {
   const activeTaskIdRef = useRef<string | null>(null);
   const nativePollRef = useRef<number | null>(null);
   const autoInstalledIdsRef = useRef<Set<number>>(new Set());
-  const lastAutoCheckMsRef = useRef<number>(0);
+  const lastSuccessfulCheckMsRef = useRef<number>(0);
+  const inFlightCheckRef = useRef<boolean>(false);
+  const installedVersionRef = useRef<string>(installedVersion);
+  const installedCodeRef = useRef<number>(installedCode);
+
+  useEffect(() => {
+    installedVersionRef.current = installedVersion;
+    installedCodeRef.current = installedCode;
+  }, [installedVersion, installedCode]);
 
   const updateAvailable = useMemo(() => {
     if (!latestRelease) return false;
@@ -128,8 +140,13 @@ export function useAppUpdater(isOnline: boolean) {
           if (info.versionName) setInstalledVersion(info.versionName);
           if (info.versionCode) setInstalledCode(info.versionCode);
           if (info.packageName) setPackageName(info.packageName);
-          if (info.githubRepo) {
-            setGithubRepoState((prev) => prev || info.githubRepo);
+          if (info.githubRepo && info.githubRepo.includes('/')) {
+            setGithubRepoState(info.githubRepo);
+            try {
+              window.localStorage.setItem(GITHUB_REPO_STORAGE_KEY, info.githubRepo);
+            } catch {
+              // Ignore storage errors
+            }
           }
           if (typeof info.canInstallPackages === 'boolean') {
             setCanInstallPackages(info.canInstallPackages);
@@ -161,7 +178,7 @@ export function useAppUpdater(isOnline: boolean) {
     setAutoUpdateEnabledState(enabled);
     saveAutoUpdateEnabled(enabled);
     if (enabled) {
-      lastAutoCheckMsRef.current = 0;
+      lastSuccessfulCheckMsRef.current = 0;
     }
   }, []);
 
@@ -176,12 +193,12 @@ export function useAppUpdater(isOnline: boolean) {
   }, []);
 
   const checkForUpdates = useCallback(
-    async (options?: { silent?: boolean }) => {
+    async (options?: { silent?: boolean; force?: boolean }) => {
       const repo = githubRepo.trim();
       if (!repo) {
         if (!options?.silent) {
           setCheckError(
-            'গিটহাব রিপোজিটরি (যেমন: username/ibn-sina-tally) সেট করা নেই। রিলিজ চেক করতে রিপোর নাম লিখুন।',
+            'গিটহাব রিপোজিটরি (যেমন: username/ibn-sina-talikhata) সেট করা নেই। রিলিজ চেক করতে রিপোর নাম লিখুন।',
           );
         }
         return;
@@ -192,25 +209,81 @@ export function useAppUpdater(isOnline: boolean) {
         }
         return;
       }
+      if (inFlightCheckRef.current && !options?.force) {
+        return;
+      }
 
+      inFlightCheckRef.current = true;
       setChecking(true);
       setCheckError(null);
       try {
-        const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
-          headers: { Accept: 'application/vnd.github+json' },
-        });
-        if (response.status === 404) {
+        let payload: GitHubReleasePayload | null = null;
+        let notFound = false;
+
+        if (isNativeAndroid()) {
+          try {
+            const nativeRes = await AppUpdater.fetchLatestRelease({ repo });
+            if (nativeRes.status === 404) {
+              notFound = true;
+            } else if (nativeRes.source === 'api' && nativeRes.jsonBody) {
+              payload = JSON.parse(nativeRes.jsonBody) as GitHubReleasePayload;
+            } else if (nativeRes.source === 'web') {
+              const atomParsed = nativeRes.atomXml
+                ? parseReleaseAtomLatest(nativeRes.atomXml, nativeRes.tagName || undefined)
+                : null;
+              const resolvedTag = nativeRes.tagName || atomParsed?.tag_name || '';
+              if (resolvedTag) {
+                const apk = parseExpandedAssetsApk(
+                  nativeRes.assetsHtml || '',
+                  resolvedTag,
+                  repo,
+                );
+                payload = {
+                  tag_name: resolvedTag,
+                  name: atomParsed?.name || resolvedTag,
+                  body: atomParsed?.body || '',
+                  published_at: atomParsed?.published_at,
+                  html_url:
+                    atomParsed?.html_url || `https://github.com/${repo}/releases/tag/${resolvedTag}`,
+                  assets: apk ? [apk] : [],
+                };
+              }
+            }
+          } catch {
+            // Fall through to standard uncached WebView fetch below
+          }
+        }
+
+        if (!payload && !notFound) {
+          const response = await fetch(
+            `https://api.github.com/repos/${repo}/releases/latest`,
+            {
+              cache: 'no-store',
+              headers: { Accept: 'application/vnd.github+json' },
+            },
+          );
+          if (response.status === 404) {
+            notFound = true;
+          } else if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          } else {
+            payload = (await response.json()) as GitHubReleasePayload;
+          }
+        }
+
+        if (notFound) {
           setLatestRelease(null);
+          lastSuccessfulCheckMsRef.current = Date.now();
           if (!options?.silent) {
             setCheckError('এই রিপোজিটরিতে এখনো কোনো GitHub Release তৈরি হয়নি।');
           }
           return;
         }
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+
+        if (!payload) {
+          throw new Error('Empty release payload');
         }
 
-        const payload = (await response.json()) as GitHubReleasePayload;
         const apkAsset = pickBestApkAsset(payload.assets);
         const releaseInfo: ReleaseInfo = {
           version: normalizeVersionString(payload.tag_name),
@@ -222,12 +295,13 @@ export function useAppUpdater(isOnline: boolean) {
           apkAsset,
         };
 
+        lastSuccessfulCheckMsRef.current = Date.now();
         setLatestRelease(releaseInfo);
         setLastCheckedAt(new Date().toISOString());
 
         const hasUpdate = isNewerReleaseAvailable(
-          installedVersion,
-          installedCode,
+          installedVersionRef.current,
+          installedCodeRef.current,
           payload.tag_name,
           payload.body,
         );
@@ -247,41 +321,71 @@ export function useAppUpdater(isOnline: boolean) {
             // Notification permission may not be granted yet
           }
         }
-      } catch {
+      } catch (err) {
         if (!options?.silent) {
-          setCheckError('গিটহাব থেকে আপডেট তথ্য আনা যায়নি। একটু পর আবার চেষ্টা করুন।');
+          const msg = err instanceof Error ? err.message : '';
+          if (msg.includes('403') || msg.includes('429')) {
+            setCheckError(
+              'গিটহাব সার্ভার সাময়িকভাবে সীমা পূর্ণ করেছে। কয়েক মিনিট পর আবার চেষ্টা করুন।',
+            );
+          } else {
+            setCheckError('গিটহাব থেকে আপডেট তথ্য আনা যায়নি। একটু পর আবার চেষ্টা করুন।');
+          }
         }
       } finally {
+        inFlightCheckRef.current = false;
         setChecking(false);
       }
     },
-    [githubRepo, installedVersion, installedCode],
+    [githubRepo],
   );
 
-  // Automatically check for updates on startup, foreground resume, and every 30m when auto-update is enabled
+  // Automatically check for updates on startup, Android resume, window focus, and every 10m
   useEffect(() => {
     if (!autoUpdateEnabled || !isOnline || !githubRepo) return;
 
     const triggerAutoCheck = () => {
       const now = Date.now();
-      if (now - lastAutoCheckMsRef.current < 15 * 60 * 1000) return;
-      lastAutoCheckMsRef.current = now;
+      if (!shouldRunAutoCheck(lastSuccessfulCheckMsRef.current, now, AUTO_CHECK_COOLDOWN_MS)) {
+        return;
+      }
       void checkForUpdates({ silent: true });
     };
 
-    const startupTimer = window.setTimeout(triggerAutoCheck, 1200);
-    const intervalId = window.setInterval(triggerAutoCheck, 30 * 60 * 1000);
+    const startupTimer = window.setTimeout(triggerAutoCheck, 900);
+    const intervalId = window.setInterval(triggerAutoCheck, 10 * 60 * 1000);
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
         triggerAutoCheck();
       }
     };
+    const onFocus = () => {
+      triggerAutoCheck();
+    };
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+
+    let removeResumeListener: (() => void) | null = null;
+    if (isNativeAndroid()) {
+      AppUpdater.addListener('appResumed', () => {
+        triggerAutoCheck();
+      })
+        .then((handle) => {
+          removeResumeListener = () => {
+            void handle.remove();
+          };
+        })
+        .catch(() => {
+          // Ignore if native listener unavailable
+        });
+    }
 
     return () => {
       window.clearTimeout(startupTimer);
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      removeResumeListener?.();
     };
   }, [autoUpdateEnabled, isOnline, githubRepo, checkForUpdates]);
 

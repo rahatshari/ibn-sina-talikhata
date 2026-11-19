@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  AUTO_CHECK_COOLDOWN_MS,
   AUTO_UPDATE_ENABLED_KEY,
   canDownloadRelease,
   compareVersions,
@@ -10,9 +11,12 @@ import {
   formatUpdateNotificationBody,
   isNewerReleaseAvailable,
   loadAutoUpdateEnabled,
+  parseExpandedAssetsApk,
+  parseReleaseAtomLatest,
   parseReleaseChangelog,
   pickBestApkAsset,
   saveAutoUpdateEnabled,
+  shouldRunAutoCheck,
 } from './updater.ts';
 
 describe('updater & sync utilities', () => {
@@ -181,6 +185,41 @@ versionCode: 114
         cloudLoading: false,
       }).state,
       'synced',
+    );
+  });
+
+  it('throttles auto-checks for 60s only after a successful check', () => {
+    assert.equal(shouldRunAutoCheck(0, 10_000), true);
+    assert.equal(shouldRunAutoCheck(10_000, 10_000 + AUTO_CHECK_COOLDOWN_MS - 1), false);
+    assert.equal(shouldRunAutoCheck(10_000, 10_000 + AUTO_CHECK_COOLDOWN_MS), true);
+  });
+
+  it('parses latest GitHub Atom release entry and expanded assets APK fallback', () => {
+    const atom = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>tag:github.com,2008:Repository/1/v1.0.9</id>
+    <updated>2026-11-19T08:32:51Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/rahatshari/ibn-sina-talikhata/releases/tag/v1.0.9"/>
+    <title>ইবনে সিনা টালিখাতা v1.0.9</title>
+    <content type="html">&lt;p&gt;versionCode: 109&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;p&gt;সময় যুক্ত করা হয়েছে&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;</content>
+  </entry>
+</feed>`;
+    const parsed = parseReleaseAtomLatest(atom, 'v1.0.9');
+    assert.ok(parsed);
+    assert.equal(parsed.tag_name, 'v1.0.9');
+    assert.equal(extractVersionCodeFromBody(parsed.body), 109);
+    assert.deepEqual(parseReleaseChangelog(parsed.body), ['সময় যুক্ত করা হয়েছে']);
+
+    const apk = parseExpandedAssetsApk(
+      '<a href="/rahatshari/ibn-sina-talikhata/releases/download/v1.0.9/IbnSina-TallyKhata-v1.0.9.apk">APK</a>',
+      'v1.0.9',
+      'rahatshari/ibn-sina-talikhata',
+    );
+    assert.equal(apk?.name, 'IbnSina-TallyKhata-v1.0.9.apk');
+    assert.equal(
+      apk?.browser_download_url,
+      'https://github.com/rahatshari/ibn-sina-talikhata/releases/download/v1.0.9/IbnSina-TallyKhata-v1.0.9.apk',
     );
   });
 });

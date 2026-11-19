@@ -674,7 +674,7 @@ export default function App() {
         latestRelease={updater.latestRelease}
         updateAvailable={updater.updateAvailable}
         downloads={updater.downloads}
-        onCheckNow={() => void updater.checkForUpdates()}
+        onCheckNow={() => void updater.checkForUpdates({ force: true })}
         onStartDownload={(release) => void updater.startApkDownload(release)}
         onInstallTask={(task) => void updater.installDownloadedTask(task)}
         onOpenInstallPermission={() => void updater.openInstallPermissionSettings()}

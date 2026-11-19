@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import {
   CheckCircle2,
   Download,
@@ -58,6 +59,14 @@ export function UpdateCenterModal({
   onClearHistory,
 }: UpdateCenterModalProps) {
   const activeDownload = downloads.find((d) => d.status === 'downloading');
+  const checkNowRef = useRef(onCheckNow);
+  checkNowRef.current = onCheckNow;
+
+  useEffect(() => {
+    if (open && isOnline) {
+      checkNowRef.current();
+    }
+  }, [open, isOnline]);
 
   return (
     <ModalShell

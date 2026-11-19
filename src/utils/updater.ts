@@ -111,6 +111,108 @@ export function canDownloadRelease(params: {
 }
 
 export const AUTO_UPDATE_ENABLED_KEY = 'ibn_sina_auto_update_enabled_v1';
+export const AUTO_CHECK_COOLDOWN_MS = 60 * 1000;
+
+export function shouldRunAutoCheck(
+  lastSuccessfulCheckMs: number,
+  nowMs: number,
+  cooldownMs: number = AUTO_CHECK_COOLDOWN_MS,
+): boolean {
+  if (lastSuccessfulCheckMs <= 0) return true;
+  return nowMs - lastSuccessfulCheckMs >= cooldownMs;
+}
+
+function decodeXmlEntities(raw: string): string {
+  return raw
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function htmlToPlainLines(html: string): string {
+  const decoded = decodeXmlEntities(html);
+  return decoded
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|li|h[1-6]|div|tr)>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '- ')
+    .replace(/<[^>]+>/g, '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+export function parseReleaseAtomLatest(
+  xml: string,
+  expectedTag?: string,
+): GitHubReleasePayload | null {
+  if (!xml) return null;
+  const entryMatches = xml.match(/<entry\b[\s\S]*?<\/entry>/gi);
+  if (!entryMatches || entryMatches.length === 0) return null;
+
+  for (const entry of entryMatches) {
+    const hrefMatch = entry.match(/<link[^>]*href="([^"]*\/releases\/tag\/([^"/]+))"/i);
+    const idMatch = entry.match(/<id>[^<]*\/([^</]+)<\/id>/i);
+    const tagName = hrefMatch?.[2] || idMatch?.[1] || '';
+    if (!tagName) continue;
+    if (expectedTag && normalizeVersionString(tagName) !== normalizeVersionString(expectedTag)) {
+      continue;
+    }
+    const titleMatch = entry.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const updatedMatch = entry.match(/<updated>([\s\S]*?)<\/updated>/i);
+    const contentMatch = entry.match(/<content[^>]*>([\s\S]*?)<\/content>/i);
+
+    const body = contentMatch ? htmlToPlainLines(contentMatch[1]) : '';
+    return {
+      tag_name: tagName,
+      name: titleMatch ? decodeXmlEntities(titleMatch[1]).trim() : tagName,
+      body,
+      published_at: updatedMatch ? updatedMatch[1].trim() : undefined,
+      html_url: hrefMatch ? hrefMatch[1] : undefined,
+      assets: [],
+    };
+  }
+
+  return null;
+}
+
+export function parseExpandedAssetsApk(
+  html: string,
+  tagName: string,
+  repo: string,
+): GitHubReleaseAsset | null {
+  const cleanRepo = repo.trim().replace(/^\/+|\/+$/g, '');
+  if (html) {
+    const hrefRegex = /href="([^"]*\/releases\/download\/[^"]+\.apk)"/gi;
+    const candidates: GitHubReleaseAsset[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = hrefRegex.exec(html)) !== null) {
+      const rawHref = match[1];
+      const fullUrl = rawHref.startsWith('http') ? rawHref : `https://github.com${rawHref}`;
+      const name = decodeURIComponent(fullUrl.split('/').pop() || `IbnSina-TallyKhata-${tagName}.apk`);
+      candidates.push({
+        name,
+        browser_download_url: fullUrl,
+        size: 0,
+      });
+    }
+    const picked = pickBestApkAsset(candidates);
+    if (picked) return picked;
+  }
+
+  if (cleanRepo && tagName) {
+    const fallbackName = `IbnSina-TallyKhata-${tagName}.apk`;
+    return {
+      name: fallbackName,
+      browser_download_url: `https://github.com/${cleanRepo}/releases/download/${tagName}/${fallbackName}`,
+      size: 0,
+    };
+  }
+
+  return null;
+}
 
 export function loadAutoUpdateEnabled(): boolean {
   if (typeof window === 'undefined') return true;
