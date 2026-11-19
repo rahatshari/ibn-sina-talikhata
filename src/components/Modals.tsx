@@ -38,7 +38,7 @@ export function ModalShell({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-3 sm:p-4 backdrop-blur-[1px]"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -47,9 +47,9 @@ export function ModalShell({
       }}
     >
       <div
-        className={`w-full ${maxWidthClass} max-h-[90vh] flex flex-col rounded-xl border border-slate-200 bg-white shadow-xl`}
+        className={`w-full ${maxWidthClass} max-h-[90dvh] flex flex-col rounded-xl border border-slate-200 bg-white shadow-xl`}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
           <button
             type="button"
@@ -60,7 +60,7 @@ export function ModalShell({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="overflow-y-auto p-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">{children}</div>
       </div>
     </div>
   );

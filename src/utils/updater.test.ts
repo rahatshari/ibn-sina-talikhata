@@ -1,14 +1,18 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  AUTO_UPDATE_ENABLED_KEY,
+  canDownloadRelease,
   compareVersions,
   computeSyncStatus,
   extractVersionCodeFromBody,
   formatBytes,
   formatUpdateNotificationBody,
   isNewerReleaseAvailable,
+  loadAutoUpdateEnabled,
   parseReleaseChangelog,
   pickBestApkAsset,
+  saveAutoUpdateEnabled,
 } from './updater.ts';
 
 describe('updater & sync utilities', () => {
@@ -29,9 +33,79 @@ describe('updater & sync utilities', () => {
       false,
     );
     assert.equal(
+      isNewerReleaseAvailable('1.0.8', 108, 'v1.0.9', 'versionCode: 108'),
+      false,
+    );
+    assert.equal(
+      isNewerReleaseAvailable('1.0.8', 108, 'v1.0.7', 'versionCode: 107'),
+      false,
+    );
+    assert.equal(
       isNewerReleaseAvailable('1.0.5', 105, 'v1.0.8'),
       true,
     );
+  });
+
+  it('prevents downloading already-installed or older APK versions and honors missing APK', () => {
+    assert.equal(
+      canDownloadRelease({
+        currentVersion: '1.0.12',
+        currentCode: 112,
+        latestTag: 'v1.0.12',
+        latestBody: 'versionCode: 112',
+        hasApkAsset: true,
+      }),
+      false,
+    );
+    assert.equal(
+      canDownloadRelease({
+        currentVersion: '1.0.12',
+        currentCode: 112,
+        latestTag: 'v1.0.11',
+        latestBody: 'versionCode: 111',
+        hasApkAsset: true,
+      }),
+      false,
+    );
+    assert.equal(
+      canDownloadRelease({
+        currentVersion: '1.0.12',
+        currentCode: 112,
+        latestTag: 'v1.0.13',
+        latestBody: 'versionCode: 113',
+        hasApkAsset: false,
+      }),
+      false,
+    );
+    assert.equal(
+      canDownloadRelease({
+        currentVersion: '1.0.12',
+        currentCode: 112,
+        latestTag: 'v1.0.13',
+        latestBody: 'versionCode: 113',
+        hasApkAsset: true,
+      }),
+      true,
+    );
+  });
+
+  it('defaults auto-update to enabled and persists ON/OFF toggle in storage', () => {
+    const mockMap = new Map<string, string>();
+    (globalThis as unknown as { window?: unknown }).window = {
+      localStorage: {
+        getItem: (k: string) => mockMap.get(k) ?? null,
+        setItem: (k: string, v: string) => {
+          mockMap.set(k, v);
+        },
+      },
+    };
+    assert.equal(loadAutoUpdateEnabled(), true);
+    saveAutoUpdateEnabled(false);
+    assert.equal(mockMap.get(AUTO_UPDATE_ENABLED_KEY), 'false');
+    assert.equal(loadAutoUpdateEnabled(), false);
+    saveAutoUpdateEnabled(true);
+    assert.equal(loadAutoUpdateEnabled(), true);
+    delete (globalThis as unknown as { window?: unknown }).window;
   });
 
   it('extracts versionCode from release body and picks signed APK asset', () => {

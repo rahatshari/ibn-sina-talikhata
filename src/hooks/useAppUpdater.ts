@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import {
   APP_PACKAGE_ID,
@@ -7,11 +7,15 @@ import {
   DEFAULT_GITHUB_REPO,
 } from '../version';
 import {
+  canDownloadRelease,
+  compareVersions,
   extractVersionCodeFromBody,
   formatUpdateNotificationBody,
   isNewerReleaseAvailable,
+  loadAutoUpdateEnabled,
   normalizeVersionString,
   pickBestApkAsset,
+  saveAutoUpdateEnabled,
   type GitHubReleaseAsset,
   type GitHubReleasePayload,
 } from '../utils/updater';
@@ -79,11 +83,13 @@ export function useAppUpdater(isOnline: boolean) {
   const [packageName, setPackageName] = useState(APP_PACKAGE_ID);
   const [githubRepo, setGithubRepoState] = useState<string>(() => loadSavedRepo());
 
+  const [autoUpdateEnabled, setAutoUpdateEnabledState] = useState<boolean>(() =>
+    loadAutoUpdateEnabled(),
+  );
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [latestRelease, setLatestRelease] = useState<ReleaseInfo | null>(null);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const [downloads, setDownloads] = useState<DownloadTask[]>(() => loadDownloadHistory());
   const [canInstallPackages, setCanInstallPackages] = useState<boolean>(true);
@@ -91,6 +97,17 @@ export function useAppUpdater(isOnline: boolean) {
   const activeTaskIdRef = useRef<string | null>(null);
   const nativePollRef = useRef<number | null>(null);
   const autoInstalledIdsRef = useRef<Set<number>>(new Set());
+  const lastAutoCheckMsRef = useRef<number>(0);
+
+  const updateAvailable = useMemo(() => {
+    if (!latestRelease) return false;
+    return isNewerReleaseAvailable(
+      installedVersion,
+      installedCode,
+      latestRelease.tagName,
+      latestRelease.releaseNotes,
+    );
+  }, [latestRelease, installedVersion, installedCode]);
 
   // Keep downloadsRef synced & persist download manager history
   useEffect(() => {
@@ -140,6 +157,14 @@ export function useAppUpdater(isOnline: boolean) {
     }
   }, []);
 
+  const setAutoUpdateEnabled = useCallback((enabled: boolean) => {
+    setAutoUpdateEnabledState(enabled);
+    saveAutoUpdateEnabled(enabled);
+    if (enabled) {
+      lastAutoCheckMsRef.current = 0;
+    }
+  }, []);
+
   const updateTask = useCallback((taskId: string, patch: Partial<DownloadTask>) => {
     setDownloads((prev) =>
       prev.map((item) =>
@@ -176,7 +201,6 @@ export function useAppUpdater(isOnline: boolean) {
         });
         if (response.status === 404) {
           setLatestRelease(null);
-          setUpdateAvailable(false);
           if (!options?.silent) {
             setCheckError('এই রিপোজিটরিতে এখনো কোনো GitHub Release তৈরি হয়নি।');
           }
@@ -207,7 +231,6 @@ export function useAppUpdater(isOnline: boolean) {
           payload.tag_name,
           payload.body,
         );
-        setUpdateAvailable(hasUpdate);
 
         if (hasUpdate && isNativeAndroid()) {
           try {
@@ -235,14 +258,32 @@ export function useAppUpdater(isOnline: boolean) {
     [githubRepo, installedVersion, installedCode],
   );
 
-  // Automatically check for updates once on startup when online and repo is configured
+  // Automatically check for updates on startup, foreground resume, and every 30m when auto-update is enabled
   useEffect(() => {
-    if (!isOnline || !githubRepo) return;
-    const timer = window.setTimeout(() => {
+    if (!autoUpdateEnabled || !isOnline || !githubRepo) return;
+
+    const triggerAutoCheck = () => {
+      const now = Date.now();
+      if (now - lastAutoCheckMsRef.current < 15 * 60 * 1000) return;
+      lastAutoCheckMsRef.current = now;
       void checkForUpdates({ silent: true });
-    }, 1800);
-    return () => window.clearTimeout(timer);
-  }, [isOnline, githubRepo, checkForUpdates]);
+    };
+
+    const startupTimer = window.setTimeout(triggerAutoCheck, 1200);
+    const intervalId = window.setInterval(triggerAutoCheck, 30 * 60 * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        triggerAutoCheck();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      window.clearTimeout(startupTimer);
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [autoUpdateEnabled, isOnline, githubRepo, checkForUpdates]);
 
   const stopNativePolling = useCallback(() => {
     if (nativePollRef.current !== null) {
@@ -254,6 +295,7 @@ export function useAppUpdater(isOnline: boolean) {
   const installDownloadedTask = useCallback(
     async (task: DownloadTask, options?: { openSettingsOnDeny?: boolean }) => {
       if (!isNativeAndroid()) return;
+      if (compareVersions(task.version, installedVersion) <= 0) return;
       if (task.nativeDownloadId === undefined && !task.fileName) return;
       try {
         const res = await AppUpdater.installApk({
@@ -383,6 +425,25 @@ export function useAppUpdater(isOnline: boolean) {
       const asset = release.apkAsset;
       if (!asset) return;
 
+      const allowed = canDownloadRelease({
+        currentVersion: installedVersion,
+        currentCode: installedCode,
+        latestTag: release.tagName,
+        latestBody: release.releaseNotes,
+        hasApkAsset: Boolean(asset),
+      });
+      if (!allowed) {
+        setCheckError(
+          `এই ভার্সনটি (v${release.version}) ইতোমধ্যে ইনস্টল করা আছে — পুনরায় ডাউনলোড করা হবে না।`,
+        );
+        return;
+      }
+
+      const alreadyActive = downloadsRef.current.some(
+        (d) => d.status === 'downloading' && d.version === release.version,
+      );
+      if (alreadyActive) return;
+
       const taskId = `dl-${Date.now()}`;
       const newTask: DownloadTask = {
         id: taskId,
@@ -401,12 +462,21 @@ export function useAppUpdater(isOnline: boolean) {
 
       if (isNativeAndroid()) {
         try {
-          const { downloadId } = await AppUpdater.startApkDownload({
+          const result = await AppUpdater.startApkDownload({
             url: asset.browser_download_url,
             fileName: asset.name,
             title: `ইবনে সিনা টালিখাতা v${release.version}`,
             version: release.version,
+            versionCode: release.versionCode ?? undefined,
           });
+          if (result.alreadyInstalled || result.downloadId <= 0) {
+            setDownloads((prev) => prev.filter((item) => item.id !== taskId));
+            setCheckError(
+              `এই ভার্সনটি (v${release.version}) ইতোমধ্যে ইনস্টল করা আছে — পুনরায় ডাউনলোড করা হবে না।`,
+            );
+            return;
+          }
+          const downloadId = result.downloadId;
           const trackedTask: DownloadTask = { ...newTask, nativeDownloadId: downloadId };
           updateTask(taskId, { nativeDownloadId: downloadId });
 
@@ -463,7 +533,7 @@ export function useAppUpdater(isOnline: boolean) {
         });
       }
     },
-    [updateTask, stopNativePolling, triggerAutoInstallOnce],
+    [installedVersion, installedCode, updateTask, stopNativePolling, triggerAutoInstallOnce],
   );
 
   const openInstallPermissionSettings = useCallback(async () => {
@@ -483,6 +553,8 @@ export function useAppUpdater(isOnline: boolean) {
     packageName,
     githubRepo,
     setGithubRepo,
+    autoUpdateEnabled,
+    setAutoUpdateEnabled,
     isNativeApp: isNativeAndroid(),
     canInstallPackages,
     checking,

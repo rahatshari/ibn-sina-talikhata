@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { DownloadTask, ReleaseInfo } from '../hooks/useAppUpdater';
 import { formatDateTimeBn } from '../utils/ledger';
-import { formatBytes, parseReleaseChangelog } from '../utils/updater';
+import { compareVersions, formatBytes, parseReleaseChangelog } from '../utils/updater';
 import { ModalShell } from './Modals';
 
 interface UpdateCenterModalProps {
@@ -18,6 +18,8 @@ interface UpdateCenterModalProps {
   installedVersion: string;
   installedCode: number;
   packageName: string;
+  autoUpdateEnabled: boolean;
+  onToggleAutoUpdate: (enabled: boolean) => void;
   isNativeApp: boolean;
   isOnline: boolean;
   checking: boolean;
@@ -39,6 +41,8 @@ export function UpdateCenterModal({
   installedVersion,
   installedCode,
   packageName,
+  autoUpdateEnabled,
+  onToggleAutoUpdate,
   isNativeApp,
   isOnline,
   checking,
@@ -94,6 +98,47 @@ export function UpdateCenterModal({
               সর্বশেষ চেক: {formatDateTimeBn(lastCheckedAt)}
             </div>
           )}
+
+          {/* Auto-Update Check Switch */}
+          <div className="mt-3.5 flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-900">
+                অটোমেটিক আপডেট খোঁজ
+              </div>
+              <div className="text-[11px] text-slate-500">
+                {autoUpdateEnabled
+                  ? 'চালু আছে — নতুন ভার্সন এলে নিজে থেকেই খুঁজবে ও জানাবে'
+                  : 'বন্ধ আছে — শুধু "আপডেট চেক করুন" চাপলে খুঁজবে'}
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoUpdateEnabled}
+              aria-label="অটোমেটিক আপডেট খোঁজ চালু বা বন্ধ করুন"
+              onClick={() => onToggleAutoUpdate(!autoUpdateEnabled)}
+              className="inline-flex min-h-[44px] items-center gap-2 shrink-0 px-1"
+            >
+              <span
+                className={`text-[11px] font-semibold ${
+                  autoUpdateEnabled ? 'text-emerald-700' : 'text-slate-500'
+                }`}
+              >
+                {autoUpdateEnabled ? 'চালু' : 'বন্ধ'}
+              </span>
+              <span
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  autoUpdateEnabled ? 'bg-emerald-600' : 'bg-slate-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    autoUpdateEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
         </div>
 
         {checkError && (
@@ -153,7 +198,7 @@ export function UpdateCenterModal({
               );
             })()}
 
-            {latestRelease.apkAsset && (
+            {latestRelease.apkAsset && updateAvailable && (
               <button
                 type="button"
                 disabled={Boolean(activeDownload)}
@@ -163,10 +208,17 @@ export function UpdateCenterModal({
                 <Download className="h-4 w-4" />
                 {activeDownload
                   ? `ডাউনলোড চলছে (${activeDownload.progress}%)...`
-                  : updateAvailable
-                    ? `ডাউনলোড ও আপডেট করুন (v${latestRelease.version})`
-                    : `পুনরায় APK ডাউনলোড করুন (v${latestRelease.version})`}
+                  : `ডাউনলোড ও আপডেট করুন (v${latestRelease.version})`}
               </button>
+            )}
+
+            {!updateAvailable && (
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-xs font-medium text-emerald-800">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>
+                  এই ভার্সনটি (v{installedVersion}) ইতোমধ্যে আপনার ফোনে ইনস্টল করা আছে — পুনরায় ডাউনলোডের প্রয়োজন নেই।
+                </span>
+              </div>
             )}
           </div>
         )}
@@ -196,7 +248,9 @@ export function UpdateCenterModal({
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {downloads.map((task) => (
+              {downloads.map((task) => {
+                const isAlreadyInstalled = compareVersions(task.version, installedVersion) <= 0;
+                return (
                 <div key={task.id} className="p-4 space-y-2.5">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -210,7 +264,9 @@ export function UpdateCenterModal({
                     </div>
                     <span className="text-xs font-semibold font-mono-num text-slate-700">
                       {task.status === 'completed'
-                        ? 'সম্পন্ন (অটো ইনস্টলার চালু)'
+                        ? isAlreadyInstalled
+                          ? 'ইনস্টল করা আছে'
+                          : 'সম্পন্ন (অটো ইনস্টলার চালু)'
                         : task.status === 'downloading'
                           ? `${task.progress}%`
                           : task.status === 'permission-required'
@@ -244,7 +300,7 @@ export function UpdateCenterModal({
                   )}
 
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    {task.status === 'permission-required' && isNativeApp && (
+                    {!isAlreadyInstalled && task.status === 'permission-required' && isNativeApp && (
                       <button
                         type="button"
                         onClick={onOpenInstallPermission}
@@ -255,7 +311,8 @@ export function UpdateCenterModal({
                       </button>
                     )}
 
-                    {(task.status === 'completed' || task.status === 'permission-required') &&
+                    {!isAlreadyInstalled &&
+                      (task.status === 'completed' || task.status === 'permission-required') &&
                       isNativeApp && (
                         <button
                           type="button"
@@ -268,7 +325,8 @@ export function UpdateCenterModal({
                       )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

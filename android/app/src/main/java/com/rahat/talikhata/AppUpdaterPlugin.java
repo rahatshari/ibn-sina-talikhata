@@ -289,6 +289,23 @@ public class AppUpdaterPlugin extends Plugin {
             call.reject("Download URL is required");
             return;
         }
+
+        String requestedVersion = call.getString("version", "");
+        Integer requestedCodeObj = call.getInt("versionCode");
+        int requestedCode = requestedCodeObj != null ? requestedCodeObj : 0;
+        String cleanReqVer = requestedVersion != null ? requestedVersion.trim().replaceFirst("^[vV]", "") : "";
+        String cleanInstalledVer = BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME.trim().replaceFirst("^[vV]", "") : "";
+
+        boolean isSameOrOlderCode = requestedCode > 0 && requestedCode <= BuildConfig.VERSION_CODE;
+        boolean isSameVersionName = !cleanReqVer.isEmpty() && cleanReqVer.equals(cleanInstalledVer);
+        if (isSameOrOlderCode || isSameVersionName) {
+            JSObject ret = new JSObject();
+            ret.put("downloadId", -1L);
+            ret.put("alreadyInstalled", true);
+            call.resolve(ret);
+            return;
+        }
+
         String safeFileName = sanitizeApkFileName(call.getString("fileName", "ibn-sina-talikhata-update.apk"));
         String title = call.getString("title", "ইবনে সিনা টালিখাতা আপডেট");
 

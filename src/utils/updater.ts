@@ -89,9 +89,47 @@ export function isNewerReleaseAvailable(
   const latestCode = extractVersionCodeFromBody(latestBody);
   if (latestCode !== null && currentCode > 0) {
     if (latestCode > currentCode) return true;
-    if (latestCode < currentCode) return false;
+    if (latestCode <= currentCode) return false;
   }
   return compareVersions(latestTag, currentVersion) > 0;
+}
+
+export function canDownloadRelease(params: {
+  currentVersion: string;
+  currentCode: number;
+  latestTag: string;
+  latestBody?: string;
+  hasApkAsset: boolean;
+}): boolean {
+  if (!params.hasApkAsset) return false;
+  return isNewerReleaseAvailable(
+    params.currentVersion,
+    params.currentCode,
+    params.latestTag,
+    params.latestBody,
+  );
+}
+
+export const AUTO_UPDATE_ENABLED_KEY = 'ibn_sina_auto_update_enabled_v1';
+
+export function loadAutoUpdateEnabled(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const saved = window.localStorage.getItem(AUTO_UPDATE_ENABLED_KEY);
+    if (saved === null) return true;
+    return saved === 'true';
+  } catch {
+    return true;
+  }
+}
+
+export function saveAutoUpdateEnabled(enabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(AUTO_UPDATE_ENABLED_KEY, enabled ? 'true' : 'false');
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 export function pickBestApkAsset(assets: GitHubReleaseAsset[] | undefined): GitHubReleaseAsset | null {

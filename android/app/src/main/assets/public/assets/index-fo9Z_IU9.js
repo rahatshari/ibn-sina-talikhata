@@ -13618,7 +13618,7 @@ function ModalShell({ open, onClose, title, maxWidthClass = "max-w-lg", children
 	}, [open, onClose]);
 	if (!open) return null;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[1px]",
+		className: "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-3 sm:p-4 backdrop-blur-[1px]",
 		role: "dialog",
 		"aria-modal": "true",
 		"aria-label": title,
@@ -13626,9 +13626,9 @@ function ModalShell({ open, onClose, title, maxWidthClass = "max-w-lg", children
 			if (e.target === e.currentTarget) onClose();
 		},
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: `w-full ${maxWidthClass} max-h-[90vh] flex flex-col rounded-xl border border-slate-200 bg-white shadow-xl`,
+			className: `w-full ${maxWidthClass} max-h-[90dvh] flex flex-col rounded-xl border border-slate-200 bg-white shadow-xl`,
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex items-center justify-between border-b border-slate-200 px-5 py-4",
+				className: "flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 					className: "text-base font-semibold text-slate-900",
 					children: title
@@ -13640,7 +13640,7 @@ function ModalShell({ open, onClose, title, maxWidthClass = "max-w-lg", children
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X$1, { className: "h-4 w-4" })
 				})]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "overflow-y-auto p-5",
+				className: "min-h-0 flex-1 overflow-y-auto overscroll-contain p-5",
 				children
 			})]
 		})
@@ -17065,9 +17065,30 @@ function isNewerReleaseAvailable(currentVersion, currentCode, latestTag, latestB
 	const latestCode = extractVersionCodeFromBody(latestBody);
 	if (latestCode !== null && currentCode > 0) {
 		if (latestCode > currentCode) return true;
-		if (latestCode < currentCode) return false;
+		if (latestCode <= currentCode) return false;
 	}
 	return compareVersions(latestTag, currentVersion) > 0;
+}
+function canDownloadRelease(params) {
+	if (!params.hasApkAsset) return false;
+	return isNewerReleaseAvailable(params.currentVersion, params.currentCode, params.latestTag, params.latestBody);
+}
+var AUTO_UPDATE_ENABLED_KEY = "ibn_sina_auto_update_enabled_v1";
+function loadAutoUpdateEnabled() {
+	if (typeof window === "undefined") return true;
+	try {
+		const saved = window.localStorage.getItem(AUTO_UPDATE_ENABLED_KEY);
+		if (saved === null) return true;
+		return saved === "true";
+	} catch {
+		return true;
+	}
+}
+function saveAutoUpdateEnabled(enabled) {
+	if (typeof window === "undefined") return;
+	try {
+		window.localStorage.setItem(AUTO_UPDATE_ENABLED_KEY, enabled ? "true" : "false");
+	} catch {}
 }
 function pickBestApkAsset(assets) {
 	if (!Array.isArray(assets) || assets.length === 0) return null;
@@ -17105,7 +17126,7 @@ function computeSyncStatus(args) {
 	};
 }
 // src/components/UpdateCenterModal.tsx
-function UpdateCenterModal({ open, onClose, installedVersion, installedCode, packageName, isNativeApp, isOnline, checking, checkError, lastCheckedAt, latestRelease, updateAvailable, downloads, onCheckNow, onStartDownload, onInstallTask, onOpenInstallPermission, onClearHistory }) {
+function UpdateCenterModal({ open, onClose, installedVersion, installedCode, packageName, autoUpdateEnabled, onToggleAutoUpdate, isNativeApp, isOnline, checking, checkError, lastCheckedAt, latestRelease, updateAvailable, downloads, onCheckNow, onStartDownload, onInstallTask, onOpenInstallPermission, onClearHistory }) {
 	const activeDownload = downloads.find((d) => d.status === "downloading");
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ModalShell, {
 		open,
@@ -17117,36 +17138,66 @@ function UpdateCenterModal({ open, onClose, installedVersion, installedCode, pac
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "rounded-xl border border-slate-200 bg-slate-50 p-4",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex flex-wrap items-center justify-between gap-3",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center gap-3",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Smartphone, { className: "h-5 w-5" })
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "text-sm font-semibold text-slate-900",
-								children: ["ইবনে সিনা টালিখাতা · v", installedVersion]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "text-xs font-mono-num text-slate-500",
-								children: [
-									"Build ",
-									installedCode,
-									" · ",
-									packageName
-								]
-							})] })]
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-							type: "button",
-							disabled: checking || !isOnline,
-							onClick: onCheckNow,
-							className: "inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50 whitespace-nowrap",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RefreshCw, { className: `h-3.5 w-3.5 ${checking ? "animate-spin" : ""}` }), checking ? "চেক হচ্ছে..." : "আপডেট চেক করুন"]
-						})]
-					}), lastCheckedAt && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "mt-2.5 text-[11px] text-slate-500",
-						children: ["সর্বশেষ চেক: ", formatDateTimeBn(lastCheckedAt)]
-					})]
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex flex-wrap items-center justify-between gap-3",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex items-center gap-3",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Smartphone, { className: "h-5 w-5" })
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "text-sm font-semibold text-slate-900",
+									children: ["ইবনে সিনা টালিখাতা · v", installedVersion]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "text-xs font-mono-num text-slate-500",
+									children: [
+										"Build ",
+										installedCode,
+										" · ",
+										packageName
+									]
+								})] })]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+								type: "button",
+								disabled: checking || !isOnline,
+								onClick: onCheckNow,
+								className: "inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50 whitespace-nowrap",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RefreshCw, { className: `h-3.5 w-3.5 ${checking ? "animate-spin" : ""}` }), checking ? "চেক হচ্ছে..." : "আপডেট চেক করুন"]
+							})]
+						}),
+						lastCheckedAt && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-2.5 text-[11px] text-slate-500",
+							children: ["সর্বশেষ চেক: ", formatDateTimeBn(lastCheckedAt)]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-3.5 flex items-center justify-between gap-3 border-t border-slate-200 pt-3",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "min-w-0",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "text-xs font-semibold text-slate-900",
+									children: "অটোমেটিক আপডেট খোঁজ"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "text-[11px] text-slate-500",
+									children: autoUpdateEnabled ? "চালু আছে — নতুন ভার্সন এলে নিজে থেকেই খুঁজবে ও জানাবে" : "বন্ধ আছে — শুধু \"আপডেট চেক করুন\" চাপলে খুঁজবে"
+								})]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+								type: "button",
+								role: "switch",
+								"aria-checked": autoUpdateEnabled,
+								"aria-label": "অটোমেটিক আপডেট খোঁজ চালু বা বন্ধ করুন",
+								onClick: () => onToggleAutoUpdate(!autoUpdateEnabled),
+								className: "inline-flex min-h-[44px] items-center gap-2 shrink-0 px-1",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: `text-[11px] font-semibold ${autoUpdateEnabled ? "text-emerald-700" : "text-slate-500"}`,
+									children: autoUpdateEnabled ? "চালু" : "বন্ধ"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoUpdateEnabled ? "bg-emerald-600" : "bg-slate-300"}`,
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoUpdateEnabled ? "translate-x-6" : "translate-x-1"}` })
+								})]
+							})]
+						})
+					]
 				}),
 				checkError && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800",
@@ -17182,12 +17233,20 @@ function UpdateCenterModal({ open, onClose, installedVersion, installedCode, pac
 								})]
 							});
 						})(),
-						latestRelease.apkAsset && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						latestRelease.apkAsset && updateAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 							type: "button",
 							disabled: Boolean(activeDownload),
 							onClick: () => onStartDownload(latestRelease),
 							className: "inline-flex w-full min-h-[44px] items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, { className: "h-4 w-4" }), activeDownload ? `ডাউনলোড চলছে (${activeDownload.progress}%)...` : updateAvailable ? `ডাউনলোড ও আপডেট করুন (v${latestRelease.version})` : `পুনরায় APK ডাউনলোড করুন (v${latestRelease.version})`]
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Download, { className: "h-4 w-4" }), activeDownload ? `ডাউনলোড চলছে (${activeDownload.progress}%)...` : `ডাউনলোড ও আপডেট করুন (v${latestRelease.version})`]
+						}),
+						!updateAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-xs font-medium text-emerald-800",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "h-4 w-4 text-emerald-600 shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+								"এই ভার্সনটি (v",
+								installedVersion,
+								") ইতোমধ্যে আপনার ফোনে ইনস্টল করা আছে — পুনরায় ডাউনলোডের প্রয়োজন নেই।"
+							] })]
 						})
 					]
 				}),
@@ -17213,64 +17272,67 @@ function UpdateCenterModal({ open, onClose, installedVersion, installedCode, pac
 						children: "এখনও কোনো APK ডাউনলোড করা হয়নি। ডাউনলোড শেষ হওয়ার সাথে সাথেই স্বয়ংক্রিয়ভাবে ইনস্টলার চালু হবে।"
 					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "divide-y divide-slate-100",
-						children: downloads.map((task) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "p-4 space-y-2.5",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "flex flex-wrap items-start justify-between gap-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										className: "min-w-0",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-											className: "truncate text-sm font-medium text-slate-900",
-											children: task.fileName
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											className: "text-xs font-mono-num text-slate-500",
-											children: [
-												"v",
-												task.version,
-												" · ",
-												formatBytes(task.downloadedBytes),
-												" /",
-												" ",
-												formatBytes(task.totalBytes)
-											]
+						children: downloads.map((task) => {
+							const isAlreadyInstalled = compareVersions(task.version, installedVersion) <= 0;
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "p-4 space-y-2.5",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex flex-wrap items-start justify-between gap-2",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "min-w-0",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+												className: "truncate text-sm font-medium text-slate-900",
+												children: task.fileName
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												className: "text-xs font-mono-num text-slate-500",
+												children: [
+													"v",
+													task.version,
+													" · ",
+													formatBytes(task.downloadedBytes),
+													" /",
+													" ",
+													formatBytes(task.totalBytes)
+												]
+											})]
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "text-xs font-semibold font-mono-num text-slate-700",
+											children: task.status === "completed" ? isAlreadyInstalled ? "ইনস্টল করা আছে" : "সম্পন্ন (অটো ইনস্টলার চালু)" : task.status === "downloading" ? `${task.progress}%` : task.status === "permission-required" ? "অনুমতি প্রয়োজন" : "ব্যর্থ"
 										})]
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "text-xs font-semibold font-mono-num text-slate-700",
-										children: task.status === "completed" ? "সম্পন্ন (অটো ইনস্টলার চালু)" : task.status === "downloading" ? `${task.progress}%` : task.status === "permission-required" ? "অনুমতি প্রয়োজন" : "ব্যর্থ"
-									})]
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									className: "h-2 w-full overflow-hidden rounded-full bg-slate-100",
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										className: `h-full transition-all duration-300 ${task.status === "failed" ? "bg-red-500" : task.status === "completed" ? "bg-emerald-600" : "bg-emerald-500"}`,
-										style: { width: `${Math.max(4, Math.min(100, task.progress))}%` }
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "h-2 w-full overflow-hidden rounded-full bg-slate-100",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											className: `h-full transition-all duration-300 ${task.status === "failed" ? "bg-red-500" : task.status === "completed" ? "bg-emerald-600" : "bg-emerald-500"}`,
+											style: { width: `${Math.max(4, Math.min(100, task.progress))}%` }
+										})
+									}),
+									task.status === "downloading" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "text-[11px] text-emerald-700",
+										children: "ডাউনলোড শেষ হলেই অটোমেটিক ইনস্টল পপ-আপ চলে আসবে..."
+									}),
+									task.errorMessage && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "text-xs text-red-600",
+										children: task.errorMessage
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex flex-wrap items-center justify-end gap-2",
+										children: [!isAlreadyInstalled && task.status === "permission-required" && isNativeApp && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+											type: "button",
+											onClick: onOpenInstallPermission,
+											className: "inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldCheck, { className: "h-3.5 w-3.5" }), "ইনস্টল অনুমতি দিন"]
+										}), !isAlreadyInstalled && (task.status === "completed" || task.status === "permission-required") && isNativeApp && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+											type: "button",
+											onClick: () => void onInstallTask(task),
+											className: "inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Smartphone, { className: "h-3.5 w-3.5" }), "আবার ইনস্টল চালু করুন"]
+										})]
 									})
-								}),
-								task.status === "downloading" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "text-[11px] text-emerald-700",
-									children: "ডাউনলোড শেষ হলেই অটোমেটিক ইনস্টল পপ-আপ চলে আসবে..."
-								}),
-								task.errorMessage && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "text-xs text-red-600",
-									children: task.errorMessage
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "flex flex-wrap items-center justify-end gap-2",
-									children: [task.status === "permission-required" && isNativeApp && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-										type: "button",
-										onClick: onOpenInstallPermission,
-										className: "inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldCheck, { className: "h-3.5 w-3.5" }), "ইনস্টল অনুমতি দিন"]
-									}), (task.status === "completed" || task.status === "permission-required") && isNativeApp && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-										type: "button",
-										onClick: () => void onInstallTask(task),
-										className: "inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Smartphone, { className: "h-3.5 w-3.5" }), "আবার ইনস্টল চালু করুন"]
-									})]
-								})
-							]
-						}, task.id))
+								]
+							}, task.id);
+						})
 					})]
 				})
 			]
@@ -17309,17 +17371,26 @@ function useAppUpdater(isOnline) {
 	const [installedCode, setInstalledCode] = (0, import_react.useState)(100);
 	const [packageName, setPackageName] = (0, import_react.useState)(APP_PACKAGE_ID);
 	const [githubRepo, setGithubRepoState] = (0, import_react.useState)(() => loadSavedRepo());
+	const [autoUpdateEnabled, setAutoUpdateEnabledState] = (0, import_react.useState)(() => loadAutoUpdateEnabled());
 	const [checking, setChecking] = (0, import_react.useState)(false);
 	const [checkError, setCheckError] = (0, import_react.useState)(null);
 	const [lastCheckedAt, setLastCheckedAt] = (0, import_react.useState)(null);
 	const [latestRelease, setLatestRelease] = (0, import_react.useState)(null);
-	const [updateAvailable, setUpdateAvailable] = (0, import_react.useState)(false);
 	const [downloads, setDownloads] = (0, import_react.useState)(() => loadDownloadHistory());
 	const [canInstallPackages, setCanInstallPackages] = (0, import_react.useState)(true);
 	const downloadsRef = (0, import_react.useRef)(downloads);
 	const activeTaskIdRef = (0, import_react.useRef)(null);
 	const nativePollRef = (0, import_react.useRef)(null);
 	const autoInstalledIdsRef = (0, import_react.useRef)(/* @__PURE__ */ new Set());
+	const lastAutoCheckMsRef = (0, import_react.useRef)(0);
+	const updateAvailable = (0, import_react.useMemo)(() => {
+		if (!latestRelease) return false;
+		return isNewerReleaseAvailable(installedVersion, installedCode, latestRelease.tagName, latestRelease.releaseNotes);
+	}, [
+		latestRelease,
+		installedVersion,
+		installedCode
+	]);
 	(0, import_react.useEffect)(() => {
 		downloadsRef.current = downloads;
 		try {
@@ -17351,6 +17422,11 @@ function useAppUpdater(isOnline) {
 			window.localStorage.setItem(GITHUB_REPO_STORAGE_KEY, cleaned);
 		} catch {}
 	}, []);
+	const setAutoUpdateEnabled = (0, import_react.useCallback)((enabled) => {
+		setAutoUpdateEnabledState(enabled);
+		saveAutoUpdateEnabled(enabled);
+		if (enabled) lastAutoCheckMsRef.current = 0;
+	}, []);
 	const updateTask = (0, import_react.useCallback)((taskId, patch) => {
 		setDownloads((prev) => prev.map((item) => item.id === taskId ? {
 			...item,
@@ -17374,7 +17450,6 @@ function useAppUpdater(isOnline) {
 			const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers: { Accept: "application/vnd.github+json" } });
 			if (response.status === 404) {
 				setLatestRelease(null);
-				setUpdateAvailable(false);
 				if (!options?.silent) setCheckError("এই রিপোজিটরিতে এখনো কোনো GitHub Release তৈরি হয়নি।");
 				return;
 			}
@@ -17392,9 +17467,7 @@ function useAppUpdater(isOnline) {
 			};
 			setLatestRelease(releaseInfo);
 			setLastCheckedAt((/* @__PURE__ */ new Date()).toISOString());
-			const hasUpdate = isNewerReleaseAvailable(installedVersion, installedCode, payload.tag_name, payload.body);
-			setUpdateAvailable(hasUpdate);
-			if (hasUpdate && isNativeAndroid()) try {
+			if (isNewerReleaseAvailable(installedVersion, installedCode, payload.tag_name, payload.body) && isNativeAndroid()) try {
 				if (window.localStorage.getItem(LAST_NOTIFIED_TAG_KEY) !== payload.tag_name) {
 					await AppUpdater.showUpdateNotification({
 						title: `নতুন আপডেট v${releaseInfo.version}`,
@@ -17415,12 +17488,26 @@ function useAppUpdater(isOnline) {
 		installedCode
 	]);
 	(0, import_react.useEffect)(() => {
-		if (!isOnline || !githubRepo) return;
-		const timer = window.setTimeout(() => {
+		if (!autoUpdateEnabled || !isOnline || !githubRepo) return;
+		const triggerAutoCheck = () => {
+			const now = Date.now();
+			if (now - lastAutoCheckMsRef.current < 9e5) return;
+			lastAutoCheckMsRef.current = now;
 			checkForUpdates({ silent: true });
-		}, 1800);
-		return () => window.clearTimeout(timer);
+		};
+		const startupTimer = window.setTimeout(triggerAutoCheck, 1200);
+		const intervalId = window.setInterval(triggerAutoCheck, 18e5);
+		const onVisible = () => {
+			if (document.visibilityState === "visible") triggerAutoCheck();
+		};
+		document.addEventListener("visibilitychange", onVisible);
+		return () => {
+			window.clearTimeout(startupTimer);
+			window.clearInterval(intervalId);
+			document.removeEventListener("visibilitychange", onVisible);
+		};
 	}, [
+		autoUpdateEnabled,
 		isOnline,
 		githubRepo,
 		checkForUpdates
@@ -17433,6 +17520,7 @@ function useAppUpdater(isOnline) {
 	}, []);
 	const installDownloadedTask = (0, import_react.useCallback)(async (task, options) => {
 		if (!isNativeAndroid()) return;
+		if (compareVersions(task.version, installedVersion) <= 0) return;
 		if (task.nativeDownloadId === void 0 && !task.fileName) return;
 		try {
 			const res = await AppUpdater.installApk({
@@ -17534,6 +17622,17 @@ function useAppUpdater(isOnline) {
 	const startApkDownload = (0, import_react.useCallback)(async (release) => {
 		const asset = release.apkAsset;
 		if (!asset) return;
+		if (!canDownloadRelease({
+			currentVersion: installedVersion,
+			currentCode: installedCode,
+			latestTag: release.tagName,
+			latestBody: release.releaseNotes,
+			hasApkAsset: Boolean(asset)
+		})) {
+			setCheckError(`এই ভার্সনটি (v${release.version}) ইতোমধ্যে ইনস্টল করা আছে — পুনরায় ডাউনলোড করা হবে না।`);
+			return;
+		}
+		if (downloadsRef.current.some((d) => d.status === "downloading" && d.version === release.version)) return;
 		const taskId = `dl-${Date.now()}`;
 		const newTask = {
 			id: taskId,
@@ -17549,12 +17648,19 @@ function useAppUpdater(isOnline) {
 		activeTaskIdRef.current = taskId;
 		setDownloads((prev) => [newTask, ...prev.slice(0, 9)]);
 		if (isNativeAndroid()) try {
-			const { downloadId } = await AppUpdater.startApkDownload({
+			const result = await AppUpdater.startApkDownload({
 				url: asset.browser_download_url,
 				fileName: asset.name,
 				title: `ইবনে সিনা টালিখাতা v${release.version}`,
-				version: release.version
+				version: release.version,
+				versionCode: release.versionCode ?? void 0
 			});
+			if (result.alreadyInstalled || result.downloadId <= 0) {
+				setDownloads((prev) => prev.filter((item) => item.id !== taskId));
+				setCheckError(`এই ভার্সনটি (v${release.version}) ইতোমধ্যে ইনস্টল করা আছে — পুনরায় ডাউনলোড করা হবে না।`);
+				return;
+			}
+			const downloadId = result.downloadId;
 			const trackedTask = {
 				...newTask,
 				nativeDownloadId: downloadId
@@ -17610,6 +17716,8 @@ function useAppUpdater(isOnline) {
 			});
 		}
 	}, [
+		installedVersion,
+		installedCode,
 		updateTask,
 		stopNativePolling,
 		triggerAutoInstallOnce
@@ -17627,6 +17735,8 @@ function useAppUpdater(isOnline) {
 		packageName,
 		githubRepo,
 		setGithubRepo,
+		autoUpdateEnabled,
+		setAutoUpdateEnabled,
 		isNativeApp: isNativeAndroid(),
 		canInstallPackages,
 		checking,
@@ -60355,7 +60465,7 @@ function App() {
 	const showUpdateBanner = updater.updateAvailable && updater.latestRelease && dismissedUpdateTag !== updater.latestRelease.tagName;
 	const userInitial = (store.user?.displayName || store.user?.email || "M").trim().charAt(0).toUpperCase();
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "min-h-screen overflow-x-hidden bg-slate-50 text-slate-900 pb-24 md:pb-10",
+		className: "min-h-screen overflow-x-clip bg-slate-50 text-slate-900 pb-24 md:pb-10",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("header", {
 				className: "no-print sticky top-0 z-30 border-b border-slate-200 bg-white pt-safe",
@@ -60793,6 +60903,8 @@ function App() {
 				installedVersion: updater.installedVersion,
 				installedCode: updater.installedCode,
 				packageName: updater.packageName,
+				autoUpdateEnabled: updater.autoUpdateEnabled,
+				onToggleAutoUpdate: updater.setAutoUpdateEnabled,
 				isNativeApp: updater.isNativeApp,
 				isOnline: store.isOnline,
 				checking: updater.checking,

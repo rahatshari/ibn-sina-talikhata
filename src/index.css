@@ -10,7 +10,9 @@
   html,
   body {
     max-width: 100%;
-    overflow-x: hidden;
+    height: auto;
+    min-height: 100%;
+    overflow-x: clip;
   }
 
   body {
@@ -18,7 +20,6 @@
     background-color: #f8fafc;
     color: #0f172a;
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior-y: contain;
   }
 }
 

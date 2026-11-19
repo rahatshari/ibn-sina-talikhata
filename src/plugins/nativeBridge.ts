@@ -21,6 +21,7 @@ export interface NativeAppInfo {
 
 export interface StartDownloadResult {
   downloadId: number;
+  alreadyInstalled?: boolean;
 }
 
 export interface NativeDownloadStatus {
@@ -48,6 +49,7 @@ export interface AppUpdaterPlugin {
     fileName: string;
     title: string;
     version: string;
+    versionCode?: number;
   }): Promise<StartDownloadResult>;
   getDownloadStatus(options: { downloadId: number }): Promise<NativeDownloadStatus>;
   installApk(options: {
