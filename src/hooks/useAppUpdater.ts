@@ -569,7 +569,7 @@ export function useAppUpdater(isOnline: boolean) {
           const result = await AppUpdater.startApkDownload({
             url: asset.browser_download_url,
             fileName: asset.name,
-            title: `ইবনে সিনা টালিখাতা v${release.version}`,
+            title: `ব্যক্তিগত টালিখাতা v${release.version}`,
             version: release.version,
             versionCode: release.versionCode ?? undefined,
           });

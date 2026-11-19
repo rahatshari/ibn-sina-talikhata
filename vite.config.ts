@@ -15,8 +15,8 @@ export default defineConfig(() => {
         includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           id: '/',
-          name: 'ইবনে সিনা টালিখাতা — MR Sales & Ledger',
-          short_name: 'টালিখাতা',
+          name: 'ব্যক্তিগত টালিখাতা',
+          short_name: 'ব্যক্তিগত টালিখাতা',
           description:
             'ওষুধ কোম্পানির মার্কেট রিপ্রেজেন্টেটিভদের জন্য অফলাইন ও অনলাইন প্রোডাক্ট বিক্রি, ডিসকাউন্ট ও বাকি হিসাবের টালিখাতা।',
           theme_color: '#059669',

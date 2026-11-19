@@ -87,3 +87,22 @@ export interface DashboardMetrics {
   activeShopCount: number;
   dueShopCount: number;
 }
+
+export interface MonthlyDashboardMetrics {
+  monthKey: string;
+  totalSales: number;
+  totalDiscountGiven: number;
+  totalBoxesSold: number;
+  invoiceCount: number;
+  paidAtSale: number;
+  dueCollections: number;
+  totalCollected: number;
+  saleDue: number;
+}
+
+export interface SessionAccountProfile {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}

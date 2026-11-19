@@ -39,7 +39,7 @@ public class GoogleAuthPlugin extends Plugin {
             .requestIdToken(webClientId)
             .requestEmail()
             .build();
-        return GoogleSignIn.getClient(getActivity(), gso);
+        return GoogleSignIn.getClient(getContext(), gso);
     }
 
     @PluginMethod
@@ -47,6 +47,27 @@ public class GoogleAuthPlugin extends Plugin {
         GoogleSignInClient client = buildClient();
         Intent signInIntent = client.getSignInIntent();
         startActivityForResult(call, signInIntent, "handleSignInResult");
+    }
+
+    @PluginMethod
+    public void silentSignIn(PluginCall call) {
+        GoogleSignInClient client = buildClient();
+        client.silentSignIn().addOnCompleteListener(task -> {
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                if (account == null || account.getIdToken() == null) {
+                    call.reject("No cached Google account");
+                    return;
+                }
+                JSObject ret = new JSObject();
+                ret.put("idToken", account.getIdToken());
+                ret.put("email", account.getEmail() != null ? account.getEmail() : "");
+                ret.put("displayName", account.getDisplayName() != null ? account.getDisplayName() : "");
+                call.resolve(ret);
+            } catch (ApiException e) {
+                call.reject("Silent sign-in unavailable: " + e.getStatusCode(), e);
+            }
+        });
     }
 
     @ActivityCallback

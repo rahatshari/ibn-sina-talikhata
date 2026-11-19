@@ -85,7 +85,7 @@ export function UpdateCenterModal({
               </div>
               <div>
                 <div className="text-sm font-semibold text-slate-900">
-                  ইবনে সিনা টালিখাতা · v{installedVersion}
+                  ব্যক্তিগত টালিখাতা · v{installedVersion}
                 </div>
                 <div className="text-xs font-mono-num text-slate-500">
                   Build {installedCode} · {packageName}

@@ -1,5 +1,6 @@
 import type {
   DashboardMetrics,
+  MonthlyDashboardMetrics,
   PaymentRecord,
   Product,
   ProductTier,
@@ -184,6 +185,120 @@ export function computeDashboardMetrics(
     activeShopCount: shops.length,
     dueShopCount,
   };
+}
+
+export function getMonthKeyFromDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+export function getMonthKeyFromIso(isoString: string): string | null {
+  const trimmed = isoString.trim();
+  const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-\d{2}$/);
+  if (dateOnlyMatch) {
+    return `${dateOnlyMatch[1]}-${dateOnlyMatch[2]}`;
+  }
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return null;
+  return getMonthKeyFromDate(date);
+}
+
+export function getAvailableMonthKeys(
+  sales: SaleRecord[],
+  payments: PaymentRecord[],
+  now: Date = new Date(),
+): string[] {
+  const keys = new Set<string>([getMonthKeyFromDate(now)]);
+  for (const sale of sales) {
+    const k = getMonthKeyFromIso(sale.date);
+    if (k) keys.add(k);
+  }
+  for (const pay of payments) {
+    const k = getMonthKeyFromIso(pay.date);
+    if (k) keys.add(k);
+  }
+  return Array.from(keys).sort((a, b) => b.localeCompare(a));
+}
+
+export function formatMonthYearBn(monthKey: string): string {
+  const match = monthKey.trim().match(/^(\d{4})-(\d{2})$/);
+  if (!match) return monthKey;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+    return monthKey;
+  }
+  const sampleDate = new Date(year, month - 1, 15);
+  return sampleDate.toLocaleDateString('bn-BD', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+export function computeMonthlySalesAndCollection(
+  sales: SaleRecord[],
+  payments: PaymentRecord[],
+  monthKey: string,
+): MonthlyDashboardMetrics {
+  let totalSales = 0;
+  let totalDiscountGiven = 0;
+  let totalBoxesSold = 0;
+  let invoiceCount = 0;
+  let paidAtSale = 0;
+  let saleDue = 0;
+
+  for (const sale of sales) {
+    if (getMonthKeyFromIso(sale.date) !== monthKey) continue;
+    totalSales = roundCurrency(totalSales + sale.netTotal);
+    totalDiscountGiven = roundCurrency(totalDiscountGiven + sale.totalDiscount);
+    totalBoxesSold += sale.totalBoxes;
+    invoiceCount += 1;
+    paidAtSale = roundCurrency(paidAtSale + sale.paidAmount);
+    saleDue = roundCurrency(saleDue + sale.dueAmount);
+  }
+
+  let dueCollections = 0;
+  for (const pay of payments) {
+    if (getMonthKeyFromIso(pay.date) !== monthKey) continue;
+    dueCollections = roundCurrency(dueCollections + pay.amount);
+  }
+
+  const totalCollected = roundCurrency(paidAtSale + dueCollections);
+
+  return {
+    monthKey,
+    totalSales,
+    totalDiscountGiven,
+    totalBoxesSold,
+    invoiceCount,
+    paidAtSale,
+    dueCollections,
+    totalCollected,
+    saleDue,
+  };
+}
+
+export type KpiPeriodMode = 'all' | 'monthly';
+export const KPI_PERIOD_MODE_KEY = 'ibn_sina_kpi_period_mode_v1';
+
+export function loadKpiPeriodMode(): KpiPeriodMode {
+  if (typeof window === 'undefined') return 'all';
+  try {
+    const saved = window.localStorage.getItem(KPI_PERIOD_MODE_KEY);
+    return saved === 'monthly' ? 'monthly' : 'all';
+  } catch {
+    return 'all';
+  }
+}
+
+export function saveKpiPeriodMode(mode: KpiPeriodMode): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(KPI_PERIOD_MODE_KEY, mode);
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 export function formatBDT(amount: number): string {

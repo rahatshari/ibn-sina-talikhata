@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   Banknote,
   BarChart3,
   Check,
@@ -8,7 +9,6 @@ import {
   CloudOff,
   Download,
   FolderDown,
-  LayoutDashboard,
   LogIn,
   LogOut,
   MoreVertical,
@@ -108,16 +108,18 @@ export default function App() {
 
   const openNewSale = (shopId?: string) => {
     setPreselectedShopId(shopId);
+    if (activeView === 'dashboard') {
+      window.history.pushState({ appView: 'new-sale' }, '');
+    }
     setActiveView('new-sale');
   };
 
   const navItems: Array<{
-    id: AppView;
+    id: Exclude<AppView, 'dashboard'>;
     label: string;
     mobileLabel: string;
-    icon: typeof LayoutDashboard;
+    icon: typeof Plus;
   }> = [
-    { id: 'dashboard', label: 'ড্যাশবোর্ড', mobileLabel: 'ড্যাশবোর্ড', icon: LayoutDashboard },
     { id: 'new-sale', label: 'নতুন বিক্রি', mobileLabel: 'বিক্রি', icon: Plus },
     { id: 'shops', label: 'দোকানদার', mobileLabel: 'দোকানদার', icon: Store },
     { id: 'due', label: 'বাকি', mobileLabel: 'বাকি', icon: Banknote },
@@ -128,8 +130,35 @@ export default function App() {
   const handleSelectNav = (id: AppView) => {
     if (id !== 'new-sale') setPreselectedShopId(undefined);
     if (id === 'shops') setSelectedLedgerShop(null);
+    if (id !== 'dashboard' && activeView === 'dashboard') {
+      window.history.pushState({ appView: id }, '');
+    }
     setActiveView(id);
   };
+
+  const handleBackToDashboard = () => {
+    setPreselectedShopId(undefined);
+    setSelectedLedgerShop(null);
+    setActiveView('dashboard');
+    if (window.history.state?.appView) {
+      window.history.replaceState(null, '');
+    }
+  };
+
+  useEffect(() => {
+    const onPopState = (e: PopStateEvent) => {
+      const targetView = e.state?.appView as AppView | undefined;
+      if (!targetView || targetView === 'dashboard') {
+        setPreselectedShopId(undefined);
+        setSelectedLedgerShop(null);
+        setActiveView('dashboard');
+      } else {
+        setActiveView(targetView);
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const showUpdateBanner =
     updater.updateAvailable &&
@@ -150,7 +179,7 @@ export default function App() {
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
-              onClick={() => setActiveView('dashboard')}
+              onClick={handleBackToDashboard}
               className="flex items-center gap-2 text-left min-w-0"
             >
               <img
@@ -159,7 +188,7 @@ export default function App() {
                 className="h-8 w-8 rounded-lg border border-emerald-100 shrink-0"
               />
               <span className="font-display text-[15px] sm:text-lg font-bold tracking-tight text-slate-900 truncate">
-                ইবনে সিনা টালিখাতা
+                ব্যক্তিগত টালিখাতা
               </span>
             </button>
             <span
@@ -273,7 +302,7 @@ export default function App() {
                 <div
                   role="menu"
                   aria-label="অতিরিক্ত অপশন মেনু"
-                  className="absolute right-0 mt-2 w-72 max-h-[82vh] overflow-y-auto origin-top-right rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl z-40"
+                  className="absolute right-0 mt-2 w-[min(90vw,330px)] max-h-[82vh] overflow-y-auto origin-top-right rounded-2xl border border-slate-200 bg-white p-2 shadow-xl z-40"
                 >
                   <button
                     type="button"
@@ -282,18 +311,18 @@ export default function App() {
                       setMenuOpen(false);
                       setUpdateModalOpen(true);
                     }}
-                    className="flex w-full min-h-[44px] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-slate-50"
+                    className="flex w-full min-h-[48px] items-center justify-between gap-2.5 rounded-xl px-3.5 py-3 text-left text-[15px] sm:text-base font-medium text-slate-800 hover:bg-slate-50"
                   >
-                    <span className="flex items-center gap-2.5 whitespace-nowrap">
-                      <FolderDown className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span className="flex items-center gap-3 whitespace-nowrap">
+                      <FolderDown className="h-5 w-5 text-emerald-600 shrink-0" />
                       <span>ডাউনলোড ও আপডেট</span>
                     </span>
                     {updater.updateAvailable ? (
-                      <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 whitespace-nowrap shrink-0">
+                      <span className="rounded-md bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 whitespace-nowrap shrink-0">
                         নতুন আপডেট
                       </span>
                     ) : (
-                      <span className="text-[11px] font-mono-num text-slate-400 whitespace-nowrap shrink-0">
+                      <span className="text-xs font-mono-num text-slate-400 whitespace-nowrap shrink-0">
                         v{updater.installedVersion}
                       </span>
                     )}
@@ -306,13 +335,13 @@ export default function App() {
                       setMenuOpen(false);
                       setAccountModalOpen(true);
                     }}
-                    className="flex w-full min-h-[44px] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-slate-50"
+                    className="flex w-full min-h-[48px] items-center justify-between gap-2.5 rounded-xl px-3.5 py-3 text-left text-[15px] sm:text-base font-medium text-slate-800 hover:bg-slate-50"
                   >
-                    <span className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex items-center gap-3 min-w-0">
                       {store.user ? (
-                        <Cloud className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <Cloud className="h-5 w-5 text-emerald-600 shrink-0" />
                       ) : (
-                        <LogIn className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <LogIn className="h-5 w-5 text-emerald-600 shrink-0" />
                       )}
                       <span className="truncate">
                         {store.user ? 'অ্যাকাউন্ট ও ক্লাউড সিঙ্ক' : 'জিমেইল লগইন করুন'}
@@ -327,19 +356,19 @@ export default function App() {
                       setMenuOpen(false);
                       setActiveView('reports');
                     }}
-                    className="flex w-full min-h-[44px] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-slate-50"
+                    className="flex w-full min-h-[48px] items-center gap-3 rounded-xl px-3.5 py-3 text-left text-[15px] sm:text-base font-medium text-slate-800 hover:bg-slate-50"
                   >
-                    <BarChart3 className="h-4 w-4 text-slate-600 shrink-0" />
+                    <BarChart3 className="h-5 w-5 text-slate-600 shrink-0" />
                     <span>ডাটা ব্যাকআপ ও রিপোর্ট</span>
                   </button>
 
-                  <div className="my-1.5 border-t border-slate-100" />
-                  <div className="px-3 py-1.5">
-                    <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
-                      <Type className="h-3.5 w-3.5 text-emerald-600" />
+                  <div className="my-2 border-t border-slate-100" />
+                  <div className="px-3 py-2">
+                    <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-slate-600">
+                      <Type className="h-4 w-4 text-emerald-600" />
                       <span>লেখার ফন্ট পরিবর্তন</span>
                     </div>
-                    <div className="grid grid-cols-1 gap-1">
+                    <div className="grid grid-cols-1 gap-1.5">
                       {APP_FONT_OPTIONS.map((font) => {
                         const active = selectedFontId === font.id;
                         return (
@@ -353,7 +382,7 @@ export default function App() {
                               saveAndApplyAppFont(font.id);
                             }}
                             style={{ fontFamily: font.fontFamily }}
-                            className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+                            className={`flex w-full min-h-[44px] items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-colors ${
                               active
                                 ? 'bg-emerald-50 font-semibold text-emerald-800'
                                 : 'text-slate-700 hover:bg-slate-50'
@@ -361,9 +390,9 @@ export default function App() {
                           >
                             <span className="flex items-center gap-2">
                               <span>{font.label}</span>
-                              <span className="text-[11px] text-slate-400">({font.sample})</span>
+                              <span className="text-xs text-slate-400">({font.sample})</span>
                             </span>
-                            {active && <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />}
+                            {active && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
                           </button>
                         );
                       })}
@@ -372,7 +401,7 @@ export default function App() {
 
                   {store.user && (
                     <>
-                      <div className="my-1 border-t border-slate-100" />
+                      <div className="my-1.5 border-t border-slate-100" />
                       <button
                         type="button"
                         role="menuitem"
@@ -380,15 +409,15 @@ export default function App() {
                           setMenuOpen(false);
                           setAccountModalOpen(true);
                         }}
-                        className="flex w-full min-h-[44px] items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                        className="flex w-full min-h-[48px] items-center gap-3 rounded-xl px-3.5 py-3 text-left text-[15px] sm:text-base font-medium text-red-600 hover:bg-red-50"
                       >
-                        <LogOut className="h-4 w-4 shrink-0" />
+                        <LogOut className="h-5 w-5 shrink-0" />
                         <span>লগআউট</span>
                       </button>
                     </>
                   )}
 
-                  <div className="px-2 pt-1">
+                  <div className="px-2 pt-1.5">
                     <PWAInstallButton />
                   </div>
                 </div>
@@ -500,6 +529,22 @@ export default function App() {
           </div>
         )}
 
+        {/* In-Page Back Button inside sub-pages (returns to Dashboard) */}
+        {activeView !== 'dashboard' && !(activeView === 'shops' && selectedLedgerShop !== null) && (
+          <div className="no-print mb-3.5 flex items-center">
+            <button
+              type="button"
+              onClick={handleBackToDashboard}
+              data-testid="in-page-back-btn"
+              aria-label="ড্যাশবোর্ডে ফিরে যান"
+              className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-800 shadow-xs transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 active:scale-[0.97]"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              <span>ব্যাক</span>
+            </button>
+          </div>
+        )}
+
         {activeView === 'dashboard' && (
           <DashboardView
             metrics={metrics}
@@ -509,11 +554,11 @@ export default function App() {
             onStartNewSale={openNewSale}
             onCollectDue={(shop, due) => setCollectTarget({ shop, due })}
             onOpenShopLedger={(shop) => {
+              handleSelectNav('shops');
               setSelectedLedgerShop(shop);
-              setActiveView('shops');
             }}
             onOpenSaleDetail={(sale) => setDetailSale(sale)}
-            onOpenAllReports={() => setActiveView('reports')}
+            onOpenAllReports={() => handleSelectNav('reports')}
           />
         )}
 
@@ -587,10 +632,10 @@ export default function App() {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation (44px+ Android touch targets, fits single screen width) */}
+      {/* Mobile Bottom Navigation (5 Primary Tabs Only: বিক্রি, দোকানদার, বাকি, প্রোডাক্ট, রিপোর্ট) */}
       <nav
         aria-label="মোবাইল নেভিগেশন"
-        className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 min-h-[60px] pb-safe items-center border-t border-slate-200 bg-white md:hidden"
+        className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 min-h-[64px] pb-safe items-center border-t border-slate-200 bg-white md:hidden"
       >
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -600,11 +645,11 @@ export default function App() {
               key={item.id}
               type="button"
               onClick={() => handleSelectNav(item.id)}
-              className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-[10px] font-medium ${
+              className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] font-semibold transition-colors ${
                 active ? 'text-emerald-700' : 'text-slate-500'
               }`}
             >
-              <Icon className="h-4 w-4 shrink-0" />
+              <Icon className="h-5 w-5 shrink-0" />
               <span className="max-w-full truncate whitespace-nowrap">{item.mobileLabel}</span>
             </button>
           );

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Minus, Plus, Search, Trash2, UserPlus } from 'lucide-react';
+import { Check, ChevronDown, MapPin, Minus, Plus, Search, Store, Trash2, UserPlus, X } from 'lucide-react';
 import type { PaymentRecord, Product, ProductTier, SaleRecord, Shopkeeper } from '../types/tally';
 import {
   calculateInvoiceTotals,
@@ -56,6 +56,8 @@ export function NewSaleView({
   const [selectedShopId, setSelectedShopId] = useState<string>(
     preselectedShopId || shops[0]?.id || '',
   );
+  const [shopPickerOpen, setShopPickerOpen] = useState(false);
+  const [shopSearch, setShopSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [tierFilter, setTierFilter] = useState<'All' | ProductTier>('All');
   const [draftRows, setDraftRows] = useState<DraftRow[]>([]);
@@ -71,6 +73,40 @@ export function NewSaleView({
       setSelectedShopId(shops[0].id);
     }
   }, [preselectedShopId, shops, selectedShopId]);
+
+  useEffect(() => {
+    if (!shopPickerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShopPickerOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [shopPickerOpen]);
+
+  const selectedShop = useMemo(
+    () => shops.find((s) => s.id === selectedShopId) ?? null,
+    [shops, selectedShopId],
+  );
+
+  const shopSummariesById = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeShopSummary>>();
+    for (const s of shops) {
+      map.set(s.id, computeShopSummary(s.id, sales, payments));
+    }
+    return map;
+  }, [shops, sales, payments]);
+
+  const filteredShopsForPicker = useMemo(() => {
+    const q = shopSearch.trim().toLowerCase();
+    if (!q) return shops;
+    return shops.filter(
+      (s) =>
+        s.shopName.toLowerCase().includes(q) ||
+        s.area.toLowerCase().includes(q) ||
+        s.ownerName.toLowerCase().includes(q) ||
+        s.phone.includes(q),
+    );
+  }, [shops, shopSearch]);
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -206,40 +242,74 @@ export function NewSaleView({
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         {/* Left Column: Shop Picker & Product Selector */}
         <div className="space-y-5 xl:col-span-5">
-          {/* Shopkeeper Selector */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
+          {/* Modern Shopkeeper Selector */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
             <div className="flex items-center justify-between gap-2">
-              <label htmlFor="sale-shop-select" className="text-sm font-semibold text-slate-900">
+              <span className="text-[15px] sm:text-base font-bold text-slate-900">
                 ১. দোকানদার নির্বাচন করুন
-              </label>
+              </span>
               <button
                 type="button"
                 onClick={onRequestAddShop}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap shrink-0"
+                className="inline-flex min-h-[38px] items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-[13px] font-semibold text-emerald-800 transition-colors hover:bg-emerald-600 hover:text-white whitespace-nowrap shrink-0"
               >
-                <UserPlus className="h-3.5 w-3.5" />
+                <UserPlus className="h-4 w-4" />
                 নতুন দোকান
               </button>
             </div>
-            <select
+
+            <button
+              type="button"
               id="sale-shop-select"
-              value={selectedShopId}
-              onChange={(e) => {
-                setSelectedShopId(e.target.value);
-                setFormError('');
+              data-testid="shop-picker-trigger"
+              aria-haspopup="listbox"
+              aria-expanded={shopPickerOpen}
+              onClick={() => {
+                setShopSearch('');
+                setShopPickerOpen(true);
               }}
-              className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+              className="mt-3 flex w-full min-h-[58px] items-center justify-between gap-3 rounded-xl border border-slate-300 bg-slate-50/70 px-3.5 py-2.5 text-left transition-all hover:border-emerald-500 hover:bg-white focus:border-emerald-600 focus:outline-none"
             >
-              <option value="">-- দোকানদার বেছে নিন --</option>
-              {shops.map((shop) => (
-                <option key={shop.id} value={shop.id}>
-                  {shop.shopName} ({shop.area})
-                </option>
-              ))}
-            </select>
+              {selectedShop ? (
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-sm font-bold text-white shrink-0">
+                    {selectedShop.shopName.trim().charAt(0) || <Store className="h-5 w-5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[15px] sm:text-base font-bold text-slate-900">
+                      {selectedShop.shopName}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-slate-500">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span className="truncate">{selectedShop.area}</span>
+                      {selectedShop.phone && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-mono-num shrink-0">{selectedShop.phone}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 text-slate-500">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200 text-slate-500 shrink-0">
+                    <Store className="h-5 w-5" />
+                  </div>
+                  <span className="text-[15px] font-medium">দোকানদার বেছে নিন...</span>
+                </div>
+              )}
+              <ChevronDown className="h-5 w-5 text-slate-500 shrink-0" />
+            </button>
+
             {selectedShopSummary && (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-600">
-                <span>পূর্বের মোট বিল: <strong className="font-mono-num">{formatBDT(selectedShopSummary.totalBilled)}</strong></span>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[13px] text-slate-600">
+                <span>
+                  পূর্বের মোট বিল:{' '}
+                  <strong className="font-mono-num text-slate-900">
+                    {formatBDT(selectedShopSummary.totalBilled)}
+                  </strong>
+                </span>
                 <span>
                   পূর্বের বাকি:{' '}
                   <strong
@@ -258,7 +328,7 @@ export function NewSaleView({
           <div className="rounded-xl border border-slate-200 bg-white">
             <div className="border-b border-slate-200 p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-900">
+                <h2 className="text-[15px] sm:text-base font-bold text-slate-900">
                   ২. প্রোডাক্ট যোগ করুন ({filteredProducts.length})
                 </h2>
               </div>
@@ -269,8 +339,8 @@ export function NewSaleView({
                   aria-label="প্রোডাক্ট খুঁজুন"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ওষুধের নাম লিখে খুঁজুন (যেমন: Dexlan, Esolok)..."
-                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+                  placeholder="ওষুধের নাম লিখে খুঁজুন (যেমন: Dexlan)..."
+                  className="w-full min-h-[42px] rounded-xl border border-slate-300 py-2 pl-9 pr-3 text-[15px] text-slate-900 focus:border-emerald-600 focus:outline-none"
                 />
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -279,10 +349,10 @@ export function NewSaleView({
                     key={tier}
                     type="button"
                     onClick={() => setTierFilter(tier)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+                    className={`min-h-[36px] rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors whitespace-nowrap ${
                       tierFilter === tier
                         ? 'bg-slate-900 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     {tier === 'All' ? 'সব প্রোডাক্ট' : tier.replace(' (Group B)', ' B')}
@@ -299,31 +369,53 @@ export function NewSaleView({
               ) : (
                 filteredProducts.map((product) => {
                   const inCart = draftRows.find((r) => r.productId === product.id);
+                  const cartBoxes = inCart ? Number.parseInt(inCart.boxesInput, 10) || 0 : 0;
                   return (
                     <div
                       key={product.id}
-                      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-slate-50"
+                      className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-slate-50/80"
                     >
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-slate-900">{product.name}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-[15px] font-semibold text-slate-900 truncate">
+                          {product.name}
+                        </div>
+                        <div className="mt-0.5 text-[13px] text-slate-500">
                           <span>{product.tier}</span>
                           <span aria-hidden="true"> · </span>
-                          <span className="font-mono-num">{formatBDT(product.boxPrice)}/বক্স</span>
+                          <span className="font-mono-num font-medium text-slate-700">
+                            {formatBDT(product.boxPrice)}/বক্স
+                          </span>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => addProductToCart(product)}
                         aria-label={`যোগ করুন: ${product.name}`}
-                        className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
+                        className={`group inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-transform duration-100 active:scale-[0.97] whitespace-nowrap shrink-0 ${
                           inCart
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                            : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                            ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/25 hover:bg-emerald-700'
+                            : 'border border-emerald-200 bg-emerald-50/90 text-emerald-800 shadow-xs hover:border-emerald-600 hover:bg-emerald-600 hover:text-white'
                         }`}
                       >
-                        <Plus className="h-3.5 w-3.5" />
-                        {inCart ? `আরও (+১) · ${Number.parseInt(inCart.boxesInput, 10) || 0}` : 'যোগ করুন'}
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-md transition-colors ${
+                            inCart
+                              ? 'bg-white/20 text-white'
+                              : 'bg-emerald-600/15 text-emerald-700 group-hover:bg-white/20 group-hover:text-white'
+                          }`}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </span>
+                        {inCart ? (
+                          <span className="flex items-center gap-1.5">
+                            <span>আরও</span>
+                            <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-xs font-bold font-mono-num">
+                              {cartBoxes}
+                            </span>
+                          </span>
+                        ) : (
+                          <span>যোগ করুন</span>
+                        )}
                       </button>
                     </div>
                   );
@@ -618,6 +710,148 @@ export function NewSaleView({
           </div>
         </form>
       </div>
+
+      {/* Modern Shopkeeper Selection Sheet / Modal */}
+      {shopPickerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-[1px] sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="দোকানদার নির্বাচন করুন"
+          data-testid="shop-picker-sheet"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShopPickerOpen(false);
+          }}
+        >
+          <div className="flex max-h-[85dvh] w-full sm:max-w-lg flex-col rounded-t-3xl sm:rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-slate-200 sm:hidden" />
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                  দোকানদার নির্বাচন করুন
+                </h2>
+                <p className="text-xs text-slate-500">
+                  তালিকা থেকে ফার্মেসি বেছে নিন ({shops.length} টি)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShopPickerOpen(false)}
+                aria-label="দোকানদার তালিকা বন্ধ করুন"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="border-b border-slate-100 px-4 py-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={shopSearch}
+                  onChange={(e) => setShopSearch(e.target.value)}
+                  placeholder="দোকানের নাম, এলাকা বা ফোন দিয়ে খুঁজুন..."
+                  aria-label="দোকানদার খুঁজুন"
+                  className="w-full min-h-[44px] rounded-xl border border-slate-300 bg-slate-50/70 py-2.5 pl-10 pr-3.5 text-[15px] text-slate-900 focus:border-emerald-600 focus:bg-white focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div
+              role="listbox"
+              aria-label="দোকানদারের তালিকা"
+              className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-3.5"
+            >
+              {filteredShopsForPicker.length === 0 ? (
+                <div className="py-10 text-center text-sm text-slate-500">
+                  কোনো দোকানদার পাওয়া যায়নি।
+                </div>
+              ) : (
+                filteredShopsForPicker.map((shop) => {
+                  const summary = shopSummariesById.get(shop.id);
+                  const isSelected = shop.id === selectedShopId;
+                  const due = summary?.totalDue ?? 0;
+                  return (
+                    <button
+                      key={shop.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => {
+                        setSelectedShopId(shop.id);
+                        setFormError('');
+                        setShopPickerOpen(false);
+                      }}
+                      className={`flex w-full min-h-[64px] items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left transition-all ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-50/80 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div
+                          className={`flex h-11 w-11 items-center justify-center rounded-xl text-base font-bold shrink-0 ${
+                            isSelected
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {shop.shopName.trim().charAt(0) || <Store className="h-5 w-5" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[15px] sm:text-base font-bold text-slate-900">
+                            {shop.shopName}
+                          </div>
+                          <div className="mt-0.5 truncate text-[13px] text-slate-500">
+                            {shop.area} · {shop.ownerName}
+                            {shop.phone ? ` · ${shop.phone}` : ''}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <div className="text-right">
+                          <div className="text-[11px] text-slate-500">
+                            {due > 0 ? 'বাকি' : 'হিসাব'}
+                          </div>
+                          <div
+                            className={`text-sm font-bold font-mono-num ${
+                              due > 0 ? 'text-red-600' : 'text-emerald-700'
+                            }`}
+                          >
+                            {due > 0 ? formatBDT(due) : 'পরিশোধিত'}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white">
+                            <Check className="h-3.5 w-3.5" />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="border-t border-slate-200 bg-slate-50/70 p-3.5 pb-safe rounded-b-2xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setShopPickerOpen(false);
+                  onRequestAddShop();
+                }}
+                className="inline-flex w-full min-h-[46px] items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+              >
+                <UserPlus className="h-4 w-4" />
+                তালিকায় না থাকলে নতুন দোকান যোগ করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

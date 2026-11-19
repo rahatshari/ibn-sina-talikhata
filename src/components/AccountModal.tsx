@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { User } from 'firebase/auth';
 import {
   CheckCircle2,
   Cloud,
@@ -10,13 +9,14 @@ import {
   Smartphone,
   UploadCloud,
 } from 'lucide-react';
+import type { SessionAccountProfile } from '../types/tally';
 import type { SyncStatusDescriptor } from '../utils/updater';
 import { ModalShell } from './Modals';
 
 interface AccountModalProps {
   open: boolean;
   onClose: () => void;
-  user: User | null;
+  user: SessionAccountProfile | null;
   isOnline: boolean;
   syncStatus: SyncStatusDescriptor;
   authError: string | null;
@@ -98,7 +98,7 @@ export function AccountModal({
     <ModalShell
       open={open}
       onClose={handleClose}
-      title={user ? 'আপনার অ্যাকাউন্ট' : 'ইবনে সিনা টালিখাতা — লগইন'}
+      title={user ? 'আপনার অ্যাকাউন্ট' : 'ব্যক্তিগত টালিখাতা — লগইন'}
       maxWidthClass="max-w-md"
     >
       {user ? (
@@ -216,7 +216,7 @@ export function AccountModal({
           <div className="flex flex-col items-center text-center pt-1 pb-2">
             <img
               src="/icon.svg"
-              alt="ইবনে সিনা টালিখাতা"
+              alt="ব্যক্তিগত টালিখাতা"
               className="h-16 w-16 rounded-2xl shadow-sm border border-emerald-100"
             />
             <h3 className="mt-3 text-lg font-bold text-slate-900">

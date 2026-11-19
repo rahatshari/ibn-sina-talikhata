@@ -91,7 +91,7 @@ export function buildPrintableReceiptHtml(sale: SaleRecord): string {
 </head>
 <body>
   <div class="header">
-    <div class="brand">THE IBN SINA'S Production — ইবনে সিনা টালিখাতা</div>
+    <div class="brand">ব্যক্তিগত টালিখাতা</div>
     <div class="shop">${escapeHtml(sale.shopName)}</div>
     <div class="meta">ইনভয়েস: ${escapeHtml(sale.invoiceNo)} · ${escapeHtml(formatDateTimeBn(sale.date))} · মোট ${sale.totalBoxes} বক্স</div>
   </div>
@@ -258,7 +258,7 @@ export function buildShopStatementHtml(
     <tbody>${tableRows}</tbody>
   </table>
 
-  <div class="footer">ইবনে সিনা টালিখাতা অ্যাপ থেকে তৈরি দোকানদারের সম্পূর্ণ হিসাব বিবরণী</div>
+  <div class="footer">ব্যক্তিগত টালিখাতা অ্যাপ থেকে তৈরি দোকানদারের সম্পূর্ণ হিসাব বিবরণী</div>
 </body>
 </html>`;
 }
@@ -357,7 +357,7 @@ export async function renderReceiptPng(
 
   ctx.fillStyle = '#D1FAE5';
   ctx.font = `600 18px ${fontFamily}`;
-  ctx.fillText("THE IBN SINA'S Production · ইবনে সিনা টালিখাতা", padding + 28, padding + 42);
+  ctx.fillText("ব্যক্তিগত টালিখাতা · বিক্রয় রসিদ", padding + 28, padding + 42);
 
   ctx.fillStyle = '#FFFFFF';
   ctx.font = `700 32px ${fontFamily}`;
@@ -491,7 +491,7 @@ export async function renderReceiptPng(
   ctx.fillStyle = '#94A3B8';
   ctx.font = '500 15px "Hind Siliguri", system-ui, sans-serif';
   ctx.fillText(
-    "ইবনে সিনা টালিখাতা অ্যাপ থেকে তৈরি ডিজিটাল বিক্রয় রসিদ",
+    "ব্যক্তিগত টালিখাতা অ্যাপ থেকে তৈরি ডিজিটাল বিক্রয় রসিদ",
     width / 2,
     height - 26,
   );

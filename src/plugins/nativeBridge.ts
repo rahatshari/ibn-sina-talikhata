@@ -8,6 +8,7 @@ export interface GoogleAuthResult {
 
 export interface GoogleAuthBridgePlugin {
   signIn(): Promise<GoogleAuthResult>;
+  silentSignIn(): Promise<GoogleAuthResult>;
   signOut(): Promise<void>;
 }
 

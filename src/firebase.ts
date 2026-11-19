@@ -1,9 +1,12 @@
 import { initializeApp } from 'firebase/app';
 import {
   browserLocalPersistence,
+  browserPopupRedirectResolver,
   getAuth,
   GoogleAuthProvider,
-  setPersistence,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  type Auth,
 } from 'firebase/auth';
 import {
   doc,
@@ -34,23 +37,37 @@ function createPersistentFirestore(): Firestore {
   }
 }
 
+function createPersistentAuth(): Auth {
+  try {
+    return initializeAuth(app, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } catch {
+    return getAuth(app);
+  }
+}
+
 export const db = createPersistentFirestore();
-export const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(() => {
-  // Ignore environments where IndexedDB persistence is restricted
-});
+export const auth = createPersistentAuth();
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export function isOfflineFirestoreError(err: unknown): boolean {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
   if (!err || typeof err !== 'object') return false;
-  const code = 'code' in err ? String((err as { code?: unknown }).code) : '';
+  const code = 'code' in err ? String((err as { code?: unknown }).code).toLowerCase() : '';
   const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
   return (
     code === 'unavailable' ||
+    code === 'deadline-exceeded' ||
+    code === 'cancelled' ||
+    code === 'aborted' ||
+    code.includes('network') ||
     msg.includes('offline') ||
     msg.includes('network') ||
+    msg.includes('could not reach cloud firestore backend') ||
     msg.includes('failed to get document because the client is offline')
   );
 }

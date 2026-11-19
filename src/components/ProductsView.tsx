@@ -52,7 +52,7 @@ export function ProductsView({
           <button
             type="button"
             onClick={onAddProduct}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 whitespace-nowrap shrink-0"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-[0.97] whitespace-nowrap shrink-0"
           >
             <Plus className="h-4 w-4" />
             নতুন প্রোডাক্ট

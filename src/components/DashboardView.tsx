@@ -1,6 +1,18 @@
-import { ArrowRight, Banknote, Store } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ArrowRight, Banknote, CalendarDays, Store } from 'lucide-react';
 import type { DashboardMetrics, PaymentRecord, SaleRecord, Shopkeeper } from '../types/tally';
-import { computeShopSummary, formatBDT, formatDateTimeBn } from '../utils/ledger';
+import {
+  computeMonthlySalesAndCollection,
+  computeShopSummary,
+  formatBDT,
+  formatDateTimeBn,
+  formatMonthYearBn,
+  getAvailableMonthKeys,
+  getMonthKeyFromDate,
+  loadKpiPeriodMode,
+  saveKpiPeriodMode,
+  type KpiPeriodMode,
+} from '../utils/ledger';
 
 interface DashboardViewProps {
   metrics: DashboardMetrics;
@@ -25,6 +37,28 @@ export function DashboardView({
   onOpenSaleDetail,
   onOpenAllReports,
 }: DashboardViewProps) {
+  const [periodMode, setPeriodMode] = useState<KpiPeriodMode>(() => loadKpiPeriodMode());
+  const availableMonths = useMemo(
+    () => getAvailableMonthKeys(sales, payments),
+    [sales, payments],
+  );
+  const currentMonthKey = getMonthKeyFromDate(new Date());
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthKey);
+
+  const activeMonth = availableMonths.includes(selectedMonth)
+    ? selectedMonth
+    : (availableMonths[0] ?? currentMonthKey);
+
+  const monthlyMetrics = useMemo(
+    () => computeMonthlySalesAndCollection(sales, payments, activeMonth),
+    [sales, payments, activeMonth],
+  );
+
+  const handleSelectPeriodMode = (nextMode: KpiPeriodMode) => {
+    setPeriodMode(nextMode);
+    saveKpiPeriodMode(nextMode);
+  };
+
   const shopSummaries = shops
     .map((shop) => ({
       shop,
@@ -61,27 +95,98 @@ export function DashboardView({
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 7);
 
+  const isMonthly = periodMode === 'monthly';
+  const activeMonthLabel = formatMonthYearBn(activeMonth);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {/* KPI Period Switcher: All-Time vs Monthly */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 sm:px-4">
+        <div
+          className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5"
+          role="group"
+          aria-label="হিসাবের সময়কাল নির্বাচন করুন"
+        >
+          <button
+            type="button"
+            onClick={() => handleSelectPeriodMode('all')}
+            aria-pressed={!isMonthly}
+            data-testid="kpi-mode-all"
+            className={`min-h-[36px] rounded-md px-3 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
+              !isMonthly
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            সর্বমোট হিসাব
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSelectPeriodMode('monthly')}
+            aria-pressed={isMonthly}
+            data-testid="kpi-mode-monthly"
+            className={`min-h-[36px] rounded-md px-3 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
+              isMonthly
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            মাসিক হিসাব
+          </button>
+        </div>
+
+        {isMonthly ? (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <CalendarDays className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+            <select
+              value={activeMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              aria-label="মাস নির্বাচন করুন"
+              data-testid="kpi-month-select"
+              className="min-h-[36px] max-w-[165px] rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 focus:border-emerald-600 focus:outline-none"
+            >
+              {availableMonths.map((monthKey) => (
+                <option key={monthKey} value={monthKey}>
+                  {formatMonthYearBn(monthKey)}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <span className="text-[11px] sm:text-xs font-medium text-slate-500">
+            শুরু থেকে এখন পর্যন্ত মোট বিক্রি ও আদায়
+          </span>
+        )}
+      </div>
 
       {/* 4-Column KPI Strip */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="text-xs sm:text-sm font-medium text-slate-500">মোট নিট বিক্রি</div>
+          <div className="text-xs sm:text-sm font-medium text-slate-500">
+            {isMonthly ? `মাসিক বিক্রি (${activeMonthLabel})` : 'মোট নিট বিক্রি'}
+          </div>
           <div className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-slate-900 font-mono-num" data-testid="kpi-total-sales">
-            {formatBDT(metrics.totalSales)}
+            {formatBDT(isMonthly ? monthlyMetrics.totalSales : metrics.totalSales)}
           </div>
           <div className="mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500 font-mono-num">
-            {metrics.totalBoxesSold} বক্স · ছাড় {formatBDT(metrics.totalDiscountGiven)}
+            {isMonthly
+              ? `${monthlyMetrics.totalBoxesSold} বক্স · ${monthlyMetrics.invoiceCount} চালান`
+              : `${metrics.totalBoxesSold} বক্স · ছাড় ${formatBDT(metrics.totalDiscountGiven)}`}
           </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="text-xs sm:text-sm font-medium text-slate-500">মোট নগদ আদায়</div>
-          <div className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-emerald-700 font-mono-num" data-testid="kpi-total-collected">
-            {formatBDT(metrics.totalCollected)}
+          <div className="text-xs sm:text-sm font-medium text-slate-500">
+            {isMonthly ? `মাসিক নগদ আদায় (${activeMonthLabel})` : 'মোট নগদ আদায়'}
           </div>
-          <div className="mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500">বিক্রয়কালীন জমা ও বাকি আদায়</div>
+          <div className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-emerald-700 font-mono-num" data-testid="kpi-total-collected">
+            {formatBDT(isMonthly ? monthlyMetrics.totalCollected : metrics.totalCollected)}
+          </div>
+          <div className="mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500 font-mono-num">
+            {isMonthly
+              ? `জমা ${formatBDT(monthlyMetrics.paidAtSale)} · বাকি আদায় ${formatBDT(monthlyMetrics.dueCollections)}`
+              : 'বিক্রয়কালীন জমা ও বাকি আদায়'}
+          </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">

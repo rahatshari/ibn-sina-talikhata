@@ -39,6 +39,7 @@ import type {
   ProductTier,
   SaleLineItem,
   SaleRecord,
+  SessionAccountProfile,
   Shopkeeper,
 } from '../types/tally';
 import {
@@ -51,6 +52,18 @@ import {
 import { computeSyncStatus } from '../utils/updater';
 
 const STORAGE_KEY = 'ibn_sina_mr_tally_v1';
+const AUTH_PROFILE_KEY = 'ibn_sina_auth_profile_v1';
+const AUTH_SIGNED_OUT_KEY = 'ibn_sina_auth_signed_out_v1';
+const FALLBACK_QUEUE_PREFIX = 'ibn_sina_fallback_queue_v1_';
+
+type FallbackSyncOp =
+  | { kind: 'upsert-shop'; shop: Shopkeeper }
+  | { kind: 'upsert-sale'; sale: SaleRecord }
+  | { kind: 'delete-sale'; saleId: string }
+  | { kind: 'upsert-payment'; payment: PaymentRecord }
+  | { kind: 'delete-payment'; paymentId: string }
+  | { kind: 'upsert-product'; product: Product }
+  | { kind: 'update-product'; productId: string; boxPrice: number; packInfo: string };
 
 interface StoredTallyState {
   products: Product[];
@@ -70,6 +83,69 @@ function clampStr(value: string, maxLen: number): string {
 
 function getCloudMirrorKey(uid: string): string {
   return `${STORAGE_KEY}_cloud_${uid}`;
+}
+
+function loadSavedAuthProfile(): SessionAccountProfile | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    if (window.localStorage.getItem(AUTH_SIGNED_OUT_KEY) === 'true') {
+      return null;
+    }
+    const raw = window.localStorage.getItem(AUTH_PROFILE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SessionAccountProfile>;
+    if (!parsed || typeof parsed.uid !== 'string' || !parsed.uid.trim()) {
+      return null;
+    }
+    return {
+      uid: parsed.uid,
+      email: typeof parsed.email === 'string' ? parsed.email : null,
+      displayName: typeof parsed.displayName === 'string' ? parsed.displayName : null,
+      photoURL: typeof parsed.photoURL === 'string' ? parsed.photoURL : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveAuthProfile(profile: SessionAccountProfile | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (profile) {
+      window.localStorage.removeItem(AUTH_SIGNED_OUT_KEY);
+      window.localStorage.setItem(AUTH_PROFILE_KEY, JSON.stringify(profile));
+    } else {
+      window.localStorage.setItem(AUTH_SIGNED_OUT_KEY, 'true');
+      window.localStorage.removeItem(AUTH_PROFILE_KEY);
+    }
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
+function loadFallbackQueue(uid: string): FallbackSyncOp[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(`${FALLBACK_QUEUE_PREFIX}${uid}`);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as FallbackSyncOp[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFallbackQueue(uid: string, ops: FallbackSyncOp[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (ops.length === 0) {
+      window.localStorage.removeItem(`${FALLBACK_QUEUE_PREFIX}${uid}`);
+    } else {
+      window.localStorage.setItem(`${FALLBACK_QUEUE_PREFIX}${uid}`, JSON.stringify(ops));
+    }
+  } catch {
+    // Ignore storage quota errors
+  }
 }
 
 function loadCloudMirror(uid: string): StoredTallyState {
@@ -134,15 +210,35 @@ function loadLocalState(): StoredTallyState {
 }
 
 export function useTallyStore() {
+  const [savedProfile, setSavedProfile] = useState<SessionAccountProfile | null>(() =>
+    loadSavedAuthProfile(),
+  );
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [localState, setLocalState] = useState<StoredTallyState>(() => loadLocalState());
-  const [cloudState, setCloudState] = useState<StoredTallyState>({
-    products: INITIAL_IBN_SINA_PRODUCTS,
-    shops: [],
-    sales: [],
-    payments: [],
+  const [cloudState, setCloudState] = useState<StoredTallyState>(() => {
+    const initialProfile = loadSavedAuthProfile();
+    return initialProfile
+      ? loadCloudMirror(initialProfile.uid)
+      : {
+          products: INITIAL_IBN_SINA_PRODUCTS,
+          shops: [],
+          sales: [],
+          payments: [],
+        };
   });
 
-  const [user, setUser] = useState<User | null>(null);
+  const user: SessionAccountProfile | null = useMemo(() => {
+    if (firebaseUser) {
+      return {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+      };
+    }
+    return savedProfile;
+  }, [firebaseUser, savedProfile]);
+
   const [authReady, setAuthReady] = useState(false);
   const [cloudLoading, setCloudLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -160,13 +256,26 @@ export function useTallyStore() {
 
   const needsBootstrapRef = useRef<User | null>(null);
   const prevPendingRef = useRef(false);
+  const explicitSignedOutRef = useRef<boolean>(
+    typeof window !== 'undefined' &&
+      window.localStorage.getItem(AUTH_SIGNED_OUT_KEY) === 'true',
+  );
+  const loadedUidRef = useRef<string | null>(savedProfile?.uid ?? null);
+  const silentAuthTriedOnlineRef = useRef<boolean>(false);
 
   if (asyncError) {
     throw asyncError;
   }
 
+  const hasFallbackPending = Boolean(
+    user && !firebaseUser && loadFallbackQueue(user.uid).length > 0,
+  );
   const hasPendingWrites =
-    pendingMap.products || pendingMap.shops || pendingMap.sales || pendingMap.payments;
+    pendingMap.products ||
+    pendingMap.shops ||
+    pendingMap.sales ||
+    pendingMap.payments ||
+    hasFallbackPending;
 
   // Track online/offline connectivity and trigger pending write flush notification on reconnect
   useEffect(() => {
@@ -295,32 +404,143 @@ export function useTallyStore() {
     }
   }, [isOnline, bootstrapUserProfileAndCatalog]);
 
-  // Listen to Firebase Auth state
+  const flushFallbackQueue = useCallback(async (uid: string) => {
+    const queue = loadFallbackQueue(uid);
+    if (queue.length === 0) return;
+    try {
+      const batch = writeBatch(db);
+      for (const op of queue) {
+        if (op.kind === 'upsert-shop') {
+          const shopId = sanitizeId(op.shop.id);
+          batch.set(doc(db, 'users', uid, 'shops', shopId), {
+            ...op.shop,
+            id: shopId,
+            ownerId: uid,
+            serverCreatedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        } else if (op.kind === 'upsert-sale') {
+          const saleId = sanitizeId(op.sale.id);
+          batch.set(doc(db, 'users', uid, 'sales', saleId), {
+            ...op.sale,
+            id: saleId,
+            ownerId: uid,
+            createdAt: serverTimestamp(),
+          });
+        } else if (op.kind === 'delete-sale') {
+          batch.delete(doc(db, 'users', uid, 'sales', sanitizeId(op.saleId)));
+        } else if (op.kind === 'upsert-payment') {
+          const payId = sanitizeId(op.payment.id);
+          batch.set(doc(db, 'users', uid, 'payments', payId), {
+            ...op.payment,
+            id: payId,
+            ownerId: uid,
+            createdAt: serverTimestamp(),
+          });
+        } else if (op.kind === 'delete-payment') {
+          batch.delete(doc(db, 'users', uid, 'payments', sanitizeId(op.paymentId)));
+        } else if (op.kind === 'upsert-product') {
+          const prodId = sanitizeId(op.product.id);
+          batch.set(doc(db, 'users', uid, 'products', prodId), {
+            ...op.product,
+            id: prodId,
+            ownerId: uid,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        } else if (op.kind === 'update-product') {
+          batch.update(doc(db, 'users', uid, 'products', sanitizeId(op.productId)), {
+            boxPrice: op.boxPrice,
+            packInfo: op.packInfo,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+      await batch.commit();
+      saveFallbackQueue(uid, []);
+      setJustSyncedNotice(true);
+    } catch (err) {
+      if (!isOfflineFirestoreError(err)) {
+        // Keep queue intact so user never loses offline entries
+      }
+    }
+  }, []);
+
+  // Listen to Firebase Auth state (never drop preserved offline session unless user explicitly signed out)
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (nextUser) => {
-      setUser(nextUser);
       setAuthReady(true);
 
       if (nextUser) {
-        setCloudState(loadCloudMirror(nextUser.uid));
+        explicitSignedOutRef.current = false;
+        silentAuthTriedOnlineRef.current = false;
+        const profile: SessionAccountProfile = {
+          uid: nextUser.uid,
+          email: nextUser.email,
+          displayName: nextUser.displayName,
+          photoURL: nextUser.photoURL,
+        };
+        saveAuthProfile(profile);
+        setSavedProfile(profile);
+        setFirebaseUser(nextUser);
+
+        if (loadedUidRef.current !== nextUser.uid) {
+          loadedUidRef.current = nextUser.uid;
+          setCloudState(loadCloudMirror(nextUser.uid));
+        }
+
         await bootstrapUserProfileAndCatalog(nextUser);
+        await flushFallbackQueue(nextUser.uid);
       } else {
-        setPendingMap({ products: false, shops: false, sales: false, payments: false });
+        setFirebaseUser(null);
+        if (explicitSignedOutRef.current) {
+          loadedUidRef.current = null;
+          setSavedProfile(null);
+          setPendingMap({ products: false, shops: false, sales: false, payments: false });
+        }
       }
     });
 
     return () => unsub();
-  }, [bootstrapUserProfileAndCatalog]);
+  }, [bootstrapUserProfileAndCatalog, flushFallbackQueue]);
+
+  // If Firebase Auth lost token while offline on Android, silently re-authenticate via Google Play Services once back online
+  useEffect(() => {
+    if (!isOnline) {
+      silentAuthTriedOnlineRef.current = false;
+      return;
+    }
+    if (
+      !authReady ||
+      firebaseUser ||
+      !savedProfile ||
+      explicitSignedOutRef.current ||
+      silentAuthTriedOnlineRef.current ||
+      !isNativeAndroid()
+    ) {
+      return;
+    }
+
+    silentAuthTriedOnlineRef.current = true;
+    GoogleAuthBridge.silentSignIn()
+      .then((res) => {
+        const credential = GoogleAuthProvider.credential(res.idToken);
+        return signInWithCredential(auth, credential);
+      })
+      .catch(() => {
+        // User remains cleanly in preserved offline mirror mode without losing data
+      });
+  }, [authReady, firebaseUser, savedProfile, isOnline]);
 
   // Attach real-time Firestore listeners (serves IndexedDB cache immediately offline + syncs online)
   useEffect(() => {
-    if (!authReady || !user) {
+    if (!authReady || !firebaseUser) {
       setCloudLoading(false);
       return;
     }
 
     setCloudLoading(true);
-    const uid = user.uid;
+    const uid = firebaseUser.uid;
 
     const productsPath = `users/${uid}/products`;
     const shopsPath = `users/${uid}/shops`;
@@ -465,7 +685,7 @@ export function useTallyStore() {
       unsubSales();
       unsubPayments();
     };
-  }, [authReady, user]);
+  }, [authReady, firebaseUser]);
 
   const activeState = user ? cloudState : localState;
 
@@ -489,6 +709,7 @@ export function useTallyStore() {
       return;
     }
     try {
+      explicitSignedOutRef.current = false;
       if (isNativeAndroid()) {
         const nativeRes = await GoogleAuthBridge.signIn();
         const credential = GoogleAuthProvider.credential(nativeRes.idToken);
@@ -508,12 +729,28 @@ export function useTallyStore() {
 
   const signOutUser = useCallback(async () => {
     setAuthError(null);
+    explicitSignedOutRef.current = true;
+    const activeUid = firebaseUser?.uid || savedProfile?.uid;
+    if (activeUid) {
+      saveFallbackQueue(activeUid, []);
+    }
+    saveAuthProfile(null);
+    setSavedProfile(null);
+    setFirebaseUser(null);
+    loadedUidRef.current = null;
     if (isNativeAndroid()) {
       await GoogleAuthBridge.signOut().catch(() => {
         // Continue Firebase sign-out
       });
     }
-    await signOut(auth);
+    await signOut(auth).catch(() => {
+      // Ignore if already signed out offline
+    });
+  }, [firebaseUser?.uid, savedProfile?.uid]);
+
+  const appendFallbackOp = useCallback((uid: string, op: FallbackSyncOp) => {
+    const existing = loadFallbackQueue(uid);
+    saveFallbackQueue(uid, [...existing, op]);
   }, []);
 
   const addShopkeeper = useCallback(
@@ -528,11 +765,11 @@ export function useTallyStore() {
         createdAt: new Date().toISOString().slice(0, 40),
       };
 
-      if (user) {
-        const path = `users/${user.uid}/shops/${id}`;
-        setDoc(doc(db, 'users', user.uid, 'shops', id), {
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/shops/${id}`;
+        setDoc(doc(db, 'users', firebaseUser.uid, 'shops', id), {
           ...newShop,
-          ownerId: user.uid,
+          ownerId: firebaseUser.uid,
           serverCreatedAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         }).catch((err) => {
@@ -543,6 +780,12 @@ export function useTallyStore() {
             setAsyncError(wrapped as Error);
           }
         });
+      } else if (user) {
+        setCloudState((prev) => ({
+          ...prev,
+          shops: [newShop, ...prev.shops],
+        }));
+        appendFallbackOp(user.uid, { kind: 'upsert-shop', shop: newShop });
       } else {
         setLocalState((prev) => ({
           ...prev,
@@ -552,7 +795,7 @@ export function useTallyStore() {
 
       return newShop;
     },
-    [user],
+    [firebaseUser, user, appendFallbackOp],
   );
 
   const updateShopkeeper = useCallback(
@@ -568,9 +811,9 @@ export function useTallyStore() {
       };
       if (!updatedFields.shopName) return;
 
-      if (user) {
-        const path = `users/${user.uid}/shops/${shopId}`;
-        updateDoc(doc(db, 'users', user.uid, 'shops', shopId), {
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/shops/${shopId}`;
+        updateDoc(doc(db, 'users', firebaseUser.uid, 'shops', shopId), {
           ...updatedFields,
           updatedAt: serverTimestamp(),
         }).catch((err) => {
@@ -581,6 +824,22 @@ export function useTallyStore() {
             setAsyncError(wrapped as Error);
           }
         });
+      } else if (user) {
+        const target = cloudState.shops.find((s) => s.id === shopId);
+        const updatedShop: Shopkeeper | null = target ? { ...target, ...updatedFields } : null;
+        setCloudState((prev) => ({
+          ...prev,
+          shops: prev.shops.map((s) => (s.id === shopId ? { ...s, ...updatedFields } : s)),
+          sales: prev.sales.map((sale) =>
+            sale.shopId === shopId ? { ...sale, shopName: updatedFields.shopName } : sale,
+          ),
+          payments: prev.payments.map((pay) =>
+            pay.shopId === shopId ? { ...pay, shopName: updatedFields.shopName } : pay,
+          ),
+        }));
+        if (updatedShop) {
+          appendFallbackOp(user.uid, { kind: 'upsert-shop', shop: updatedShop });
+        }
       } else {
         setLocalState((prev) => ({
           ...prev,
@@ -594,7 +853,7 @@ export function useTallyStore() {
         }));
       }
     },
-    [user],
+    [firebaseUser, user, cloudState.shops, appendFallbackOp],
   );
 
   const recordSale = useCallback(
@@ -629,11 +888,11 @@ export function useTallyStore() {
         ...(trimmedNote ? { note: trimmedNote } : {}),
       };
 
-      if (user) {
-        const path = `users/${user.uid}/sales/${id}`;
-        setDoc(doc(db, 'users', user.uid, 'sales', id), {
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/sales/${id}`;
+        setDoc(doc(db, 'users', firebaseUser.uid, 'sales', id), {
           id: sale.id,
-          ownerId: user.uid,
+          ownerId: firebaseUser.uid,
           invoiceNo: sale.invoiceNo,
           shopId: sale.shopId,
           shopName: sale.shopName,
@@ -655,6 +914,12 @@ export function useTallyStore() {
             setAsyncError(wrapped as Error);
           }
         });
+      } else if (user) {
+        setCloudState((prev) => ({
+          ...prev,
+          sales: [sale, ...prev.sales],
+        }));
+        appendFallbackOp(user.uid, { kind: 'upsert-sale', sale });
       } else {
         setLocalState((prev) => ({
           ...prev,
@@ -664,7 +929,7 @@ export function useTallyStore() {
 
       return sale;
     },
-    [user, activeState.shops, activeState.sales],
+    [firebaseUser, user, activeState.shops, activeState.sales, appendFallbackOp],
   );
 
   const recordPayment = useCallback(
@@ -695,11 +960,11 @@ export function useTallyStore() {
         ...(trimmedNote ? { note: trimmedNote } : {}),
       };
 
-      if (user) {
-        const path = `users/${user.uid}/payments/${id}`;
-        setDoc(doc(db, 'users', user.uid, 'payments', id), {
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/payments/${id}`;
+        setDoc(doc(db, 'users', firebaseUser.uid, 'payments', id), {
           id: payment.id,
-          ownerId: user.uid,
+          ownerId: firebaseUser.uid,
           receiptNo: payment.receiptNo,
           shopId: payment.shopId,
           shopName: payment.shopName,
@@ -716,6 +981,12 @@ export function useTallyStore() {
             setAsyncError(wrapped as Error);
           }
         });
+      } else if (user) {
+        setCloudState((prev) => ({
+          ...prev,
+          payments: [payment, ...prev.payments],
+        }));
+        appendFallbackOp(user.uid, { kind: 'upsert-payment', payment });
       } else {
         setLocalState((prev) => ({
           ...prev,
@@ -723,14 +994,14 @@ export function useTallyStore() {
         }));
       }
     },
-    [user, activeState.shops, activeState.payments],
+    [firebaseUser, user, activeState.shops, activeState.payments, appendFallbackOp],
   );
 
   const deleteSale = useCallback(
     (saleId: string) => {
-      if (user) {
-        const path = `users/${user.uid}/sales/${saleId}`;
-        deleteDoc(doc(db, 'users', user.uid, 'sales', saleId)).catch((err) => {
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/sales/${saleId}`;
+        deleteDoc(doc(db, 'users', firebaseUser.uid, 'sales', saleId)).catch((err) => {
           if (isOfflineFirestoreError(err)) return;
           try {
             handleFirestoreError(err, OperationType.DELETE, path);
@@ -738,6 +1009,12 @@ export function useTallyStore() {
             setAsyncError(wrapped as Error);
           }
         });
+      } else if (user) {
+        setCloudState((prev) => ({
+          ...prev,
+          sales: prev.sales.filter((s) => s.id !== saleId),
+        }));
+        appendFallbackOp(user.uid, { kind: 'delete-sale', saleId });
       } else {
         setLocalState((prev) => ({
           ...prev,
@@ -745,14 +1022,14 @@ export function useTallyStore() {
         }));
       }
     },
-    [user],
+    [firebaseUser, user, appendFallbackOp],
   );
 
   const deletePayment = useCallback(
     (paymentId: string) => {
-      if (user) {
-        const path = `users/${user.uid}/payments/${paymentId}`;
-        deleteDoc(doc(db, 'users', user.uid, 'payments', paymentId)).catch((err) => {
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/payments/${paymentId}`;
+        deleteDoc(doc(db, 'users', firebaseUser.uid, 'payments', paymentId)).catch((err) => {
           if (isOfflineFirestoreError(err)) return;
           try {
             handleFirestoreError(err, OperationType.DELETE, path);
@@ -760,6 +1037,12 @@ export function useTallyStore() {
             setAsyncError(wrapped as Error);
           }
         });
+      } else if (user) {
+        setCloudState((prev) => ({
+          ...prev,
+          payments: prev.payments.filter((p) => p.id !== paymentId),
+        }));
+        appendFallbackOp(user.uid, { kind: 'delete-payment', paymentId });
       } else {
         setLocalState((prev) => ({
           ...prev,
@@ -767,16 +1050,16 @@ export function useTallyStore() {
         }));
       }
     },
-    [user],
+    [firebaseUser, user, appendFallbackOp],
   );
 
   const updateProductPrice = useCallback(
     (productId: string, boxPrice: number, packInfo?: string) => {
       const safePrice = roundCurrency(Math.max(0, Math.min(1000000, boxPrice)));
-      if (user) {
+      if (firebaseUser) {
         const existing = cloudState.products.find((p) => p.id === productId);
-        const path = `users/${user.uid}/products/${productId}`;
-        updateDoc(doc(db, 'users', user.uid, 'products', productId), {
+        const path = `users/${firebaseUser.uid}/products/${productId}`;
+        updateDoc(doc(db, 'users', firebaseUser.uid, 'products', productId), {
           boxPrice: safePrice,
           packInfo: clampStr(
             packInfo !== undefined ? packInfo || existing?.packInfo || '1 Box' : existing?.packInfo || '1 Box',
@@ -790,6 +1073,26 @@ export function useTallyStore() {
           } catch (wrapped) {
             setAsyncError(wrapped as Error);
           }
+        });
+      } else if (user) {
+        const existing = cloudState.products.find((p) => p.id === productId);
+        const nextPack = clampStr(
+          packInfo !== undefined ? packInfo || existing?.packInfo || '1 Box' : existing?.packInfo || '1 Box',
+          60,
+        );
+        setCloudState((prev) => ({
+          ...prev,
+          products: prev.products.map((p) =>
+            p.id === productId
+              ? { ...p, boxPrice: safePrice, packInfo: nextPack }
+              : p,
+          ),
+        }));
+        appendFallbackOp(user.uid, {
+          kind: 'update-product',
+          productId,
+          boxPrice: safePrice,
+          packInfo: nextPack,
         });
       } else {
         setLocalState((prev) => ({
@@ -806,7 +1109,7 @@ export function useTallyStore() {
         }));
       }
     },
-    [user, cloudState.products],
+    [firebaseUser, user, cloudState.products, appendFallbackOp],
   );
 
   const addProduct = useCallback(
@@ -821,11 +1124,11 @@ export function useTallyStore() {
         active: true,
       };
 
-      if (user) {
-        const path = `users/${user.uid}/products/${id}`;
-        setDoc(doc(db, 'users', user.uid, 'products', id), {
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/products/${id}`;
+        setDoc(doc(db, 'users', firebaseUser.uid, 'products', id), {
           ...newProduct,
-          ownerId: user.uid,
+          ownerId: firebaseUser.uid,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         }).catch((err) => {
@@ -836,6 +1139,12 @@ export function useTallyStore() {
             setAsyncError(wrapped as Error);
           }
         });
+      } else if (user) {
+        setCloudState((prev) => ({
+          ...prev,
+          products: [newProduct, ...prev.products],
+        }));
+        appendFallbackOp(user.uid, { kind: 'upsert-product', product: newProduct });
       } else {
         setLocalState((prev) => ({
           ...prev,
@@ -845,12 +1154,12 @@ export function useTallyStore() {
 
       return newProduct;
     },
-    [user],
+    [firebaseUser, user, appendFallbackOp],
   );
 
   const syncLocalDemoToCloud = useCallback(async () => {
-    if (!user) return;
-    const uid = user.uid;
+    if (!firebaseUser) return;
+    const uid = firebaseUser.uid;
     try {
       const batch = writeBatch(db);
       for (const shop of localState.shops) {
@@ -911,7 +1220,7 @@ export function useTallyStore() {
         setAsyncError(wrapped as Error);
       }
     }
-  }, [user, localState]);
+  }, [firebaseUser, localState]);
 
   const importBackupData = useCallback((jsonText: string): { ok: boolean; error?: string } => {
     try {

@@ -3,10 +3,14 @@ import assert from 'node:assert/strict';
 import {
   calculateLineItem,
   calculateInvoiceTotals,
+  computeMonthlySalesAndCollection,
   computeShopSummary,
   computeDashboardMetrics,
   formatDateTimeBn,
+  formatMonthYearBn,
+  getAvailableMonthKeys,
   getDueShopSummaries,
+  getMonthKeyFromIso,
   mergeCatalogProducts,
 } from './ledger';
 import { INITIAL_IBN_SINA_PRODUCTS } from '../data/ibnSinaProducts';
@@ -252,3 +256,141 @@ test('formatDateTimeBn displays both Bengali date and 12-hour time for ISO times
   assert.match(dateOnly, /২০২৬/);
   assert.doesNotMatch(dateOnly, /:/);
 });
+
+test('getMonthKeyFromIso, getAvailableMonthKeys, and formatMonthYearBn parse and sort months accurately', () => {
+  assert.equal(getMonthKeyFromIso('2026-11-18'), '2026-11');
+  assert.equal(getMonthKeyFromIso('2026-10-15T10:30:00.000Z'), '2026-10');
+  assert.equal(getMonthKeyFromIso('invalid-date'), null);
+
+  const sales: SaleRecord[] = [
+    {
+      id: 's1',
+      invoiceNo: 'INV-101',
+      shopId: 'shop-1',
+      shopName: 'মা ফার্মেসি',
+      date: '2026-10-15T10:00:00.000Z',
+      items: [],
+      totalBoxes: 4,
+      grossTotal: 2000,
+      totalDiscount: 0,
+      netTotal: 2000,
+      paidAmount: 1000,
+      dueAmount: 1000,
+    },
+    {
+      id: 's2',
+      invoiceNo: 'INV-102',
+      shopId: 'shop-1',
+      shopName: 'মা ফার্মেসি',
+      date: '2026-11-16T10:00:00.000Z',
+      items: [],
+      totalBoxes: 6,
+      grossTotal: 3000,
+      totalDiscount: 300,
+      netTotal: 2700,
+      paidAmount: 1500,
+      dueAmount: 1200,
+    },
+  ];
+  const payments: PaymentRecord[] = [
+    {
+      id: 'p1',
+      receiptNo: 'REC-201',
+      shopId: 'shop-1',
+      shopName: 'মা ফার্মেসি',
+      date: '2026-11-17T12:00:00.000Z',
+      amount: 800,
+      method: 'Cash',
+    },
+  ];
+
+  const months = getAvailableMonthKeys(sales, payments, new Date(2026, 10, 19));
+  assert.deepEqual(months, ['2026-11', '2026-10']);
+
+  assert.match(formatMonthYearBn('2026-11'), /নভেম্বর/);
+  assert.match(formatMonthYearBn('2026-11'), /২০২৬/);
+});
+
+test('computeMonthlySalesAndCollection isolates sales and collections for the selected month', () => {
+  const sales: SaleRecord[] = [
+    {
+      id: 's-oct',
+      invoiceNo: 'INV-101',
+      shopId: 'shop-1',
+      shopName: 'মা ফার্মেসি',
+      date: '2026-10-15T10:00:00.000Z',
+      items: [],
+      totalBoxes: 5,
+      grossTotal: 5000,
+      totalDiscount: 500,
+      netTotal: 4500,
+      paidAmount: 2000,
+      dueAmount: 2500,
+    },
+    {
+      id: 's-nov-1',
+      invoiceNo: 'INV-102',
+      shopId: 'shop-1',
+      shopName: 'মা ফার্মেসি',
+      date: '2026-11-12T10:00:00.000Z',
+      items: [],
+      totalBoxes: 8,
+      grossTotal: 4000,
+      totalDiscount: 400,
+      netTotal: 3600,
+      paidAmount: 1600,
+      dueAmount: 2000,
+    },
+    {
+      id: 's-nov-2',
+      invoiceNo: 'INV-103',
+      shopId: 'shop-2',
+      shopName: 'নিউ মডার্ন',
+      date: '2026-11-15T10:00:00.000Z',
+      items: [],
+      totalBoxes: 4,
+      grossTotal: 2000,
+      totalDiscount: 0,
+      netTotal: 2000,
+      paidAmount: 2000,
+      dueAmount: 0,
+    },
+  ];
+
+  const payments: PaymentRecord[] = [
+    {
+      id: 'p-oct',
+      receiptNo: 'REC-201',
+      shopId: 'shop-1',
+      shopName: 'মা ফার্মেসি',
+      date: '2026-10-20T12:00:00.000Z',
+      amount: 500,
+      method: 'Cash',
+    },
+    {
+      id: 'p-nov',
+      receiptNo: 'REC-202',
+      shopId: 'shop-1',
+      shopName: 'মা ফার্মেসি',
+      date: '2026-11-16T12:00:00.000Z',
+      amount: 1200,
+      method: 'bKash',
+    },
+  ];
+
+  const nov = computeMonthlySalesAndCollection(sales, payments, '2026-11');
+  assert.equal(nov.monthKey, '2026-11');
+  assert.equal(nov.totalSales, 5600);
+  assert.equal(nov.totalDiscountGiven, 400);
+  assert.equal(nov.totalBoxesSold, 12);
+  assert.equal(nov.invoiceCount, 2);
+  assert.equal(nov.paidAtSale, 3600);
+  assert.equal(nov.dueCollections, 1200);
+  assert.equal(nov.totalCollected, 4800);
+  assert.equal(nov.saleDue, 2000);
+
+  const oct = computeMonthlySalesAndCollection(sales, payments, '2026-10');
+  assert.equal(oct.totalSales, 4500);
+  assert.equal(oct.totalCollected, 2500);
+});
+

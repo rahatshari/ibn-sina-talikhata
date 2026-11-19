@@ -75,7 +75,7 @@ export function parseReleaseChangelog(body?: string): string[] {
 export function formatUpdateNotificationBody(version: string, body?: string): string {
   const items = parseReleaseChangelog(body).slice(0, 4);
   if (items.length === 0) {
-    return `ইবনে সিনা টালিখাতা v${version} ডাউনলোড ও আপডেট করতে ট্যাপ করুন।`;
+    return `ব্যক্তিগত টালিখাতা v${version} ডাউনলোড ও আপডেট করতে ট্যাপ করুন।`;
   }
   return items.map((item) => `• ${item}`).join('\n');
 }

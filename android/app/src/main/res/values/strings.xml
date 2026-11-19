@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">ইবনে সিনা টালিখাতা</string>
-    <string name="title_activity_main">ইবনে সিনা টালিখাতা</string>
+    <string name="app_name">ব্যক্তিগত টালিখাতা</string>
+    <string name="title_activity_main">ব্যক্তিগত টালিখাতা</string>
     <string name="package_name">com.rahat.talikhata</string>
     <string name="custom_url_scheme">com.rahat.talikhata</string>
 </resources>
