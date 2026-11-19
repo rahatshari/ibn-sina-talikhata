@@ -1,0 +1,12 @@
+{
+	"appId": "com.rahat.talikhata",
+	"appName": "ইবনে সিনা টালিখাতা",
+	"webDir": "dist",
+	"android": {
+		"allowMixedContent": false,
+		"backgroundColor": "#f8fafc"
+	},
+	"server": {
+		"androidScheme": "https"
+	}
+}

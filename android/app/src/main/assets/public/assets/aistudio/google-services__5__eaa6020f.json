@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "30985726414",
+    "firebase_url": "https://tali-66089-default-rtdb.firebaseio.com",
+    "project_id": "tali-66089",
+    "storage_bucket": "tali-66089.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:30985726414:android:7266d4e4cf224ab50ea39f",
+        "android_client_info": {
+          "package_name": "com.rahat.talikhata"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "30985726414-9t20a5f812n20kdpbik2tb2u03vnbbuq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6_vIP9DimBr78lsMF5F5m34rtoqXyN10"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "30985726414-9t20a5f812n20kdpbik2tb2u03vnbbuq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

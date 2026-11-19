@@ -1,0 +1,370 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated Medical Representative profile document",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "User display name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160,
+          "description": "Verified Google account email"
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Profile avatar URL"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["uid", "displayName", "email", "createdAt", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Pharmaceutical product in the MR catalog",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Product identifier"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner MR user UID"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Medicine brand name"
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "Super Star",
+            "Priority Star",
+            "Promising Star",
+            "Star Line (Group B)",
+            "Priority Line (Group B)",
+            "Promising Line (Group B)",
+            "Custom"
+          ],
+          "maxLength": 40,
+          "description": "Product tier from Ibn Sina production sheet"
+        },
+        "boxPrice": {
+          "type": "number",
+          "description": "Unit price per box in BDT"
+        },
+        "packInfo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "description": "Packaging specification"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether product is active for sale"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["id", "ownerId", "name", "tier", "boxPrice", "packInfo", "active", "createdAt", "updatedAt"]
+    },
+    "Shopkeeper": {
+      "title": "Shopkeeper",
+      "description": "Pharmacy or shopkeeper ledger account",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Shopkeeper identifier"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner MR user UID"
+        },
+        "shopName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Pharmacy name"
+        },
+        "ownerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Proprietor name"
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Contact phone number"
+        },
+        "area": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Market or neighborhood area"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Client ISO timestamp for display"
+        },
+        "serverCreatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["id", "ownerId", "shopName", "ownerName", "phone", "area", "createdAt", "serverCreatedAt", "updatedAt"]
+    },
+    "SaleRecord": {
+      "title": "SaleRecord",
+      "description": "Medicine sale invoice with itemized discount and payment tracking",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Sale identifier"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner MR user UID"
+        },
+        "invoiceNo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Human-readable invoice code"
+        },
+        "shopId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Referenced shopkeeper document ID"
+        },
+        "shopName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Shop name snapshot"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Sale ISO date string"
+        },
+        "items": {
+          "type": "array",
+          "description": "Bounded list (1 to 60) of sold line items with per-product discount"
+        },
+        "totalBoxes": {
+          "type": "number",
+          "description": "Total boxes sold"
+        },
+        "grossTotal": {
+          "type": "number",
+          "description": "Gross price before discount"
+        },
+        "totalDiscount": {
+          "type": "number",
+          "description": "Total discount amount"
+        },
+        "netTotal": {
+          "type": "number",
+          "description": "Net payable after discount"
+        },
+        "paidAmount": {
+          "type": "number",
+          "description": "Amount paid at sale"
+        },
+        "dueAmount": {
+          "type": "number",
+          "description": "Remaining due amount"
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Optional sale note"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "invoiceNo",
+        "shopId",
+        "shopName",
+        "date",
+        "items",
+        "totalBoxes",
+        "grossTotal",
+        "totalDiscount",
+        "netTotal",
+        "paidAmount",
+        "dueAmount",
+        "createdAt"
+      ]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Due collection payment receipt from a shopkeeper",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Payment identifier"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner MR user UID"
+        },
+        "receiptNo": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Receipt number"
+        },
+        "shopId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Referenced shopkeeper document ID"
+        },
+        "shopName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Shop name snapshot"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Payment ISO date string"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Collected amount in BDT"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["Cash", "bKash", "Nagad", "Bank"],
+          "maxLength": 20,
+          "description": "Payment method"
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Optional payment note"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "receiptNo",
+        "shopId",
+        "shopName",
+        "date",
+        "amount",
+        "method",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private MR user profile document keyed by Firebase Auth UID"
+    },
+    "/users/{userId}/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "User-scoped pharmaceutical product catalog"
+    },
+    "/users/{userId}/shops/{shopId}": {
+      "schema": { "$ref": "#/entities/Shopkeeper" },
+      "description": "User-scoped pharmacy/shopkeeper directory"
+    },
+    "/users/{userId}/sales/{saleId}": {
+      "schema": { "$ref": "#/entities/SaleRecord" },
+      "description": "User-scoped sales invoices"
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/PaymentRecord" },
+      "description": "User-scoped due collection receipts"
+    }
+  }
+}

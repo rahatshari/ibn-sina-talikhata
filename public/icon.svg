@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="108" fill="#059669" />
+  <rect x="32" y="32" width="448" height="448" rx="84" fill="#047857" opacity="0.35" />
+  <!-- Ledger Book Shape -->
+  <rect x="132" y="108" width="248" height="296" rx="28" fill="#FFFFFF" />
+  <rect x="132" y="108" width="44" height="296" rx="14" fill="#D1FAE5" />
+  <!-- Medical Cross Badge -->
+  <circle cx="282" cy="212" r="54" fill="#ECFDF5" />
+  <rect x="270" y="180" width="24" height="64" rx="6" fill="#059669" />
+  <rect x="250" y="200" width="64" height="24" rx="6" fill="#059669" />
+  <!-- Tally Lines -->
+  <rect x="216" y="294" width="128" height="16" rx="8" fill="#0F172A" opacity="0.8" />
+  <rect x="216" y="328" width="92" height="16" rx="8" fill="#059669" />
+</svg>

@@ -1,0 +1,8 @@
+{
+  "name": "ইবনে সিনা টালিখাতা — MR Sales & Ledger",
+  "description": "ওষুধ কোম্পানির মার্কেট রিপ্রেজেন্টেটিভদের জন্য প্রোডাক্ট ভিত্তিক বিক্রি, ডিসকাউন্ট, নগদ আদায় ও বাকি হিসাবের ডিজিটাল টালিখাতা।",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

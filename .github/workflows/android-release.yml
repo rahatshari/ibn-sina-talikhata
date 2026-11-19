@@ -1,0 +1,125 @@
+name: Build & Release Signed Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android-apk:
+    name: Build Signed APK & Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Compute auto-incrementing version
+        id: version
+        run: |
+          CODE=$((100 + GITHUB_RUN_NUMBER))
+          NAME="1.0.${GITHUB_RUN_NUMBER}"
+          echo "version_code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "version_name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "tag_name=v$NAME" >> "$GITHUB_OUTPUT"
+          echo "Auto Version: $NAME (versionCode=$CODE)"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run unit tests & lint
+        run: |
+          npx tsx --test src/utils/ledger.test.ts src/utils/updater.test.ts
+          npm run lint
+
+      - name: Build web bundle with baked release metadata
+        env:
+          VITE_APP_VERSION: ${{ steps.version.outputs.version_name }}
+          VITE_APP_VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          VITE_GITHUB_REPO: ${{ github.repository }}
+        run: npm run build
+
+      - name: Sync Capacitor Android assets
+        run: npx cap sync android
+
+      - name: Validate persistent release signing keystore secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ]; then
+            echo "::error::Missing persistent signing secrets! Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD in GitHub Repo Settings -> Secrets and variables -> Actions. See ANDROID_GITHUB_SETUP.md."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release-keystore.jks
+
+      - name: Build signed Release APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: release-keystore.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APP_VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          APP_VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -PAPP_VERSION_CODE="$APP_VERSION_CODE" \
+            -PAPP_VERSION_NAME="$APP_VERSION_NAME" \
+            -PGITHUB_REPO="$GITHUB_REPO" \
+            -PANDROID_KEYSTORE_PATH="$ANDROID_KEYSTORE_PATH" \
+            -PANDROID_KEYSTORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
+            -PANDROID_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
+            -PANDROID_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+
+      - name: Cleanup decoded keystore & prepare release APK
+        if: always()
+        run: |
+          rm -f android/app/release-keystore.jks
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk "IbnSina-TallyKhata-${{ steps.version.outputs.tag_name }}.apk"
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IbnSina-TallyKhata-${{ steps.version.outputs.tag_name }}
+          path: IbnSina-TallyKhata-${{ steps.version.outputs.tag_name }}.apk
+
+      - name: Publish signed APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          name: ইবনে সিনা টালিখাতা ${{ steps.version.outputs.tag_name }}
+          draft: false
+          prerelease: false
+          body: |
+            অটোমেটিক বিল্ড ও রিলিজ (${{ steps.version.outputs.tag_name }})
+            versionCode: ${{ steps.version.outputs.version_code }}
+
+            - একই রিলিজ সিগনেচারে সাইন করা APK (পুরনো অ্যাপের ডাটা রেখেই সরাসরি আপডেট করা যাবে)
+            - অফলাইন ও অনলাইন অটো-সিঙ্ক এবং ইন-অ্যাপ ডাউনলোড ম্যানেজার যুক্ত
+          files: IbnSina-TallyKhata-${{ steps.version.outputs.tag_name }}.apk
