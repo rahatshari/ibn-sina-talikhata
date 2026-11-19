@@ -30,8 +30,20 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Configure pre-installed Android SDK
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "$SDK_ROOT" ]; then
+            echo "::error::Android SDK directory not found at $SDK_ROOT"
+            exit 1
+          fi
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -n 1 || true)"
+          if [ -n "$SDKMANAGER" ]; then
+            (yes || true) | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null 2>&1 || true
+            "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          fi
 
       - name: Compute auto-incrementing version
         id: version
@@ -63,8 +75,12 @@ jobs:
           VITE_GITHUB_REPO: ${{ github.repository }}
         run: npm run build
 
-      - name: Sync Capacitor Android assets
-        run: npx --no-install cap sync android
+      - name: Ensure Android google-services.json & sync Capacitor assets
+        run: |
+          if [ ! -f android/app/google-services.json ] && [ -f public/assets/aistudio/google-services__5__eaa6020f.json ]; then
+            cp public/assets/aistudio/google-services__5__eaa6020f.json android/app/google-services.json
+          fi
+          npx --no-install cap sync android
 
       - name: Validate persistent release signing keystore secrets
         env:
@@ -77,6 +93,10 @@ jobs:
             exit 1
           fi
           echo "$ANDROID_KEYSTORE_BASE64" | tr -d '\n\r ' | base64 -d > android/app/release-keystore.jks
+          if [ ! -s android/app/release-keystore.jks ]; then
+            echo "::error::Decoded keystore file is empty. Please re-check ANDROID_KEYSTORE_BASE64 secret."
+            exit 1
+          fi
 
       - name: Build signed Release APK
         working-directory: android
