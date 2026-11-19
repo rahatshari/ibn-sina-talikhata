@@ -210,3 +210,13 @@ test('Dirty Dozen adversarial payloads all result in PERMISSION_DENIED', () => {
     'PERMISSION_DENIED',
   );
 });
+
+test('firestore.rules enforces hardened update guards on sales and payments', () => {
+  assert.match(rulesSource, /match \/sales\/\{saleId\}[\s\S]*allow update: if isValidId\(userId\) && isValidId\(saleId\) && isOwner\(userId\)/);
+  assert.match(rulesSource, /match \/sales\/\{saleId\}[\s\S]*incoming\(\)\.invoiceNo == existing\(\)\.invoiceNo/);
+  assert.match(rulesSource, /match \/sales\/\{saleId\}[\s\S]*incoming\(\)\.updatedAt == request\.time/);
+  assert.match(rulesSource, /match \/payments\/\{paymentId\}[\s\S]*allow update: if isValidId\(userId\) && isValidId\(paymentId\) && isOwner\(userId\)/);
+  assert.match(rulesSource, /match \/payments\/\{paymentId\}[\s\S]*incoming\(\)\.receiptNo == existing\(\)\.receiptNo/);
+  assert.match(rulesSource, /match \/payments\/\{paymentId\}[\s\S]*affectedKeys\(\)\.hasOnly\(\['amount', 'method', 'note', 'updatedAt'\]\)/);
+});
+

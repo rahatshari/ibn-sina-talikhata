@@ -377,3 +377,89 @@ export function getDueShopSummaries(
     .filter(({ summary }) => summary.totalDue > 0)
     .sort((a, b) => b.summary.totalDue - a.summary.totalDue);
 }
+
+export function buildEditedSaleRecord(
+  existingSale: SaleRecord,
+  itemsInput: SaleLineItem[],
+  paidAmountInput: number,
+  noteInput?: string,
+): { ok: true; sale: SaleRecord } | { ok: false; error: string } {
+  const validItems = itemsInput.filter((item) => item.boxes > 0).slice(0, 60);
+  if (validItems.length === 0) {
+    return {
+      ok: false,
+      error: 'কমপক্ষে ১টি প্রোডাক্টে ১ বা তার বেশি বক্স সংখ্যা রাখুন। (পুরো চালান বাদ দিতে চাইলে রিপোর্ট থেকে ডিলিট করুন।)',
+    };
+  }
+
+  const safePaidRaw = Number.isFinite(paidAmountInput) ? roundCurrency(paidAmountInput) : Number.NaN;
+  if (!Number.isFinite(safePaidRaw) || safePaidRaw < 0) {
+    return { ok: false, error: 'জমা টাকার পরিমাণ ০ বা তার বেশি হতে হবে।' };
+  }
+
+  const totals = calculateInvoiceTotals(validItems, safePaidRaw);
+  if (safePaidRaw > totals.netTotal) {
+    return {
+      ok: false,
+      error: `জমা টাকা সর্বমোট বিল (${formatBDT(totals.netTotal)}) এর চেয়ে বেশি হতে পারবে না।`,
+    };
+  }
+
+  const trimmedNote = (noteInput ?? '').trim().slice(0, 300);
+  const updated: SaleRecord = {
+    id: existingSale.id,
+    invoiceNo: existingSale.invoiceNo,
+    shopId: existingSale.shopId,
+    shopName: existingSale.shopName,
+    date: existingSale.date,
+    items: validItems,
+    totalBoxes: totals.totalBoxes,
+    grossTotal: totals.grossTotal,
+    totalDiscount: totals.totalDiscount,
+    netTotal: totals.netTotal,
+    paidAmount: totals.paidAmount,
+    dueAmount: totals.dueAmount,
+    ...(trimmedNote ? { note: trimmedNote } : {}),
+  };
+
+  return { ok: true, sale: updated };
+}
+
+const ALLOWED_PAYMENT_METHODS: ReadonlyArray<PaymentRecord['method']> = [
+  'Cash',
+  'bKash',
+  'Nagad',
+  'Bank',
+];
+
+export function buildEditedPaymentRecord(
+  existingPayment: PaymentRecord,
+  amountInput: number,
+  methodInput: PaymentRecord['method'],
+  noteInput?: string,
+): { ok: true; payment: PaymentRecord } | { ok: false; error: string } {
+  const safeAmount = Number.isFinite(amountInput) ? roundCurrency(amountInput) : Number.NaN;
+  if (!Number.isFinite(safeAmount) || safeAmount <= 0) {
+    return { ok: false, error: 'সঠিক টাকার পরিমাণ লিখুন (০ এর বেশি)।' };
+  }
+  if (safeAmount > 10000000) {
+    return { ok: false, error: 'টাকার পরিমাণ ১,০০,০০,০০০ এর বেশি হতে পারবে না।' };
+  }
+
+  const method = ALLOWED_PAYMENT_METHODS.includes(methodInput) ? methodInput : existingPayment.method;
+  const trimmedNote = (noteInput ?? '').trim().slice(0, 300);
+
+  const updated: PaymentRecord = {
+    id: existingPayment.id,
+    receiptNo: existingPayment.receiptNo,
+    shopId: existingPayment.shopId,
+    shopName: existingPayment.shopName,
+    date: existingPayment.date,
+    amount: safeAmount,
+    method,
+    ...(trimmedNote ? { note: trimmedNote } : {}),
+  };
+
+  return { ok: true, payment: updated };
+}
+

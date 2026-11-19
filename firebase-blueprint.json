@@ -249,6 +249,11 @@
           "type": "string",
           "format": "date-time",
           "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
         }
       },
       "required": [
@@ -330,6 +335,11 @@
           "type": "string",
           "format": "date-time",
           "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
         }
       },
       "required": [

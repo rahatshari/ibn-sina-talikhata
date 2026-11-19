@@ -258,11 +258,20 @@ export function AccountModal({
             type="button"
             disabled={signingIn}
             onClick={() => void handleGoogleLogin()}
-            className="flex w-full min-h-[48px] items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-xs transition-all hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60"
+            className="flex w-full min-h-[48px] items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-xs transition-all hover:bg-slate-50 active:scale-[0.99] disabled:opacity-70"
           >
-            <GoogleLogoIcon />
-            <span>{signingIn ? 'লগইন হচ্ছে...' : 'Google (Gmail) দিয়ে এগিয়ে যান'}</span>
+            {signingIn ? (
+              <RefreshCw className="h-5 w-5 animate-spin text-emerald-600 shrink-0" />
+            ) : (
+              <GoogleLogoIcon />
+            )}
+            <span>{signingIn ? 'গুগল অ্যাকাউন্ট লোড হচ্ছে...' : 'Google (Gmail) দিয়ে এগিয়ে যান'}</span>
           </button>
+          {signingIn && (
+            <p className="text-center text-[11px] text-slate-500">
+              ফোনের Google Play Services থেকে জিমেইল তালিকা আনতে ২–৪ সেকেন্ড সময় লাগতে পারে।
+            </p>
+          )}
         </div>
       )}
     </ModalShell>

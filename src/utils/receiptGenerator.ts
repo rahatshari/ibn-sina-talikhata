@@ -536,7 +536,10 @@ const receiptRenderCache = new Map<string, Promise<RenderedReceiptResult>>();
 
 export function getCachedReceiptPng(sale: SaleRecord): Promise<RenderedReceiptResult> {
   const fontId = getActiveFontOption().id;
-  const cacheKey = `${sale.id}:${sale.date}:${sale.netTotal}:${sale.paidAmount}:${sale.items.length}:${fontId}`;
+  const itemsSignature = sale.items
+    .map((item) => `${item.productId}:${item.boxes}:${item.boxPrice}:${item.discountPercent}`)
+    .join(',');
+  const cacheKey = `${sale.id}:${sale.date}:${sale.shopName}:${sale.netTotal}:${sale.paidAmount}:${sale.dueAmount}:${sale.note ?? ''}:${itemsSignature}:${fontId}`;
   const cached = receiptRenderCache.get(cacheKey);
   if (cached) return cached;
 

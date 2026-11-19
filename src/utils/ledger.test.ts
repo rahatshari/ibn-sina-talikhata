@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildEditedPaymentRecord,
+  buildEditedSaleRecord,
   calculateLineItem,
   calculateInvoiceTotals,
   computeMonthlySalesAndCollection,
@@ -393,4 +395,100 @@ test('computeMonthlySalesAndCollection isolates sales and collections for the se
   assert.equal(oct.totalSales, 4500);
   assert.equal(oct.totalCollected, 2500);
 });
+
+test('buildEditedSaleRecord recalculates boxes, discount, net total, due, and validates limits', () => {
+  const existingSale: SaleRecord = {
+    id: 'sale-1',
+    invoiceNo: 'INV-101',
+    shopId: 'shop-1',
+    shopName: 'মা ফার্মেসি',
+    date: '2026-11-12T10:00:00.000Z',
+    items: [
+      calculateLineItem({
+        productId: 'ibn-dexlan',
+        productName: 'Dexlan',
+        tier: 'Super Star',
+        boxes: 10,
+        boxPrice: 480,
+        discountPercent: 10,
+      }),
+    ],
+    totalBoxes: 10,
+    grossTotal: 4800,
+    totalDiscount: 480,
+    netTotal: 4320,
+    paidAmount: 2000,
+    dueAmount: 2320,
+    note: 'পুরানো নোট',
+  };
+
+  // User accidentally entered 10 boxes, reduces to 5 boxes and adds Linax 2 boxes, updates paid to 1500
+  const editedItems = [
+    calculateLineItem({
+      productId: 'ibn-dexlan',
+      productName: 'Dexlan',
+      tier: 'Super Star',
+      boxes: 5,
+      boxPrice: 480,
+      discountPercent: 10,
+    }), // net 2160
+    calculateLineItem({
+      productId: 'ibn-linax',
+      productName: 'Linax',
+      tier: 'Super Star',
+      boxes: 2,
+      boxPrice: 400,
+      discountPercent: 0,
+    }), // net 800
+  ];
+
+  const okRes = buildEditedSaleRecord(existingSale, editedItems, 1500, '  সংশোধিত হিসাব  ');
+  assert.equal(okRes.ok, true);
+  if (okRes.ok) {
+    assert.equal(okRes.sale.id, 'sale-1');
+    assert.equal(okRes.sale.invoiceNo, 'INV-101');
+    assert.equal(okRes.sale.totalBoxes, 7);
+    assert.equal(okRes.sale.grossTotal, 3200);
+    assert.equal(okRes.sale.totalDiscount, 240);
+    assert.equal(okRes.sale.netTotal, 2960);
+    assert.equal(okRes.sale.paidAmount, 1500);
+    assert.equal(okRes.sale.dueAmount, 1460);
+    assert.equal(okRes.sale.note, 'সংশোধিত হিসাব');
+  }
+
+  // Empty items must fail
+  const emptyRes = buildEditedSaleRecord(existingSale, [], 0);
+  assert.equal(emptyRes.ok, false);
+
+  // Overpayment (> netTotal) must fail
+  const overpayRes = buildEditedSaleRecord(existingSale, editedItems, 3500);
+  assert.equal(overpayRes.ok, false);
+});
+
+test('buildEditedPaymentRecord updates amount, method, note and validates bounds', () => {
+  const existingPay: PaymentRecord = {
+    id: 'pay-1',
+    receiptNo: 'REC-201',
+    shopId: 'shop-1',
+    shopName: 'মা ফার্মেসি',
+    date: '2026-11-15T12:00:00.000Z',
+    amount: 1500,
+    method: 'Cash',
+    note: 'নগদ',
+  };
+
+  const okRes = buildEditedPaymentRecord(existingPay, 1800, 'bKash', '  বিকাশে সংশোধন  ');
+  assert.equal(okRes.ok, true);
+  if (okRes.ok) {
+    assert.equal(okRes.payment.id, 'pay-1');
+    assert.equal(okRes.payment.receiptNo, 'REC-201');
+    assert.equal(okRes.payment.amount, 1800);
+    assert.equal(okRes.payment.method, 'bKash');
+    assert.equal(okRes.payment.note, 'বিকাশে সংশোধন');
+  }
+
+  assert.equal(buildEditedPaymentRecord(existingPay, 0, 'Cash').ok, false);
+  assert.equal(buildEditedPaymentRecord(existingPay, -100, 'Cash').ok, false);
+});
+
 

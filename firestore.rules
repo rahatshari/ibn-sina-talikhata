@@ -98,7 +98,7 @@ service cloud.firestore {
         && data.keys().hasOnly([
           'id', 'ownerId', 'invoiceNo', 'shopId', 'shopName', 'date',
           'items', 'totalBoxes', 'grossTotal', 'totalDiscount',
-          'netTotal', 'paidAmount', 'dueAmount', 'note', 'createdAt'
+          'netTotal', 'paidAmount', 'dueAmount', 'note', 'createdAt', 'updatedAt'
         ])
         && data.id == saleId
         && isValidId(data.id)
@@ -116,7 +116,8 @@ service cloud.firestore {
         && (data.paidAmount is int || data.paidAmount is float) && data.paidAmount >= 0 && data.paidAmount <= data.netTotal
         && (data.dueAmount is int || data.dueAmount is float) && data.dueAmount >= 0
         && (!('note' in data) || (data.note is string && data.note.size() <= 300))
-        && data.createdAt is timestamp;
+        && data.createdAt is timestamp
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
     function isValidPayment(data, paymentId, userId) {
@@ -126,7 +127,7 @@ service cloud.firestore {
         ])
         && data.keys().hasOnly([
           'id', 'ownerId', 'receiptNo', 'shopId', 'shopName',
-          'date', 'amount', 'method', 'note', 'createdAt'
+          'date', 'amount', 'method', 'note', 'createdAt', 'updatedAt'
         ])
         && data.id == paymentId
         && isValidId(data.id)
@@ -139,7 +140,8 @@ service cloud.firestore {
         && (data.amount is int || data.amount is float) && data.amount > 0 && data.amount <= 10000000
         && data.method is string && data.method.size() <= 20 && data.method in ['Cash', 'bKash', 'Nagad', 'Bank']
         && (!('note' in data) || (data.note is string && data.note.size() <= 300))
-        && data.createdAt is timestamp;
+        && data.createdAt is timestamp
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
     // User Profile Collection (Strictly Owner-Only, No Listing)
@@ -202,8 +204,22 @@ service cloud.firestore {
         allow create: if isValidId(userId) && isValidId(saleId) && isOwner(userId)
           && isValidSale(incoming(), saleId, userId)
           && incoming().createdAt == request.time
+          && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
           && existsAfter(/databases/$(database)/documents/users/$(userId)/shops/$(incoming().shopId));
-        allow update: if false;
+        allow update: if isValidId(userId) && isValidId(saleId) && isOwner(userId)
+          && isValidSale(incoming(), saleId, userId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().invoiceNo == existing().invoiceNo
+          && incoming().shopId == existing().shopId
+          && incoming().shopName == existing().shopName
+          && incoming().date == existing().date
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'items', 'totalBoxes', 'grossTotal', 'totalDiscount',
+            'netTotal', 'paidAmount', 'dueAmount', 'note', 'updatedAt'
+          ]);
         allow delete: if isValidId(userId) && isValidId(saleId) && isOwner(userId);
       }
 
@@ -214,8 +230,19 @@ service cloud.firestore {
         allow create: if isValidId(userId) && isValidId(paymentId) && isOwner(userId)
           && isValidPayment(incoming(), paymentId, userId)
           && incoming().createdAt == request.time
+          && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
           && existsAfter(/databases/$(database)/documents/users/$(userId)/shops/$(incoming().shopId));
-        allow update: if false;
+        allow update: if isValidId(userId) && isValidId(paymentId) && isOwner(userId)
+          && isValidPayment(incoming(), paymentId, userId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().receiptNo == existing().receiptNo
+          && incoming().shopId == existing().shopId
+          && incoming().shopName == existing().shopName
+          && incoming().date == existing().date
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['amount', 'method', 'note', 'updatedAt']);
         allow delete: if isValidId(userId) && isValidId(paymentId) && isOwner(userId);
       }
     }

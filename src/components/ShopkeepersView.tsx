@@ -30,6 +30,8 @@ interface ShopkeepersViewProps {
   onStartNewSale: (shopId: string) => void;
   onCollectDue: (shop: Shopkeeper, currentDue: number) => void;
   onOpenSaleDetail: (sale: SaleRecord) => void;
+  onEditSale: (sale: SaleRecord) => void;
+  onEditPayment: (payment: PaymentRecord) => void;
 }
 
 export function ShopkeepersView({
@@ -43,6 +45,8 @@ export function ShopkeepersView({
   onStartNewSale,
   onCollectDue,
   onOpenSaleDetail,
+  onEditSale,
+  onEditPayment,
 }: ShopkeepersViewProps) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'due' | 'paid'>('all');
@@ -299,6 +303,8 @@ export function ShopkeepersView({
               {activeShopStatementRows.map((row) => {
                 const matchingSale =
                   row.kind === 'sale' ? sales.find((s) => s.id === row.id) ?? null : null;
+                const matchingPayment =
+                  row.kind === 'payment' ? payments.find((p) => p.id === row.id) ?? null : null;
                 return (
                   <div key={row.id} className="p-4 space-y-2.5">
                     <div className="flex items-start justify-between gap-2">
@@ -318,15 +324,32 @@ export function ShopkeepersView({
                         )}
                         <div className="text-[11px] text-slate-500">{formatDateTimeBn(row.date)}</div>
                       </div>
-                      {matchingSale && (
-                        <button
-                          type="button"
-                          onClick={() => onOpenSaleDetail(matchingSale)}
-                          className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 whitespace-nowrap shrink-0"
-                        >
-                          রসিদ দেখুন
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {(matchingSale || matchingPayment) && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              matchingSale
+                                ? onEditSale(matchingSale)
+                                : matchingPayment && onEditPayment(matchingPayment)
+                            }
+                            aria-label={`এডিট করুন: ${row.code}`}
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            এডিট
+                          </button>
+                        )}
+                        {matchingSale && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenSaleDetail(matchingSale)}
+                            className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 whitespace-nowrap"
+                          >
+                            রসিদ দেখুন
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs text-slate-700 break-words">{row.details}</p>
                     <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-2.5 text-xs">
@@ -368,12 +391,15 @@ export function ShopkeepersView({
                     <th className="px-4 py-3 text-right font-semibold">বিল</th>
                     <th className="px-4 py-3 text-right font-semibold">জমা/আদায়</th>
                     <th className="px-4 py-3 text-right font-semibold">চলমান বাকি</th>
+                    <th className="px-4 py-3 text-right font-semibold">এডিট</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {activeShopStatementRows.map((row) => {
                     const matchingSale =
                       row.kind === 'sale' ? sales.find((s) => s.id === row.id) ?? null : null;
+                    const matchingPayment =
+                      row.kind === 'payment' ? payments.find((p) => p.id === row.id) ?? null : null;
                     return (
                       <tr key={row.id} className="hover:bg-slate-50/70">
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -406,6 +432,23 @@ export function ShopkeepersView({
                         >
                           {formatBDT(row.runningDue)}
                         </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          {(matchingSale || matchingPayment) && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                matchingSale
+                                  ? onEditSale(matchingSale)
+                                  : matchingPayment && onEditPayment(matchingPayment)
+                              }
+                              aria-label={`এডিট করুন: ${row.code}`}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              এডিট
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -419,7 +462,7 @@ export function ShopkeepersView({
               entry.kind === 'sale' && entry.sale ? (
                 <div key={entry.id} className="p-4 space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() => onOpenSaleDetail(entry.sale!)}
@@ -427,10 +470,19 @@ export function ShopkeepersView({
                       >
                         {entry.sale.invoiceNo}
                       </button>
-                      <span className="mx-2 text-slate-300" aria-hidden="true">·</span>
+                      <span className="text-slate-300" aria-hidden="true">·</span>
                       <span className="text-xs text-slate-500">
                         {formatDateTimeBn(entry.sale.date)} · {entry.sale.totalBoxes} বক্স
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => onEditSale(entry.sale!)}
+                        aria-label={`এডিট করুন: ${entry.sale.invoiceNo}`}
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        এডিট
+                      </button>
                     </div>
                     <div className="text-xs font-mono-num">
                       <span className="font-semibold text-slate-900">
@@ -469,8 +521,19 @@ export function ShopkeepersView({
                         {entry.payment.note ? ` · ${entry.payment.note}` : ''}
                       </div>
                     </div>
-                    <div className="text-sm font-bold font-mono-num text-emerald-700 shrink-0">
-                      +{formatBDT(entry.payment.amount)}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="text-sm font-bold font-mono-num text-emerald-700">
+                        +{formatBDT(entry.payment.amount)}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onEditPayment(entry.payment!)}
+                        aria-label={`এডিট করুন: ${entry.payment.receiptNo}`}
+                        className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-50"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        এডিট
+                      </button>
                     </div>
                   </div>
                 )

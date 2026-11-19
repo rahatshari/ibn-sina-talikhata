@@ -21,7 +21,18 @@ public class GoogleAuthPlugin extends Plugin {
     private static final String FALLBACK_WEB_CLIENT_ID =
         "30985726414-9t20a5f812n20kdpbik2tb2u03vnbbuq.apps.googleusercontent.com";
 
-    private GoogleSignInClient buildClient() {
+    private volatile GoogleSignInClient cachedClient;
+
+    @Override
+    public void load() {
+        super.load();
+        getOrCreateClient();
+    }
+
+    private synchronized GoogleSignInClient getOrCreateClient() {
+        if (cachedClient != null) {
+            return cachedClient;
+        }
         String webClientId = FALLBACK_WEB_CLIENT_ID;
         int resId = getContext().getResources().getIdentifier(
             "default_web_client_id",
@@ -39,19 +50,20 @@ public class GoogleAuthPlugin extends Plugin {
             .requestIdToken(webClientId)
             .requestEmail()
             .build();
-        return GoogleSignIn.getClient(getContext(), gso);
+        cachedClient = GoogleSignIn.getClient(getContext(), gso);
+        return cachedClient;
     }
 
     @PluginMethod
     public void signIn(PluginCall call) {
-        GoogleSignInClient client = buildClient();
+        GoogleSignInClient client = getOrCreateClient();
         Intent signInIntent = client.getSignInIntent();
         startActivityForResult(call, signInIntent, "handleSignInResult");
     }
 
     @PluginMethod
     public void silentSignIn(PluginCall call) {
-        GoogleSignInClient client = buildClient();
+        GoogleSignInClient client = getOrCreateClient();
         client.silentSignIn().addOnCompleteListener(task -> {
             try {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
@@ -98,7 +110,7 @@ public class GoogleAuthPlugin extends Plugin {
 
     @PluginMethod
     public void signOut(PluginCall call) {
-        GoogleSignInClient client = buildClient();
+        GoogleSignInClient client = getOrCreateClient();
         client.signOut().addOnCompleteListener(task -> call.resolve());
     }
 }

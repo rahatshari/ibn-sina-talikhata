@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Download, Printer, Share2, X } from 'lucide-react';
+import { CheckCircle2, Download, Pencil, Printer, Share2, X } from 'lucide-react';
 import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import type { PaymentRecord, Product, ProductTier, SaleRecord, Shopkeeper } from '../types/tally';
 import { formatBDT, formatDateTimeBn } from '../utils/ledger';
@@ -352,9 +352,10 @@ export function CollectPaymentModal({
 interface InvoiceDetailModalProps {
   sale: SaleRecord | null;
   onClose: () => void;
+  onEditSale?: (sale: SaleRecord) => void;
 }
 
-export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
+export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailModalProps) {
   const [actionBusy, setActionBusy] = useState<'download' | 'share' | 'print' | null>(null);
   const [actionNotice, setActionNotice] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -511,6 +512,17 @@ export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
             </div>
           </div>
           <div className="no-print flex flex-wrap items-center gap-2">
+            {onEditSale && (
+              <button
+                type="button"
+                disabled={actionBusy !== null}
+                onClick={() => onEditSale(sale)}
+                className="inline-flex min-h-[42px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap shrink-0"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                এডিট করুন
+              </button>
+            )}
             <button
               type="button"
               disabled={actionBusy !== null}

@@ -22,6 +22,7 @@ import {
 import { AccountModal } from './components/AccountModal';
 import { DashboardView } from './components/DashboardView';
 import { DueCustomersView } from './components/DueCustomersView';
+import { EditPaymentModal, EditSaleModal } from './components/EditTransactionModals';
 import {
   AddShopModal,
   CollectPaymentModal,
@@ -36,7 +37,7 @@ import { ShopkeepersView } from './components/ShopkeepersView';
 import { UpdateCenterModal } from './components/UpdateCenterModal';
 import { useAppUpdater } from './hooks/useAppUpdater';
 import { useTallyStore } from './hooks/useTallyStore';
-import type { Product, SaleRecord, Shopkeeper } from './types/tally';
+import type { PaymentRecord, Product, SaleRecord, Shopkeeper } from './types/tally';
 import {
   computeDashboardMetrics,
   loadKpiPeriodMode,
@@ -79,6 +80,8 @@ export default function App() {
   }>({ open: false, editing: null });
   const [collectTarget, setCollectTarget] = useState<{ shop: Shopkeeper; due: number } | null>(null);
   const [detailSale, setDetailSale] = useState<SaleRecord | null>(null);
+  const [editingSale, setEditingSale] = useState<SaleRecord | null>(null);
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -189,7 +192,11 @@ export default function App() {
   };
 
   const closeTopMostModal = () => {
-    if (detailSale) {
+    if (editingSale) {
+      setEditingSale(null);
+    } else if (editingPayment) {
+      setEditingPayment(null);
+    } else if (detailSale) {
       setDetailSale(null);
     } else if (collectTarget) {
       setCollectTarget(null);
@@ -213,7 +220,9 @@ export default function App() {
     }
 
     const hasOpenModal = Boolean(
-      detailSale ||
+      editingSale ||
+        editingPayment ||
+        detailSale ||
         collectTarget ||
         shopModalState.open ||
         productModalState.open ||
@@ -764,6 +773,8 @@ export default function App() {
             onStartNewSale={openNewSale}
             onCollectDue={(shop, due) => setCollectTarget({ shop, due })}
             onOpenSaleDetail={(sale) => setDetailSale(sale)}
+            onEditSale={(sale) => setEditingSale(sale)}
+            onEditPayment={(payment) => setEditingPayment(payment)}
           />
         )}
 
@@ -795,6 +806,8 @@ export default function App() {
             appVersionCode={updater.installedCode}
             onOpenUpdateManager={() => setUpdateModalOpen(true)}
             onOpenSaleDetail={(sale) => setDetailSale(sale)}
+            onEditSale={(sale) => setEditingSale(sale)}
+            onEditPayment={(payment) => setEditingPayment(payment)}
             onDeleteSale={store.deleteSale}
             onDeletePayment={store.deletePayment}
             onImportBackup={store.importBackupData}
@@ -850,7 +863,30 @@ export default function App() {
         onCollect={(data) => store.recordPayment(data)}
       />
 
-      <InvoiceDetailModal sale={detailSale} onClose={() => setDetailSale(null)} />
+      <InvoiceDetailModal
+        sale={detailSale}
+        onClose={() => setDetailSale(null)}
+        onEditSale={(sale) => setEditingSale(sale)}
+      />
+
+      <EditSaleModal
+        sale={editingSale}
+        products={store.products}
+        onClose={() => setEditingSale(null)}
+        onSave={(saleId, data) => {
+          const res = store.updateSale(saleId, data);
+          if (res.ok && detailSale?.id === res.sale.id) {
+            setDetailSale(res.sale);
+          }
+          return res;
+        }}
+      />
+
+      <EditPaymentModal
+        payment={editingPayment}
+        onClose={() => setEditingPayment(null)}
+        onSave={(paymentId, data) => store.updatePayment(paymentId, data)}
+      />
 
       <ProductFormModal
         open={productModalState.open}

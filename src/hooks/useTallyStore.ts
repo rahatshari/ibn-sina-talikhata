@@ -13,6 +13,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
   query,
   serverTimestamp,
@@ -43,6 +44,8 @@ import type {
   Shopkeeper,
 } from '../types/tally';
 import {
+  buildEditedPaymentRecord,
+  buildEditedSaleRecord,
   calculateInvoiceTotals,
   generateNextInvoiceNo,
   generateNextReceiptNo,
@@ -59,8 +62,10 @@ const FALLBACK_QUEUE_PREFIX = 'ibn_sina_fallback_queue_v1_';
 type FallbackSyncOp =
   | { kind: 'upsert-shop'; shop: Shopkeeper }
   | { kind: 'upsert-sale'; sale: SaleRecord }
+  | { kind: 'update-sale'; sale: SaleRecord }
   | { kind: 'delete-sale'; saleId: string }
   | { kind: 'upsert-payment'; payment: PaymentRecord }
+  | { kind: 'update-payment'; payment: PaymentRecord }
   | { kind: 'delete-payment'; paymentId: string }
   | { kind: 'upsert-product'; product: Product }
   | { kind: 'update-product'; productId: string; boxPrice: number; packInfo: string };
@@ -359,10 +364,10 @@ export function useTallyStore() {
         await updateDoc(userRef, profilePayload);
       }
 
-      // Seed initial 55 Ibn Sina products for new cloud account if empty
+      // Seed initial 55 Ibn Sina products for new cloud account if empty (fetch only 1 doc to verify existence quickly)
       const productsRef = collection(db, 'users', targetUser.uid, 'products');
       const existingProductsSnap = await getDocs(
-        query(productsRef, where('ownerId', '==', targetUser.uid)),
+        query(productsRef, where('ownerId', '==', targetUser.uid), limit(1)),
       );
       if (existingProductsSnap.empty) {
         const batch = writeBatch(db);
@@ -426,6 +431,20 @@ export function useTallyStore() {
             id: saleId,
             ownerId: uid,
             createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        } else if (op.kind === 'update-sale') {
+          const saleId = sanitizeId(op.sale.id);
+          batch.update(doc(db, 'users', uid, 'sales', saleId), {
+            items: op.sale.items.slice(0, 60),
+            totalBoxes: op.sale.totalBoxes,
+            grossTotal: op.sale.grossTotal,
+            totalDiscount: op.sale.totalDiscount,
+            netTotal: op.sale.netTotal,
+            paidAmount: op.sale.paidAmount,
+            dueAmount: op.sale.dueAmount,
+            note: op.sale.note ? clampStr(op.sale.note, 300) : '',
+            updatedAt: serverTimestamp(),
           });
         } else if (op.kind === 'delete-sale') {
           batch.delete(doc(db, 'users', uid, 'sales', sanitizeId(op.saleId)));
@@ -436,6 +455,15 @@ export function useTallyStore() {
             id: payId,
             ownerId: uid,
             createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        } else if (op.kind === 'update-payment') {
+          const payId = sanitizeId(op.payment.id);
+          batch.update(doc(db, 'users', uid, 'payments', payId), {
+            amount: op.payment.amount,
+            method: op.payment.method,
+            note: op.payment.note ? clampStr(op.payment.note, 300) : '',
+            updatedAt: serverTimestamp(),
           });
         } else if (op.kind === 'delete-payment') {
           batch.delete(doc(db, 'users', uid, 'payments', sanitizeId(op.paymentId)));
@@ -468,7 +496,7 @@ export function useTallyStore() {
 
   // Listen to Firebase Auth state (never drop preserved offline session unless user explicitly signed out)
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (nextUser) => {
+    const unsub = onAuthStateChanged(auth, (nextUser) => {
       setAuthReady(true);
 
       if (nextUser) {
@@ -489,8 +517,8 @@ export function useTallyStore() {
           setCloudState(loadCloudMirror(nextUser.uid));
         }
 
-        await bootstrapUserProfileAndCatalog(nextUser);
-        await flushFallbackQueue(nextUser.uid);
+        // Run profile/catalog bootstrap and fallback flush asynchronously so UI responds immediately
+        void bootstrapUserProfileAndCatalog(nextUser).then(() => flushFallbackQueue(nextUser.uid));
       } else {
         setFirebaseUser(null);
         if (explicitSignedOutRef.current) {
@@ -630,7 +658,7 @@ export function useTallyStore() {
               netTotal: Number(data.netTotal || 0),
               paidAmount: Number(data.paidAmount || 0),
               dueAmount: Number(data.dueAmount || 0),
-              note: typeof data.note === 'string' ? data.note : undefined,
+              note: typeof data.note === 'string' && data.note.trim() ? data.note : undefined,
             } satisfies SaleRecord;
           })
           .sort((a, b) => b.date.localeCompare(a.date));
@@ -662,7 +690,7 @@ export function useTallyStore() {
               date: String(data.date || ''),
               amount: Number(data.amount || 0),
               method: (data.method as PaymentRecord['method']) || 'Cash',
-              note: typeof data.note === 'string' ? data.note : undefined,
+              note: typeof data.note === 'string' && data.note.trim() ? data.note : undefined,
             } satisfies PaymentRecord;
           })
           .sort((a, b) => b.date.localeCompare(a.date));
@@ -750,6 +778,32 @@ export function useTallyStore() {
 
   const appendFallbackOp = useCallback((uid: string, op: FallbackSyncOp) => {
     const existing = loadFallbackQueue(uid);
+    if (op.kind === 'update-sale') {
+      const upsertIdx = existing.findIndex(
+        (item) => item.kind === 'upsert-sale' && item.sale.id === op.sale.id,
+      );
+      if (upsertIdx !== -1) {
+        const next = existing.map((item, idx) =>
+          idx === upsertIdx ? ({ kind: 'upsert-sale', sale: op.sale } satisfies FallbackSyncOp) : item,
+        );
+        saveFallbackQueue(uid, next);
+        return;
+      }
+    }
+    if (op.kind === 'update-payment') {
+      const upsertIdx = existing.findIndex(
+        (item) => item.kind === 'upsert-payment' && item.payment.id === op.payment.id,
+      );
+      if (upsertIdx !== -1) {
+        const next = existing.map((item, idx) =>
+          idx === upsertIdx
+            ? ({ kind: 'upsert-payment', payment: op.payment } satisfies FallbackSyncOp)
+            : item,
+        );
+        saveFallbackQueue(uid, next);
+        return;
+      }
+    }
     saveFallbackQueue(uid, [...existing, op]);
   }, []);
 
@@ -906,6 +960,7 @@ export function useTallyStore() {
           dueAmount: sale.dueAmount,
           ...(trimmedNote ? { note: trimmedNote } : {}),
           createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         }).catch((err) => {
           if (isOfflineFirestoreError(err)) return;
           try {
@@ -930,6 +985,61 @@ export function useTallyStore() {
       return sale;
     },
     [firebaseUser, user, activeState.shops, activeState.sales, appendFallbackOp],
+  );
+
+  const updateSale = useCallback(
+    (
+      saleId: string,
+      input: {
+        items: SaleLineItem[];
+        paidAmount: number;
+        note?: string;
+      },
+    ): { ok: true; sale: SaleRecord } | { ok: false; error: string } => {
+      const existing = activeState.sales.find((s) => s.id === saleId);
+      if (!existing) {
+        return { ok: false, error: 'বিক্রয়ের তথ্য খুঁজে পাওয়া যায়নি।' };
+      }
+      const res = buildEditedSaleRecord(existing, input.items, input.paidAmount, input.note);
+      if (!res.ok) return res;
+      const updated = res.sale;
+
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/sales/${saleId}`;
+        updateDoc(doc(db, 'users', firebaseUser.uid, 'sales', saleId), {
+          items: updated.items,
+          totalBoxes: updated.totalBoxes,
+          grossTotal: updated.grossTotal,
+          totalDiscount: updated.totalDiscount,
+          netTotal: updated.netTotal,
+          paidAmount: updated.paidAmount,
+          dueAmount: updated.dueAmount,
+          note: updated.note ?? '',
+          updatedAt: serverTimestamp(),
+        }).catch((err) => {
+          if (isOfflineFirestoreError(err)) return;
+          try {
+            handleFirestoreError(err, OperationType.UPDATE, path);
+          } catch (wrapped) {
+            setAsyncError(wrapped as Error);
+          }
+        });
+      } else if (user) {
+        setCloudState((prev) => ({
+          ...prev,
+          sales: prev.sales.map((s) => (s.id === saleId ? updated : s)),
+        }));
+        appendFallbackOp(user.uid, { kind: 'update-sale', sale: updated });
+      } else {
+        setLocalState((prev) => ({
+          ...prev,
+          sales: prev.sales.map((s) => (s.id === saleId ? updated : s)),
+        }));
+      }
+
+      return { ok: true, sale: updated };
+    },
+    [firebaseUser, user, activeState.sales, appendFallbackOp],
   );
 
   const recordPayment = useCallback(
@@ -973,6 +1083,7 @@ export function useTallyStore() {
           method: payment.method,
           ...(trimmedNote ? { note: trimmedNote } : {}),
           createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         }).catch((err) => {
           if (isOfflineFirestoreError(err)) return;
           try {
@@ -995,6 +1106,56 @@ export function useTallyStore() {
       }
     },
     [firebaseUser, user, activeState.shops, activeState.payments, appendFallbackOp],
+  );
+
+  const updatePayment = useCallback(
+    (
+      paymentId: string,
+      input: {
+        amount: number;
+        method: PaymentRecord['method'];
+        note?: string;
+      },
+    ): { ok: true; payment: PaymentRecord } | { ok: false; error: string } => {
+      const existing = activeState.payments.find((p) => p.id === paymentId);
+      if (!existing) {
+        return { ok: false, error: 'আদায়ের রসিদ খুঁজে পাওয়া যায়নি।' };
+      }
+      const res = buildEditedPaymentRecord(existing, input.amount, input.method, input.note);
+      if (!res.ok) return res;
+      const updated = res.payment;
+
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/payments/${paymentId}`;
+        updateDoc(doc(db, 'users', firebaseUser.uid, 'payments', paymentId), {
+          amount: updated.amount,
+          method: updated.method,
+          note: updated.note ?? '',
+          updatedAt: serverTimestamp(),
+        }).catch((err) => {
+          if (isOfflineFirestoreError(err)) return;
+          try {
+            handleFirestoreError(err, OperationType.UPDATE, path);
+          } catch (wrapped) {
+            setAsyncError(wrapped as Error);
+          }
+        });
+      } else if (user) {
+        setCloudState((prev) => ({
+          ...prev,
+          payments: prev.payments.map((p) => (p.id === paymentId ? updated : p)),
+        }));
+        appendFallbackOp(user.uid, { kind: 'update-payment', payment: updated });
+      } else {
+        setLocalState((prev) => ({
+          ...prev,
+          payments: prev.payments.map((p) => (p.id === paymentId ? updated : p)),
+        }));
+      }
+
+      return { ok: true, payment: updated };
+    },
+    [firebaseUser, user, activeState.payments, appendFallbackOp],
   );
 
   const deleteSale = useCallback(
@@ -1194,6 +1355,7 @@ export function useTallyStore() {
           dueAmount: sale.dueAmount,
           ...(sale.note ? { note: clampStr(sale.note, 300) } : {}),
           createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         });
       }
       for (const pay of localState.payments) {
@@ -1209,6 +1371,7 @@ export function useTallyStore() {
           method: pay.method,
           ...(pay.note ? { note: clampStr(pay.note, 300) } : {}),
           createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         });
       }
       await batch.commit();
@@ -1269,7 +1432,9 @@ export function useTallyStore() {
     addShopkeeper,
     updateShopkeeper,
     recordSale,
+    updateSale,
     recordPayment,
+    updatePayment,
     deleteSale,
     deletePayment,
     updateProductPrice,

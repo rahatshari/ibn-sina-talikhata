@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { CalendarDays, CheckCircle2, Download, FolderDown, RotateCcw, Search, Trash2, Upload } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Download, FolderDown, Pencil, RotateCcw, Search, Trash2, Upload } from 'lucide-react';
 import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import type { PaymentRecord, Product, SaleRecord, Shopkeeper } from '../types/tally';
 import {
@@ -21,6 +21,8 @@ interface ReportsViewProps {
   appVersionCode: number;
   onOpenUpdateManager: () => void;
   onOpenSaleDetail: (sale: SaleRecord) => void;
+  onEditSale: (sale: SaleRecord) => void;
+  onEditPayment: (payment: PaymentRecord) => void;
   onDeleteSale: (saleId: string) => void;
   onDeletePayment: (paymentId: string) => void;
   onImportBackup: (jsonText: string) => { ok: boolean; error?: string };
@@ -36,6 +38,8 @@ export function ReportsView({
   appVersionCode,
   onOpenUpdateManager,
   onOpenSaleDetail,
+  onEditSale,
+  onEditPayment,
   onDeleteSale,
   onDeletePayment,
   onImportBackup,
@@ -286,18 +290,32 @@ export function ReportsView({
                       </div>
                       <div className="text-xs text-slate-500 break-words">{entry.details}</div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        entry.kind === 'sale'
-                          ? onDeleteSale(entry.id)
-                          : onDeletePayment(entry.id)
-                      }
-                      aria-label={`মুছে ফেলুন: ${entry.code}`}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 shrink-0"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          entry.sale
+                            ? onEditSale(entry.sale)
+                            : entry.payment && onEditPayment(entry.payment)
+                        }
+                        aria-label={`এডিট করুন: ${entry.code}`}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          entry.kind === 'sale'
+                            ? onDeleteSale(entry.id)
+                            : onDeletePayment(entry.id)
+                        }
+                        aria-label={`মুছে ফেলুন: ${entry.code}`}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs">
@@ -366,7 +384,7 @@ export function ReportsView({
                         {entry.kind === 'sale' ? formatBDT(entry.due) : '—'}
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <div className="inline-flex items-center justify-end gap-2">
+                        <div className="inline-flex items-center justify-end gap-1.5">
                           {entry.sale && (
                             <button
                               type="button"
@@ -376,6 +394,18 @@ export function ReportsView({
                               রসিদ দেখুন
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              entry.sale
+                                ? onEditSale(entry.sale)
+                                : entry.payment && onEditPayment(entry.payment)
+                            }
+                            aria-label={`এডিট করুন: ${entry.code}`}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
                           <button
                             type="button"
                             onClick={() =>
