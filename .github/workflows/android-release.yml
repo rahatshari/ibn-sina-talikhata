@@ -23,13 +23,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: Setup Java 17
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -44,12 +43,17 @@ jobs:
           echo "tag_name=v$NAME" >> "$GITHUB_OUTPUT"
           echo "Auto Version: $NAME (versionCode=$CODE)"
 
-      - name: Install npm dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps --no-audit --no-fund
+          fi
 
       - name: Run unit tests & lint
         run: |
-          npx tsx --test src/utils/ledger.test.ts src/utils/updater.test.ts
+          npx --no-install tsx --test src/utils/ledger.test.ts src/utils/updater.test.ts
           npm run lint
 
       - name: Build web bundle with baked release metadata
@@ -60,7 +64,7 @@ jobs:
         run: npm run build
 
       - name: Sync Capacitor Android assets
-        run: npx cap sync android
+        run: npx --no-install cap sync android
 
       - name: Validate persistent release signing keystore secrets
         env:
@@ -72,7 +76,7 @@ jobs:
             echo "::error::Missing persistent signing secrets! Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD in GitHub Repo Settings -> Secrets and variables -> Actions. See ANDROID_GITHUB_SETUP.md."
             exit 1
           fi
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release-keystore.jks
+          echo "$ANDROID_KEYSTORE_BASE64" | tr -d '\n\r ' | base64 -d > android/app/release-keystore.jks
 
       - name: Build signed Release APK
         working-directory: android
@@ -95,13 +99,12 @@ jobs:
             -PANDROID_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
             -PANDROID_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
 
-      - name: Cleanup decoded keystore & prepare release APK
+      - name: Cleanup decoded keystore
         if: always()
-        run: |
-          rm -f android/app/release-keystore.jks
-          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
-            cp android/app/build/outputs/apk/release/app-release.apk "IbnSina-TallyKhata-${{ steps.version.outputs.tag_name }}.apk"
-          fi
+        run: rm -f android/app/release-keystore.jks
+
+      - name: Prepare release APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk "IbnSina-TallyKhata-${{ steps.version.outputs.tag_name }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
