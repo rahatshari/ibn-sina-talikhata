@@ -1,5 +1,15 @@
-import { useMemo, useState } from 'react';
-import { Banknote, ChevronRight, FileText, Pencil, Plus, Printer, Search, UserPlus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowLeft,
+  Banknote,
+  ChevronRight,
+  FileText,
+  Pencil,
+  Plus,
+  Printer,
+  Search,
+  UserPlus,
+} from 'lucide-react';
 import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import type { PaymentRecord, SaleRecord, Shopkeeper } from '../types/tally';
 import { computeShopSummary, formatBDT, formatDateTimeBn } from '../utils/ledger';
@@ -8,7 +18,6 @@ import {
   buildShopStatementHtml,
   printHtmlInBrowser,
 } from '../utils/receiptGenerator';
-import { ModalShell } from './Modals';
 
 interface ShopkeepersViewProps {
   shops: Shopkeeper[];
@@ -66,6 +75,13 @@ export function ShopkeepersView({
     return shops.find((s) => s.id === selectedLedgerShop.id) ?? selectedLedgerShop;
   }, [selectedLedgerShop, shops]);
 
+  useEffect(() => {
+    if (liveLedgerShop) {
+      setPrintNotice(null);
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    }
+  }, [liveLedgerShop?.id]);
+
   const activeShopSummary = liveLedgerShop
     ? computeShopSummary(liveLedgerShop.id, sales, payments)
     : null;
@@ -118,19 +134,368 @@ export function ShopkeepersView({
     }
   };
 
+  // Dedicated Full-Page Shopkeeper Detail View (No Popup Modal)
+  if (liveLedgerShop && activeShopSummary) {
+    return (
+      <div className="space-y-5" data-testid="shop-detail-fullpage">
+        {/* Back Button + Shop Identity */}
+        <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-1.5">
+            <button
+              type="button"
+              onClick={() => onSelectLedgerShop(null)}
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              সকল দোকানদার
+            </button>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 break-words">
+              {liveLedgerShop.shopName}
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-2 text-xs sm:text-sm text-slate-600">
+              <span>{liveLedgerShop.ownerName}</span>
+              <span aria-hidden="true">·</span>
+              <span>{liveLedgerShop.area}</span>
+              {liveLedgerShop.phone && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-mono-num">{liveLedgerShop.phone}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* All Actions Inside the Dedicated Page */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center shrink-0">
+            {activeShopSummary.totalDue > 0 && (
+              <button
+                type="button"
+                onClick={() => onCollectDue(liveLedgerShop, activeShopSummary.totalDue)}
+                className="inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 whitespace-nowrap"
+              >
+                <Banknote className="h-3.5 w-3.5 shrink-0" />
+                বাকি আদায়
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onStartNewSale(liveLedgerShop.id)}
+              className={`inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold whitespace-nowrap ${
+                activeShopSummary.totalDue > 0
+                  ? 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+              }`}
+            >
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              নতুন বিক্রি
+            </button>
+            <button
+              type="button"
+              onClick={() => void handlePrintShopStatement(liveLedgerShop)}
+              className="inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 whitespace-nowrap"
+            >
+              <Printer className="h-3.5 w-3.5 shrink-0" />
+              রিপোর্ট PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => onRequestEditShop(liveLedgerShop)}
+              className="inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 whitespace-nowrap"
+            >
+              <Pencil className="h-3.5 w-3.5 shrink-0" />
+              এডিট করুন
+            </button>
+          </div>
+        </div>
+
+        {printNotice && (
+          <div
+            role="status"
+            className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-medium text-emerald-800"
+          >
+            {printNotice}
+          </div>
+        )}
+
+        {/* 3 KPI Summary Cards */}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 min-w-0">
+            <div className="text-[11px] sm:text-xs text-slate-500 truncate">মোট বিল</div>
+            <div className="mt-1 text-sm sm:text-xl font-bold font-mono-num text-slate-900 truncate">
+              {formatBDT(activeShopSummary.totalBilled)}
+            </div>
+            <div className="mt-0.5 text-[10px] sm:text-xs text-slate-400 font-mono-num">
+              {activeShopSummary.totalBoxes} বক্স
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 min-w-0">
+            <div className="text-[11px] sm:text-xs text-slate-500 truncate">মোট জমা</div>
+            <div className="mt-1 text-sm sm:text-xl font-bold font-mono-num text-emerald-700 truncate">
+              {formatBDT(activeShopSummary.totalPaid)}
+            </div>
+            <div className="mt-0.5 text-[10px] sm:text-xs text-slate-400 font-mono-num">
+              {activeShopSummary.paymentCount} আদায়
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 min-w-0">
+            <div className="text-[11px] sm:text-xs text-slate-500 truncate">বর্তমান বাকি</div>
+            <div
+              className={`mt-1 text-sm sm:text-xl font-bold font-mono-num truncate ${
+                activeShopSummary.totalDue > 0 ? 'text-red-600' : 'text-emerald-700'
+              }`}
+            >
+              {formatBDT(activeShopSummary.totalDue)}
+            </div>
+            <div className="mt-0.5 text-[10px] sm:text-xs text-slate-400 font-mono-num">
+              {activeShopSummary.invoiceCount} চালান
+            </div>
+          </div>
+        </div>
+
+        {/* Report Tabs */}
+        <div className="grid grid-cols-2 sm:inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1">
+          <button
+            type="button"
+            onClick={() => setLedgerTab('statement')}
+            className={`inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
+              ledgerTab === 'statement'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5 shrink-0" />
+            সম্পূর্ণ রিপোর্ট ({activeShopStatementRows.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setLedgerTab('timeline')}
+            className={`inline-flex min-h-[38px] items-center justify-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
+              ledgerTab === 'timeline'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            পণ্যভিত্তিক তালিকা
+          </button>
+        </div>
+
+        {/* Ledger Content */}
+        {activeShopTimeline.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
+            <p className="text-sm text-slate-500">এই দোকানে এখনও কোনো বিক্রি বা আদায়ের হিসাব নেই।</p>
+            <button
+              type="button"
+              onClick={() => onStartNewSale(liveLedgerShop.id)}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              প্রথম বিক্রি যোগ করুন
+            </button>
+          </div>
+        ) : ledgerTab === 'statement' ? (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            {/* Mobile Single-Screen Cards (No Horizontal Swipe) */}
+            <div className="divide-y divide-slate-100 md:hidden">
+              {activeShopStatementRows.map((row) => {
+                const matchingSale =
+                  row.kind === 'sale' ? sales.find((s) => s.id === row.id) ?? null : null;
+                return (
+                  <div key={row.id} className="p-4 space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        {matchingSale ? (
+                          <button
+                            type="button"
+                            onClick={() => onOpenSaleDetail(matchingSale)}
+                            className="text-sm font-bold font-mono-num text-emerald-700 hover:underline"
+                          >
+                            {row.code}
+                          </button>
+                        ) : (
+                          <span className="text-sm font-bold font-mono-num text-slate-900">
+                            {row.code}
+                          </span>
+                        )}
+                        <div className="text-[11px] text-slate-500">{formatDateTimeBn(row.date)}</div>
+                      </div>
+                      {matchingSale && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenSaleDetail(matchingSale)}
+                          className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 whitespace-nowrap shrink-0"
+                        >
+                          রসিদ দেখুন
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-700 break-words">{row.details}</p>
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-2.5 text-xs">
+                      <div>
+                        <div className="text-[10px] text-slate-500">বিল</div>
+                        <div className="font-semibold font-mono-num text-slate-900">
+                          {row.billed > 0 ? formatBDT(row.billed) : '—'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-500">জমা/আদায়</div>
+                        <div className="font-semibold font-mono-num text-emerald-700">
+                          {row.paid > 0 ? formatBDT(row.paid) : '—'}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] text-slate-500">চলমান বাকি</div>
+                        <div
+                          className={`font-bold font-mono-num ${
+                            row.runningDue > 0 ? 'text-red-600' : 'text-emerald-700'
+                          }`}
+                        >
+                          {formatBDT(row.runningDue)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Full Statement Table */}
+            <div className="hidden md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">তারিখ ও নম্বর</th>
+                    <th className="px-4 py-3 font-semibold">বিবরণ</th>
+                    <th className="px-4 py-3 text-right font-semibold">বিল</th>
+                    <th className="px-4 py-3 text-right font-semibold">জমা/আদায়</th>
+                    <th className="px-4 py-3 text-right font-semibold">চলমান বাকি</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {activeShopStatementRows.map((row) => {
+                    const matchingSale =
+                      row.kind === 'sale' ? sales.find((s) => s.id === row.id) ?? null : null;
+                    return (
+                      <tr key={row.id} className="hover:bg-slate-50/70">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {matchingSale ? (
+                            <button
+                              type="button"
+                              onClick={() => onOpenSaleDetail(matchingSale)}
+                              className="font-semibold font-mono-num text-emerald-700 hover:underline"
+                            >
+                              {row.code}
+                            </button>
+                          ) : (
+                            <span className="font-semibold font-mono-num text-slate-800">
+                              {row.code}
+                            </span>
+                          )}
+                          <div className="text-xs text-slate-500">{formatDateTimeBn(row.date)}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">{row.details}</td>
+                        <td className="px-4 py-3 text-right font-mono-num text-slate-900 whitespace-nowrap">
+                          {row.billed > 0 ? formatBDT(row.billed) : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold font-mono-num text-emerald-700 whitespace-nowrap">
+                          {row.paid > 0 ? formatBDT(row.paid) : '—'}
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-right font-bold font-mono-num whitespace-nowrap ${
+                            row.runningDue > 0 ? 'text-red-600' : 'text-emerald-700'
+                          }`}
+                        >
+                          {formatBDT(row.runningDue)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
+            {activeShopTimeline.map((entry) =>
+              entry.kind === 'sale' && entry.sale ? (
+                <div key={entry.id} className="p-4 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => onOpenSaleDetail(entry.sale!)}
+                        className="text-sm font-semibold text-slate-900 hover:text-emerald-700 hover:underline font-mono-num"
+                      >
+                        {entry.sale.invoiceNo}
+                      </button>
+                      <span className="mx-2 text-slate-300" aria-hidden="true">·</span>
+                      <span className="text-xs text-slate-500">
+                        {formatDateTimeBn(entry.sale.date)} · {entry.sale.totalBoxes} বক্স
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono-num">
+                      <span className="font-semibold text-slate-900">
+                        বিল {formatBDT(entry.sale.netTotal)}
+                      </span>
+                      <span className="mx-1.5 text-slate-300">|</span>
+                      <span className="text-emerald-700">জমা {formatBDT(entry.sale.paidAmount)}</span>
+                      <span className="mx-1.5 text-slate-300">|</span>
+                      <span className={entry.sale.dueAmount > 0 ? 'font-semibold text-red-600' : 'text-slate-500'}>
+                        বাকি {formatBDT(entry.sale.dueAmount)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-xs text-slate-600">
+                    {entry.sale.items.map((item, i) => (
+                      <div key={`${item.productId}-${i}`} className="flex items-start justify-between gap-2">
+                        <span className="min-w-0 break-words">
+                          {item.productName} ({item.boxes} বক্স · {item.discountPercent}% ছাড়)
+                        </span>
+                        <span className="font-mono-num text-slate-800 shrink-0 text-right">
+                          {formatBDT(item.netTotal)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                entry.payment && (
+                  <div key={entry.id} className="flex items-center justify-between gap-3 bg-emerald-50/40 p-4">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-emerald-800">
+                        বাকি আদায় · <span className="font-mono-num">{entry.payment.receiptNo}</span>
+                      </div>
+                      <div className="text-xs text-slate-600 break-words">
+                        {formatDateTimeBn(entry.payment.date)} · {entry.payment.method}
+                        {entry.payment.note ? ` · ${entry.payment.note}` : ''}
+                      </div>
+                    </div>
+                    <div className="text-sm font-bold font-mono-num text-emerald-700 shrink-0">
+                      +{formatBDT(entry.payment.amount)}
+                    </div>
+                  </div>
+                )
+              ),
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Clean Outside Shopkeepers List (No External Action Buttons; Tap Any Shop to Open Full Page)
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">দোকানদার ও খাতা</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            প্রতিটি ফার্মেসির মোট বিক্রি, জমা, বাকি এবং প্রোডাক্ট অনুযায়ী লেনদেনের খাতা
+    <div className="space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">দোকানদার ও খাতা</h1>
+          <p className="mt-0.5 text-xs sm:text-sm text-slate-600">
+            দোকানদারের নামের ওপর ক্লিক করলে তার সম্পূর্ণ খাতা, রিপোর্ট, বিক্রি ও এডিট পেজ খুলবে
           </p>
         </div>
         <button
           type="button"
           onClick={onRequestAddShop}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 whitespace-nowrap shrink-0"
+          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs sm:text-sm font-medium text-white hover:bg-emerald-700 whitespace-nowrap shrink-0"
         >
           <UserPlus className="h-4 w-4" />
           নতুন দোকানদার
@@ -138,32 +503,32 @@ export function ShopkeepersView({
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 sm:max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             aria-label="দোকান খুঁজুন"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="দোকানের নাম, এলাকা বা ফোন নম্বর দিয়ে খুঁজুন..."
+            placeholder="দোকানের নাম, এলাকা বা ফোন দিয়ে খুঁজুন..."
             className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
           />
         </div>
-        <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+        <div className="grid grid-cols-3 sm:inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
           <button
             type="button"
             onClick={() => setFilter('all')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`rounded-md px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
               filter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            সব দোকান ({shops.length})
+            সব ({shops.length})
           </button>
           <button
             type="button"
             onClick={() => setFilter('due')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`rounded-md px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
               filter === 'due' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -172,7 +537,7 @@ export function ShopkeepersView({
           <button
             type="button"
             onClick={() => setFilter('paid')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`rounded-md px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
               filter === 'paid' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -181,372 +546,123 @@ export function ShopkeepersView({
         </div>
       </div>
 
-      {/* Shopkeepers Table */}
+      {/* Clean Tappable Shopkeepers List (Zero External Action Buttons, Zero Horizontal Overflow) */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         {rows.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-sm text-slate-500">এই ফিল্টারে কোনো দোকান পাওয়া যায়নি।</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
-                <tr>
-                  <th className="px-5 py-3 font-medium">দোকান ও ঠিকানা</th>
-                  <th className="px-4 py-3 text-right font-medium">মোট বক্স</th>
-                  <th className="px-4 py-3 text-right font-medium">মোট বিল</th>
-                  <th className="px-4 py-3 text-right font-medium">মোট জমা</th>
-                  <th className="px-4 py-3 text-right font-medium">বাকি পাওনা</th>
-                  <th className="px-5 py-3 text-right font-medium">অ্যাকশন</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rows.map(({ shop, summary }) => (
-                  <tr key={shop.id} className="hover:bg-slate-50/70">
-                    <td className="px-5 py-3.5">
-                      <button
-                        type="button"
-                        onClick={() => onSelectLedgerShop(shop)}
-                        className="font-semibold text-slate-900 hover:text-emerald-700 hover:underline"
+          <>
+            {/* Mobile Clean Card Rows */}
+            <div className="divide-y divide-slate-100 md:hidden">
+              {rows.map(({ shop, summary }) => (
+                <button
+                  key={shop.id}
+                  type="button"
+                  onClick={() => onSelectLedgerShop(shop)}
+                  aria-label={`খাতা দেখুন: ${shop.shopName}`}
+                  className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-slate-900">
+                      {shop.shopName}
+                    </div>
+                    <div className="mt-0.5 truncate text-xs text-slate-500">
+                      {shop.ownerName} · {shop.area}
+                    </div>
+                    <div className="mt-1 text-[11px] font-mono-num text-slate-500">
+                      মোট বিল {formatBDT(summary.totalBilled)} · জমা {formatBDT(summary.totalPaid)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <div className="text-[10px] text-slate-500">
+                        {summary.totalDue > 0 ? 'বাকি' : 'পরিশোধিত'}
+                      </div>
+                      <div
+                        className={`text-sm font-bold font-mono-num ${
+                          summary.totalDue > 0 ? 'text-red-600' : 'text-emerald-700'
+                        }`}
                       >
-                        {shop.shopName}
-                      </button>
-                      <div className="mt-0.5 text-xs text-slate-500">
-                        <span>{shop.ownerName}</span>
-                        <span aria-hidden="true"> · </span>
-                        <span>{shop.area}</span>
-                        {shop.phone && (
-                          <>
-                            <span aria-hidden="true"> · </span>
-                            <span className="font-mono-num">{shop.phone}</span>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-right font-mono-num text-slate-700">
-                      {summary.totalBoxes}
-                    </td>
-                    <td className="px-4 py-3.5 text-right font-mono-num text-slate-900">
-                      {formatBDT(summary.totalBilled)}
-                    </td>
-                    <td className="px-4 py-3.5 text-right font-mono-num text-emerald-700">
-                      {formatBDT(summary.totalPaid)}
-                    </td>
-                    <td
-                      className={`px-4 py-3.5 text-right font-bold font-mono-num ${
-                        summary.totalDue > 0 ? 'text-red-600' : 'text-emerald-700'
-                      }`}
-                    >
-                      {formatBDT(summary.totalDue)}
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="inline-flex items-center justify-end gap-2">
-                        {summary.totalDue > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => onCollectDue(shop, summary.totalDue)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 whitespace-nowrap"
-                          >
-                            <Banknote className="h-3.5 w-3.5" />
-                            বাকি আদায়
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => onStartNewSale(shop.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          বিক্রি
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handlePrintShopStatement(shop)}
-                          aria-label={`রিপোর্ট PDF প্রিন্ট: ${shop.shopName}`}
-                          className="inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                          রিপোর্ট PDF
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onRequestEditShop(shop)}
-                          aria-label={`তথ্য এডিট: ${shop.shopName}`}
-                          className="inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          এডিট
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPrintNotice(null);
-                            onSelectLedgerShop(shop);
-                          }}
-                          aria-label={`খাতা দেখুন: ${shop.shopName}`}
-                          className="inline-flex min-h-[36px] items-center gap-0.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 whitespace-nowrap"
-                        >
-                          রিপোর্ট / খাতা
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Individual Shop TallyKhata Ledger Modal */}
-      <ModalShell
-        open={Boolean(liveLedgerShop)}
-        onClose={() => onSelectLedgerShop(null)}
-        title={liveLedgerShop ? `দোকানের খাতা — ${liveLedgerShop.shopName}` : ''}
-        maxWidthClass="max-w-3xl"
-      >
-        {liveLedgerShop && activeShopSummary && (
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
-              <div className="text-xs text-slate-600 space-y-0.5">
-                <div className="text-sm font-semibold text-slate-900">{liveLedgerShop.ownerName}</div>
-                <div>
-                  {liveLedgerShop.area}
-                  {liveLedgerShop.phone ? ` · ${liveLedgerShop.phone}` : ''}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handlePrintShopStatement(liveLedgerShop)}
-                  className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 whitespace-nowrap"
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                  রিপোর্ট / PDF প্রিন্ট
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onRequestEditShop(liveLedgerShop)}
-                  className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  এডিট
-                </button>
-                {activeShopSummary.totalDue > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => onCollectDue(liveLedgerShop, activeShopSummary.totalDue)}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
-                  >
-                    <Banknote className="h-3.5 w-3.5" />
-                    বাকি আদায়
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectLedgerShop(null);
-                    onStartNewSale(liveLedgerShop.id);
-                  }}
-                  className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  নতুন বিক্রি
-                </button>
-              </div>
-            </div>
-
-            {printNotice && (
-              <div
-                role="status"
-                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-medium text-emerald-800"
-              >
-                {printNotice}
-              </div>
-            )}
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs text-slate-500">মোট বিল</div>
-                <div className="mt-1 text-base font-bold font-mono-num text-slate-900">
-                  {formatBDT(activeShopSummary.totalBilled)}
-                </div>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs text-slate-500">মোট জমা</div>
-                <div className="mt-1 text-base font-bold font-mono-num text-emerald-700">
-                  {formatBDT(activeShopSummary.totalPaid)}
-                </div>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="text-xs text-slate-500">বর্তমান বাকি</div>
-                <div
-                  className={`mt-1 text-base font-bold font-mono-num ${
-                    activeShopSummary.totalDue > 0 ? 'text-red-600' : 'text-emerald-700'
-                  }`}
-                >
-                  {formatBDT(activeShopSummary.totalDue)}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1 w-fit">
-              <button
-                type="button"
-                onClick={() => setLedgerTab('statement')}
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium ${
-                  ledgerTab === 'statement'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <FileText className="h-3.5 w-3.5" />
-                সম্পূর্ণ রিপোর্ট ({activeShopStatementRows.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setLedgerTab('timeline')}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-                  ledgerTab === 'timeline'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                পণ্যভিত্তিক তালিকা
-              </button>
-            </div>
-
-            {activeShopTimeline.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-500">
-                এই দোকানে এখনও কোনো বিক্রি বা আদায়ের হিসাব নেই।
-              </p>
-            ) : ledgerTab === 'statement' ? (
-              <div className="overflow-x-auto rounded-lg border border-slate-200">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
-                    <tr>
-                      <th className="px-3 py-2.5 font-semibold">তারিখ ও নম্বর</th>
-                      <th className="px-3 py-2.5 font-semibold">বিবরণ</th>
-                      <th className="px-3 py-2.5 text-right font-semibold">বিল</th>
-                      <th className="px-3 py-2.5 text-right font-semibold">জমা/আদায়</th>
-                      <th className="px-3 py-2.5 text-right font-semibold">চলমান বাকি</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {activeShopStatementRows.map((row) => {
-                      const matchingSale =
-                        row.kind === 'sale' ? sales.find((s) => s.id === row.id) ?? null : null;
-                      return (
-                        <tr key={row.id} className="hover:bg-slate-50/70">
-                          <td className="px-3 py-2.5 whitespace-nowrap">
-                            {matchingSale ? (
-                              <button
-                                type="button"
-                                onClick={() => onOpenSaleDetail(matchingSale)}
-                                className="font-semibold font-mono-num text-emerald-700 hover:underline"
-                              >
-                                {row.code}
-                              </button>
-                            ) : (
-                              <span className="font-semibold font-mono-num text-slate-800">
-                                {row.code}
-                              </span>
-                            )}
-                            <div className="text-[11px] text-slate-500">
-                              {formatDateTimeBn(row.date)}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-slate-700 max-w-[240px]">
-                            {row.details}
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-mono-num text-slate-900 whitespace-nowrap">
-                            {row.billed > 0 ? formatBDT(row.billed) : '—'}
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-semibold font-mono-num text-emerald-700 whitespace-nowrap">
-                            {row.paid > 0 ? formatBDT(row.paid) : '—'}
-                          </td>
-                          <td
-                            className={`px-3 py-2.5 text-right font-bold font-mono-num whitespace-nowrap ${
-                              row.runningDue > 0 ? 'text-red-600' : 'text-emerald-700'
-                            }`}
-                          >
-                            {formatBDT(row.runningDue)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-200 rounded-lg border border-slate-200">
-                {activeShopTimeline.map((entry) =>
-                  entry.kind === 'sale' && entry.sale ? (
-                    <div key={entry.id} className="p-4 space-y-2.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() => onOpenSaleDetail(entry.sale!)}
-                            className="text-sm font-semibold text-slate-900 hover:text-emerald-700 hover:underline font-mono-num"
-                          >
-                            {entry.sale.invoiceNo}
-                          </button>
-                          <span className="mx-2 text-slate-300" aria-hidden="true">·</span>
-                          <span className="text-xs text-slate-500">
-                            {formatDateTimeBn(entry.sale.date)} · {entry.sale.totalBoxes} বক্স
-                          </span>
-                        </div>
-                        <div className="text-right text-xs font-mono-num">
-                          <span className="font-semibold text-slate-900">
-                            বিল {formatBDT(entry.sale.netTotal)}
-                          </span>
-                          <span className="mx-1.5 text-slate-300">|</span>
-                          <span className="text-emerald-700">জমা {formatBDT(entry.sale.paidAmount)}</span>
-                          <span className="mx-1.5 text-slate-300">|</span>
-                          <span className={entry.sale.dueAmount > 0 ? 'font-semibold text-red-600' : 'text-slate-500'}>
-                            বাকি {formatBDT(entry.sale.dueAmount)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-1 text-xs text-slate-600">
-                        {entry.sale.items.map((item, i) => (
-                          <div key={`${item.productId}-${i}`} className="flex justify-between">
-                            <span>
-                              {item.productName} ({item.boxes} বক্স · {item.discountPercent}% ছাড়)
-                            </span>
-                            <span className="font-mono-num text-slate-800">
-                              {formatBDT(item.netTotal)} ({formatBDT(item.effectiveBoxPrice)}/বক্স)
-                            </span>
-                          </div>
-                        ))}
+                        {formatBDT(summary.totalDue)}
                       </div>
                     </div>
-                  ) : (
-                    entry.payment && (
-                      <div key={entry.id} className="flex items-center justify-between bg-emerald-50/40 p-4">
-                        <div>
-                          <div className="text-sm font-semibold text-emerald-800">
-                            বাকি আদায় · <span className="font-mono-num">{entry.payment.receiptNo}</span>
-                          </div>
-                          <div className="text-xs text-slate-600">
-                            {formatDateTimeBn(entry.payment.date)} · {entry.payment.method}
-                            {entry.payment.note ? ` · ${entry.payment.note}` : ''}
-                          </div>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Desktop Clean Clickable Table (No Extra Action Columns) */}
+            <div className="hidden md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
+                  <tr>
+                    <th className="px-5 py-3 font-medium">দোকান ও ঠিকানা</th>
+                    <th className="px-4 py-3 text-right font-medium">মোট বক্স</th>
+                    <th className="px-4 py-3 text-right font-medium">মোট বিল</th>
+                    <th className="px-4 py-3 text-right font-medium">মোট জমা</th>
+                    <th className="px-5 py-3 text-right font-medium">বাকি পাওনা</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {rows.map(({ shop, summary }) => (
+                    <tr
+                      key={shop.id}
+                      onClick={() => onSelectLedgerShop(shop)}
+                      className="cursor-pointer transition-colors hover:bg-emerald-50/40"
+                    >
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectLedgerShop(shop);
+                            }}
+                            className="font-semibold text-slate-900 hover:text-emerald-700 hover:underline text-left"
+                          >
+                            {shop.shopName}
+                          </button>
+                          <ChevronRight className="h-4 w-4 text-slate-400" />
                         </div>
-                        <div className="text-sm font-bold font-mono-num text-emerald-700">
-                          +{formatBDT(entry.payment.amount)}
+                        <div className="mt-0.5 text-xs text-slate-500">
+                          <span>{shop.ownerName}</span>
+                          <span aria-hidden="true"> · </span>
+                          <span>{shop.area}</span>
+                          {shop.phone && (
+                            <>
+                              <span aria-hidden="true"> · </span>
+                              <span className="font-mono-num">{shop.phone}</span>
+                            </>
+                          )}
                         </div>
-                      </div>
-                    )
-                  ),
-                )}
-              </div>
-            )}
-          </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-mono-num text-slate-700">
+                        {summary.totalBoxes}
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-mono-num text-slate-900">
+                        {formatBDT(summary.totalBilled)}
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-mono-num text-emerald-700">
+                        {formatBDT(summary.totalPaid)}
+                      </td>
+                      <td
+                        className={`px-5 py-3.5 text-right font-bold font-mono-num ${
+                          summary.totalDue > 0 ? 'text-red-600' : 'text-emerald-700'
+                        }`}
+                      >
+                        {formatBDT(summary.totalDue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
-      </ModalShell>
+      </div>
     </div>
   );
 }

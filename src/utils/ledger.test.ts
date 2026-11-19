@@ -5,6 +5,7 @@ import {
   calculateInvoiceTotals,
   computeShopSummary,
   computeDashboardMetrics,
+  getDueShopSummaries,
   mergeCatalogProducts,
 } from './ledger';
 import { INITIAL_IBN_SINA_PRODUCTS } from '../data/ibnSinaProducts';
@@ -158,4 +159,84 @@ test('INITIAL_IBN_SINA_PRODUCTS contains all 55 unique products from the sheet',
   assert.equal(uniqueNames.size, 55);
   const merged = mergeCatalogProducts(undefined, INITIAL_IBN_SINA_PRODUCTS);
   assert.equal(merged.length, 55);
+});
+
+test('getDueShopSummaries returns only shops with due > 0 sorted highest first', () => {
+  const shops: Shopkeeper[] = [
+    {
+      id: 's1',
+      shopName: 'দোকান ক',
+      ownerName: 'আব্দুল',
+      phone: '01700000001',
+      area: 'শাহবাগ',
+      createdAt: '2026-11-10T09:00:00.000Z',
+    },
+    {
+      id: 's2',
+      shopName: 'দোকান খ',
+      ownerName: 'কামাল',
+      phone: '01700000002',
+      area: 'ধানমন্ডি',
+      createdAt: '2026-11-11T09:00:00.000Z',
+    },
+    {
+      id: 's3',
+      shopName: 'দোকান গ',
+      ownerName: 'জামাল',
+      phone: '01700000003',
+      area: 'মিরপুর',
+      createdAt: '2026-11-12T09:00:00.000Z',
+    },
+  ];
+  const sales: SaleRecord[] = [
+    {
+      id: 'sale-a',
+      invoiceNo: 'INV-101',
+      shopId: 's1',
+      shopName: 'দোকান ক',
+      date: '2026-11-12T10:00:00.000Z',
+      items: [],
+      totalBoxes: 2,
+      grossTotal: 1000,
+      totalDiscount: 0,
+      netTotal: 1000,
+      paidAmount: 1000,
+      dueAmount: 0,
+    },
+    {
+      id: 'sale-b',
+      invoiceNo: 'INV-102',
+      shopId: 's2',
+      shopName: 'দোকান খ',
+      date: '2026-11-12T10:00:00.000Z',
+      items: [],
+      totalBoxes: 5,
+      grossTotal: 2000,
+      totalDiscount: 0,
+      netTotal: 2000,
+      paidAmount: 500,
+      dueAmount: 1500,
+    },
+    {
+      id: 'sale-c',
+      invoiceNo: 'INV-103',
+      shopId: 's3',
+      shopName: 'দোকান গ',
+      date: '2026-11-12T10:00:00.000Z',
+      items: [],
+      totalBoxes: 8,
+      grossTotal: 4000,
+      totalDiscount: 0,
+      netTotal: 4000,
+      paidAmount: 1000,
+      dueAmount: 3000,
+    },
+  ];
+
+  const dueList = getDueShopSummaries(shops, sales, []);
+  assert.equal(dueList.length, 2);
+  assert.equal(dueList[0]?.shop.id, 's3');
+  assert.equal(dueList[0]?.summary.totalDue, 3000);
+  assert.equal(dueList[1]?.shop.id, 's2');
+  assert.equal(dueList[1]?.summary.totalDue, 1500);
 });

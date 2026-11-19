@@ -226,3 +226,22 @@ export function mergeCatalogProducts(
   const custom = stored.filter((p) => !defaultIds.has(p.id));
   return [...merged, ...custom];
 }
+
+export interface ShopWithSummary {
+  shop: Shopkeeper;
+  summary: ShopSummary;
+}
+
+export function getDueShopSummaries(
+  shops: Shopkeeper[],
+  sales: SaleRecord[],
+  payments: PaymentRecord[],
+): ShopWithSummary[] {
+  return shops
+    .map((shop) => ({
+      shop,
+      summary: computeShopSummary(shop.id, sales, payments),
+    }))
+    .filter(({ summary }) => summary.totalDue > 0)
+    .sort((a, b) => b.summary.totalDue - a.summary.totalDue);
+}

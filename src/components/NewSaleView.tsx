@@ -347,7 +347,7 @@ export function NewSaleView({
                 প্রতিটি প্রোডাক্টের বক্স, ডিসকাউন্ট (%) এবং ছাড়ের পর দাম এখানে দেখাবে
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="number"
                 min="0"
@@ -357,7 +357,7 @@ export function NewSaleView({
                 value={bulkDiscount}
                 onChange={(e) => setBulkDiscount(e.target.value)}
                 placeholder="সব % (10)"
-                className="w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-900 font-mono-num focus:border-emerald-600 focus:outline-none"
+                className="w-24 sm:w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-900 font-mono-num focus:border-emerald-600 focus:outline-none"
               />
               <button
                 type="button"
@@ -370,16 +370,16 @@ export function NewSaleView({
           </div>
 
           {formError && (
-            <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700" role="alert">
+            <div className="mx-4 sm:mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700" role="alert">
               {formError}
             </div>
           )}
 
           {computedItems.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
+            <div className="flex flex-1 flex-col items-center justify-center p-8 sm:p-10 text-center">
               <p className="text-sm font-medium text-slate-700">এখনও কোনো প্রোডাক্ট যোগ করা হয়নি</p>
               <p className="mt-1 text-xs text-slate-500">
-                বাম পাশের তালিকা থেকে প্রয়োজনীয় ওষুধগুলো &ldquo;যোগ করুন&rdquo; বাটনে ক্লিক করে ইনভয়েসে যুক্ত করুন।
+                ওপরের তালিকা থেকে প্রয়োজনীয় ওষুধগুলো &ldquo;যোগ করুন&rdquo; বাটনে ক্লিক করে ইনভয়েসে যুক্ত করুন।
               </p>
             </div>
           ) : (
@@ -390,11 +390,11 @@ export function NewSaleView({
                   <div
                     key={item.productId}
                     data-testid={`line-item-${item.productId}`}
-                    className="space-y-3 px-5 py-4"
+                    className="space-y-3 px-4 sm:px-5 py-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold text-slate-900">{item.productName}</div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900 truncate">{item.productName}</div>
                         <div className="text-xs text-slate-500">
                           {item.tier} · আসল মোট {formatBDT(item.grossTotal)}
                         </div>
@@ -403,14 +403,14 @@ export function NewSaleView({
                         type="button"
                         onClick={() => removeRow(item.productId)}
                         aria-label={`মুছে ফেলুন: ${item.productName}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 shrink-0"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div>
+                      <div className="min-w-0">
                         <label
                           htmlFor={`boxes-${item.productId}`}
                           className="mb-1 block text-xs font-medium text-slate-600"

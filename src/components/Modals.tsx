@@ -555,42 +555,73 @@ export function InvoiceDetailModal({ sale, onClose }: InvoiceDetailModalProps) {
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
-              <tr>
-                <th className="px-3 py-2.5 font-medium">প্রোডাক্ট</th>
-                <th className="px-3 py-2.5 text-right font-medium">বক্স</th>
-                <th className="px-3 py-2.5 text-right font-medium">দাম/বক্স</th>
-                <th className="px-3 py-2.5 text-right font-medium">ডিসকাউন্ট</th>
-                <th className="px-3 py-2.5 text-right font-medium">ছাড়ের পর বক্স</th>
-                <th className="px-3 py-2.5 text-right font-medium">মোট দাম</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {sale.items.map((item, idx) => (
-                <tr key={`${item.productId}-${idx}`} className="hover:bg-slate-50/70">
-                  <td className="px-3 py-2.5">
-                    <div className="font-medium text-slate-900">{item.productName}</div>
-                    <div className="text-xs text-slate-500">{item.tier}</div>
-                  </td>
-                  <td className="px-3 py-2.5 text-right font-mono-num text-slate-800">{item.boxes}</td>
-                  <td className="px-3 py-2.5 text-right font-mono-num text-slate-600">
-                    {formatBDT(item.boxPrice)}
-                  </td>
-                  <td className="px-3 py-2.5 text-right font-mono-num text-amber-700">
-                    {item.discountPercent}% (-{formatBDT(item.discountAmount)})
-                  </td>
-                  <td className="px-3 py-2.5 text-right font-mono-num text-emerald-700">
-                    {formatBDT(item.effectiveBoxPrice)}
-                  </td>
-                  <td className="px-3 py-2.5 text-right font-semibold font-mono-num text-slate-900">
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+          {/* Mobile Line Item Cards */}
+          <div className="divide-y divide-slate-100 sm:hidden">
+            {sale.items.map((item, idx) => (
+              <div key={`${item.productId}-${idx}`} className="p-3 space-y-1.5 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900">{item.productName}</div>
+                    <div className="text-[11px] text-slate-500">{item.tier}</div>
+                  </div>
+                  <div className="font-bold font-mono-num text-slate-900 shrink-0">
                     {formatBDT(item.netTotal)}
-                  </td>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 font-mono-num">
+                  <span>
+                    {item.boxes} বক্স × {formatBDT(item.boxPrice)}
+                  </span>
+                  <span className="text-amber-700">
+                    ছাড় {item.discountPercent}% (-{formatBDT(item.discountAmount)})
+                  </span>
+                  <span className="text-emerald-700">
+                    {formatBDT(item.effectiveBoxPrice)}/বক্স
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Line Item Table */}
+          <div className="hidden sm:block">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
+                <tr>
+                  <th className="px-3 py-2.5 font-medium">প্রোডাক্ট</th>
+                  <th className="px-3 py-2.5 text-right font-medium">বক্স</th>
+                  <th className="px-3 py-2.5 text-right font-medium">দাম/বক্স</th>
+                  <th className="px-3 py-2.5 text-right font-medium">ডিসকাউন্ট</th>
+                  <th className="px-3 py-2.5 text-right font-medium">ছাড়ের পর বক্স</th>
+                  <th className="px-3 py-2.5 text-right font-medium">মোট দাম</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sale.items.map((item, idx) => (
+                  <tr key={`${item.productId}-${idx}`} className="hover:bg-slate-50/70">
+                    <td className="px-3 py-2.5">
+                      <div className="font-medium text-slate-900">{item.productName}</div>
+                      <div className="text-xs text-slate-500">{item.tier}</div>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono-num text-slate-800">{item.boxes}</td>
+                    <td className="px-3 py-2.5 text-right font-mono-num text-slate-600">
+                      {formatBDT(item.boxPrice)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono-num text-amber-700">
+                      {item.discountPercent}% (-{formatBDT(item.discountAmount)})
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono-num text-emerald-700">
+                      {formatBDT(item.effectiveBoxPrice)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-semibold font-mono-num text-slate-900">
+                      {formatBDT(item.netTotal)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-2">

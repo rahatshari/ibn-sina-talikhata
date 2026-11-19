@@ -1,6 +1,7 @@
 package com.rahat.talikhata;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.DownloadManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -11,6 +12,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -52,6 +54,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AppUpdaterPlugin extends Plugin {
     private static final String UPDATE_CHANNEL_ID = "app_updates";
     private static final int UPDATE_NOTIFICATION_ID = 10041;
+    private static final int INSTALL_READY_NOTIFICATION_ID = 10042;
+    private static final String PREFS_NAME = "ibn_sina_updater_prefs";
+    private static final String KEY_DL_PREFIX = "dl_file_";
+    private static final String KEY_PENDING_DL_ID = "pending_install_dl_id";
+    private static final String KEY_PENDING_FILE_NAME = "pending_install_file_name";
 
     private final Map<Long, String> downloadFileNames = new ConcurrentHashMap<>();
     private BroadcastReceiver downloadCompleteReceiver;
@@ -64,6 +71,29 @@ public class AppUpdaterPlugin extends Plugin {
     }
 
     @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        long pendingId = prefs.getLong(KEY_PENDING_DL_ID, -1L);
+        String pendingFile = prefs.getString(KEY_PENDING_FILE_NAME, null);
+
+        if ((pendingId > 0 || (pendingFile != null && !pendingFile.isEmpty())) && canInstallUnknownApps()) {
+            clearPendingInstall(prefs);
+            Uri apkUri = resolveApkUri(pendingId, pendingFile);
+            if (apkUri != null) {
+                boolean launched = launchPackageInstaller(apkUri);
+                if (launched) {
+                    JSObject event = new JSObject();
+                    event.put("downloadId", pendingId);
+                    event.put("started", true);
+                    event.put("needsPermission", false);
+                    notifyListeners("installStateChanged", event);
+                }
+            }
+        }
+    }
+
+    @Override
     protected void handleOnDestroy() {
         if (downloadCompleteReceiver != null) {
             try {
@@ -73,6 +103,42 @@ public class AppUpdaterPlugin extends Plugin {
             downloadCompleteReceiver = null;
         }
         super.handleOnDestroy();
+    }
+
+    private boolean canInstallUnknownApps() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return true;
+        }
+        return getContext().getPackageManager().canRequestPackageInstalls();
+    }
+
+    private void savePendingInstall(long downloadId, String fileName) {
+        SharedPreferences.Editor editor = getContext()
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit();
+        editor.putLong(KEY_PENDING_DL_ID, downloadId);
+        if (fileName != null && !fileName.trim().isEmpty()) {
+            editor.putString(KEY_PENDING_FILE_NAME, sanitizeApkFileName(fileName));
+        }
+        editor.apply();
+    }
+
+    private void clearPendingInstall(SharedPreferences prefs) {
+        prefs.edit()
+            .remove(KEY_PENDING_DL_ID)
+            .remove(KEY_PENDING_FILE_NAME)
+            .apply();
+    }
+
+    private String sanitizeApkFileName(String rawFileName) {
+        String base = (rawFileName == null || rawFileName.trim().isEmpty())
+            ? "ibn-sina-talikhata-update.apk"
+            : rawFileName.trim();
+        String safe = base.replaceAll("[^a-zA-Z0-9._-]", "_");
+        if (!safe.endsWith(".apk")) {
+            safe = safe + ".apk";
+        }
+        return safe;
     }
 
     private void createNotificationChannel() {
@@ -107,6 +173,18 @@ public class AppUpdaterPlugin extends Plugin {
                 JSObject status = queryDownloadStatus(downloadId);
                 status.put("downloadId", downloadId);
                 notifyListeners("downloadProgress", status);
+
+                // If download succeeded while user is away or listener isn't active, post tap-to-install notification
+                if ("successful".equals(status.getString("status"))) {
+                    SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                    String fileName = prefs.getString(KEY_DL_PREFIX + downloadId, downloadFileNames.get(downloadId));
+                    if (fileName != null) {
+                        Uri apkUri = resolveApkUri(downloadId, fileName);
+                        if (apkUri != null && canInstallUnknownApps()) {
+                            postReadyToInstallNotification(apkUri);
+                        }
+                    }
+                }
             }
         };
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
@@ -118,6 +196,32 @@ public class AppUpdaterPlugin extends Plugin {
         );
     }
 
+    private void postReadyToInstallNotification(Uri apkUri) {
+        try {
+            createNotificationChannel();
+            Intent installIntent = buildInstallIntent(apkUri);
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                getContext(),
+                (int) (System.currentTimeMillis() & 0xffff),
+                installIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), UPDATE_CHANNEL_ID)
+                .setSmallIcon(getContext().getApplicationInfo().icon)
+                .setContentTitle("আপডেট ডাউনলোড সম্পন্ন হয়েছে")
+                .setContentText("অ্যাপটি আপডেট / ইনস্টল করতে এখানে ট্যাপ করুন।")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent);
+
+            NotificationManager manager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) {
+                manager.notify(INSTALL_READY_NOTIFICATION_ID, builder.build());
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     @PluginMethod
     public void getAppInfo(PluginCall call) {
         JSObject ret = new JSObject();
@@ -125,6 +229,7 @@ public class AppUpdaterPlugin extends Plugin {
         ret.put("versionCode", BuildConfig.VERSION_CODE);
         ret.put("packageName", BuildConfig.APPLICATION_ID);
         ret.put("githubRepo", BuildConfig.GITHUB_REPO);
+        ret.put("canInstallPackages", canInstallUnknownApps());
         call.resolve(ret);
     }
 
@@ -184,18 +289,16 @@ public class AppUpdaterPlugin extends Plugin {
             call.reject("Download URL is required");
             return;
         }
-        String rawFileName = call.getString("fileName", "ibn-sina-talikhata-update.apk");
-        String safeFileName = rawFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
-        if (!safeFileName.endsWith(".apk")) {
-            safeFileName = safeFileName + ".apk";
-        }
+        String safeFileName = sanitizeApkFileName(call.getString("fileName", "ibn-sina-talikhata-update.apk"));
         String title = call.getString("title", "ইবনে সিনা টালিখাতা আপডেট");
 
         File targetDir = getContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
         if (targetDir != null) {
+            if (!targetDir.exists()) {
+                targetDir.mkdirs();
+            }
             File existing = new File(targetDir, safeFileName);
             if (existing.exists()) {
-                // Remove older file with the same name to prevent duplicate numbering
                 existing.delete();
             }
         }
@@ -217,6 +320,11 @@ public class AppUpdaterPlugin extends Plugin {
 
         long downloadId = dm.enqueue(request);
         downloadFileNames.put(downloadId, safeFileName);
+        getContext()
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_DL_PREFIX + downloadId, safeFileName)
+            .apply();
 
         JSObject ret = new JSObject();
         ret.put("downloadId", downloadId);
@@ -304,10 +412,137 @@ public class AppUpdaterPlugin extends Plugin {
         }
     }
 
+    private Uri resolveApkUri(long downloadId, String explicitFileName) {
+        File externalDownloads = getContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+
+        // 1. Check explicit filename, in-memory map, and persisted SharedPreferences
+        SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String candidateName = explicitFileName;
+        if ((candidateName == null || candidateName.trim().isEmpty()) && downloadId > 0) {
+            candidateName = downloadFileNames.get(downloadId);
+            if (candidateName == null) {
+                candidateName = prefs.getString(KEY_DL_PREFIX + downloadId, null);
+            }
+        }
+
+        if (candidateName != null && !candidateName.trim().isEmpty() && externalDownloads != null) {
+            File apkFile = new File(externalDownloads, sanitizeApkFileName(candidateName));
+            if (apkFile.exists() && apkFile.length() > 0) {
+                return FileProvider.getUriForFile(
+                    getContext(),
+                    getContext().getPackageName() + ".fileprovider",
+                    apkFile
+                );
+            }
+        }
+
+        // 2. Query DownloadManager COLUMN_LOCAL_URI -> File -> FileProvider (works reliably on Android 7-15)
+        if (downloadId > 0) {
+            DownloadManager dm = (DownloadManager) getContext().getSystemService(Context.DOWNLOAD_SERVICE);
+            if (dm != null) {
+                DownloadManager.Query query = new DownloadManager.Query();
+                query.setFilterById(downloadId);
+                try (Cursor cursor = dm.query(query)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int localUriCol = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                        if (localUriCol >= 0) {
+                            String localUriStr = cursor.getString(localUriCol);
+                            if (localUriStr != null && localUriStr.startsWith("file://")) {
+                                String path = Uri.parse(localUriStr).getPath();
+                                if (path != null) {
+                                    File file = new File(path);
+                                    if (file.exists() && file.length() > 0) {
+                                        return FileProvider.getUriForFile(
+                                            getContext(),
+                                            getContext().getPackageName() + ".fileprovider",
+                                            file
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
+
+                // 3. Final fallback to DownloadManager URI
+                try {
+                    Uri dmUri = dm.getUriForDownloadedFile(downloadId);
+                    if (dmUri != null) {
+                        return dmUri;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private Intent buildInstallIntent(Uri apkUri) {
+        Intent installIntent = new Intent(Intent.ACTION_VIEW);
+        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+        installIntent.addFlags(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION |
+            Intent.FLAG_ACTIVITY_NEW_TASK |
+            Intent.FLAG_ACTIVITY_CLEAR_TOP
+        );
+        return installIntent;
+    }
+
+    private boolean launchPackageInstaller(Uri apkUri) {
+        try {
+            Intent installIntent = buildInstallIntent(apkUri);
+            Activity activity = getActivity();
+            if (activity != null && !activity.isFinishing()) {
+                activity.runOnUiThread(() -> {
+                    try {
+                        activity.startActivity(installIntent);
+                    } catch (Exception ignored) {
+                    }
+                });
+                return true;
+            }
+            getContext().startActivity(installIntent);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void launchUnknownSourcesSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent intent = new Intent(
+                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:" + getContext().getPackageName())
+            );
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            Activity activity = getActivity();
+            if (activity != null && !activity.isFinishing()) {
+                activity.runOnUiThread(() -> activity.startActivity(intent));
+            } else {
+                getContext().startActivity(intent);
+            }
+        }
+    }
+
     @PluginMethod
     public void installApk(PluginCall call) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            !getContext().getPackageManager().canRequestPackageInstalls()) {
+        Long idObj = call.getLong("downloadId");
+        long downloadId = idObj != null ? idObj : -1L;
+        String fileName = call.getString("fileName", null);
+        boolean openSettingsOnDeny = Boolean.TRUE.equals(call.getBoolean("openSettingsOnDeny", false));
+
+        if (downloadId <= 0 && (fileName == null || fileName.trim().isEmpty())) {
+            call.reject("downloadId or fileName is required");
+            return;
+        }
+
+        if (!canInstallUnknownApps()) {
+            savePendingInstall(downloadId, fileName);
+            if (openSettingsOnDeny) {
+                launchUnknownSourcesSettings();
+            }
             JSObject ret = new JSObject();
             ret.put("started", false);
             ret.put("needsPermission", true);
@@ -315,44 +550,19 @@ public class AppUpdaterPlugin extends Plugin {
             return;
         }
 
-        Long idLong = call.getLong("downloadId");
-        if (idLong == null || idLong <= 0) {
-            call.reject("Valid downloadId is required");
-            return;
-        }
-
-        Uri apkUri = null;
-        String fileName = downloadFileNames.get(idLong);
-        if (fileName != null) {
-            File dir = getContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-            if (dir != null) {
-                File apkFile = new File(dir, fileName);
-                if (apkFile.exists()) {
-                    apkUri = FileProvider.getUriForFile(
-                        getContext(),
-                        getContext().getPackageName() + ".fileprovider",
-                        apkFile
-                    );
-                }
-            }
-        }
-
-        if (apkUri == null) {
-            DownloadManager dm = (DownloadManager) getContext().getSystemService(Context.DOWNLOAD_SERVICE);
-            if (dm != null) {
-                apkUri = dm.getUriForDownloadedFile(idLong);
-            }
-        }
-
+        Uri apkUri = resolveApkUri(downloadId, fileName);
         if (apkUri == null) {
             call.reject("Downloaded APK file could not be located");
             return;
         }
 
-        Intent installIntent = new Intent(Intent.ACTION_VIEW);
-        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-        installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-        getContext().startActivity(installIntent);
+        boolean started = launchPackageInstaller(apkUri);
+        if (!started) {
+            call.reject("Could not start Android package installer");
+            return;
+        }
+
+        clearPendingInstall(getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE));
 
         JSObject ret = new JSObject();
         ret.put("started", true);
@@ -362,14 +572,7 @@ public class AppUpdaterPlugin extends Plugin {
 
     @PluginMethod
     public void openUnknownSourcesSettings(PluginCall call) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent intent = new Intent(
-                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                Uri.parse("package:" + getContext().getPackageName())
-            );
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            getContext().startActivity(intent);
-        }
+        launchUnknownSourcesSettings();
         call.resolve();
     }
 

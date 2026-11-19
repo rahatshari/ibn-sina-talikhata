@@ -16,6 +16,7 @@ export interface NativeAppInfo {
   versionCode: number;
   packageName: string;
   githubRepo: string;
+  canInstallPackages?: boolean;
 }
 
 export interface StartDownloadResult {
@@ -49,7 +50,11 @@ export interface AppUpdaterPlugin {
     version: string;
   }): Promise<StartDownloadResult>;
   getDownloadStatus(options: { downloadId: number }): Promise<NativeDownloadStatus>;
-  installApk(options: { downloadId: number }): Promise<InstallApkResult>;
+  installApk(options: {
+    downloadId?: number;
+    fileName?: string;
+    openSettingsOnDeny?: boolean;
+  }): Promise<InstallApkResult>;
   openUnknownSourcesSettings(): Promise<void>;
   saveFileToDownloads(options: {
     base64Data: string;
@@ -67,6 +72,10 @@ export interface AppUpdaterPlugin {
   addListener(
     eventName: 'downloadProgress',
     listenerFunc: (data: NativeDownloadStatus & { downloadId: number }) => void,
+  ): Promise<PluginListenerHandle>;
+  addListener(
+    eventName: 'installStateChanged',
+    listenerFunc: (data: InstallApkResult & { downloadId: number }) => void,
   ): Promise<PluginListenerHandle>;
 }
 

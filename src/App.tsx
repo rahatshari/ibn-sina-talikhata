@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Banknote,
   BarChart3,
   Check,
   CheckCircle2,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { AccountModal } from './components/AccountModal';
 import { DashboardView } from './components/DashboardView';
+import { DueCustomersView } from './components/DueCustomersView';
 import {
   AddShopModal,
   CollectPaymentModal,
@@ -38,13 +40,14 @@ import type { Product, SaleRecord, Shopkeeper } from './types/tally';
 import { computeDashboardMetrics } from './utils/ledger';
 import {
   APP_FONT_OPTIONS,
+  applyAppFont,
   loadSavedFontId,
   saveAndApplyAppFont,
   type AppFontId,
 } from './utils/fontPreferences';
 import { parseReleaseChangelog } from './utils/updater';
 
-type AppView = 'dashboard' | 'new-sale' | 'shops' | 'products' | 'reports';
+type AppView = 'dashboard' | 'new-sale' | 'shops' | 'due' | 'products' | 'reports';
 
 export default function App() {
   const store = useTallyStore();
@@ -73,7 +76,7 @@ export default function App() {
   const menuContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    saveAndApplyAppFont(selectedFontId);
+    applyAppFont(selectedFontId);
   }, [selectedFontId]);
 
   useEffect(() => {
@@ -108,13 +111,25 @@ export default function App() {
     setActiveView('new-sale');
   };
 
-  const navItems: Array<{ id: AppView; label: string; icon: typeof LayoutDashboard }> = [
-    { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: LayoutDashboard },
-    { id: 'new-sale', label: 'নতুন বিক্রি', icon: Plus },
-    { id: 'shops', label: 'দোকানদার', icon: Store },
-    { id: 'products', label: 'প্রোডাক্ট', icon: Package },
-    { id: 'reports', label: 'রিপোর্ট', icon: BarChart3 },
+  const navItems: Array<{
+    id: AppView;
+    label: string;
+    mobileLabel: string;
+    icon: typeof LayoutDashboard;
+  }> = [
+    { id: 'dashboard', label: 'ড্যাশবোর্ড', mobileLabel: 'ড্যাশবোর্ড', icon: LayoutDashboard },
+    { id: 'new-sale', label: 'নতুন বিক্রি', mobileLabel: 'বিক্রি', icon: Plus },
+    { id: 'shops', label: 'দোকানদার', mobileLabel: 'দোকানদার', icon: Store },
+    { id: 'due', label: 'বাকি', mobileLabel: 'বাকি', icon: Banknote },
+    { id: 'products', label: 'প্রোডাক্ট', mobileLabel: 'প্রোডাক্ট', icon: Package },
+    { id: 'reports', label: 'রিপোর্ট', mobileLabel: 'রিপোর্ট', icon: BarChart3 },
   ];
+
+  const handleSelectNav = (id: AppView) => {
+    if (id !== 'new-sale') setPreselectedShopId(undefined);
+    if (id === 'shops') setSelectedLedgerShop(null);
+    setActiveView(id);
+  };
 
   const showUpdateBanner =
     updater.updateAvailable &&
@@ -172,17 +187,14 @@ export default function App() {
           </div>
 
           {/* Zone 2: Clean Single-line Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-5" aria-label="প্রধান নেভিগেশন">
+          <nav className="hidden md:flex items-center gap-4 lg:gap-5" aria-label="প্রধান নেভিগেশন">
             {navItems.map((item) => {
               const active = activeView === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => {
-                    if (item.id !== 'new-sale') setPreselectedShopId(undefined);
-                    setActiveView(item.id);
-                  }}
+                  onClick={() => handleSelectNav(item.id)}
                   className={`border-b-2 py-1 text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
                     active
                       ? 'border-emerald-600 text-emerald-700'
@@ -536,6 +548,19 @@ export default function App() {
           />
         )}
 
+        {activeView === 'due' && (
+          <DueCustomersView
+            shops={store.shops}
+            sales={store.sales}
+            payments={store.payments}
+            onOpenShopLedger={(shop) => {
+              setSelectedLedgerShop(shop);
+              setActiveView('shops');
+            }}
+            onCollectDue={(shop, due) => setCollectTarget({ shop, due })}
+          />
+        )}
+
         {activeView === 'products' && (
           <ProductsView
             products={store.products}
@@ -562,10 +587,10 @@ export default function App() {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation (44px+ Android touch targets) */}
+      {/* Mobile Bottom Navigation (44px+ Android touch targets, fits single screen width) */}
       <nav
         aria-label="মোবাইল নেভিগেশন"
-        className="no-print fixed inset-x-0 bottom-0 z-30 flex min-h-[60px] pb-safe items-center justify-around border-t border-slate-200 bg-white md:hidden"
+        className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 min-h-[60px] pb-safe items-center border-t border-slate-200 bg-white md:hidden"
       >
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -574,16 +599,13 @@ export default function App() {
             <button
               key={item.id}
               type="button"
-              onClick={() => {
-                if (item.id !== 'new-sale') setPreselectedShopId(undefined);
-                setActiveView(item.id);
-              }}
-              className={`flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium ${
+              onClick={() => handleSelectNav(item.id)}
+              className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-[10px] font-medium ${
                 active ? 'text-emerald-700' : 'text-slate-500'
               }`}
             >
-              <Icon className="h-4 w-4" />
-              <span className="whitespace-nowrap">{item.label}</span>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="max-w-full truncate whitespace-nowrap">{item.mobileLabel}</span>
             </button>
           );
         })}

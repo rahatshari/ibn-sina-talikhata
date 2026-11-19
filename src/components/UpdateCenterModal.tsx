@@ -192,7 +192,7 @@ export function UpdateCenterModal({
 
           {downloads.length === 0 ? (
             <div className="p-6 text-center text-xs text-slate-500">
-              এখনও কোনো APK ডাউনলোড করা হয়নি। GitHub Release থেকে নতুন আপডেট এলে এখানে ডাউনলোডের অগ্রগতি ও ইনস্টল বাটন দেখাবে।
+              এখনও কোনো APK ডাউনলোড করা হয়নি। ডাউনলোড শেষ হওয়ার সাথে সাথেই স্বয়ংক্রিয়ভাবে ইনস্টলার চালু হবে।
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
@@ -210,7 +210,7 @@ export function UpdateCenterModal({
                     </div>
                     <span className="text-xs font-semibold font-mono-num text-slate-700">
                       {task.status === 'completed'
-                        ? 'সম্পন্ন (100%)'
+                        ? 'সম্পন্ন (অটো ইনস্টলার চালু)'
                         : task.status === 'downloading'
                           ? `${task.progress}%`
                           : task.status === 'permission-required'
@@ -232,6 +232,12 @@ export function UpdateCenterModal({
                       style={{ width: `${Math.max(4, Math.min(100, task.progress))}%` }}
                     />
                   </div>
+
+                  {task.status === 'downloading' && (
+                    <p className="text-[11px] text-emerald-700">
+                      ডাউনলোড শেষ হলেই অটোমেটিক ইনস্টল পপ-আপ চলে আসবে...
+                    </p>
+                  )}
 
                   {task.errorMessage && (
                     <p className="text-xs text-red-600">{task.errorMessage}</p>
@@ -257,7 +263,7 @@ export function UpdateCenterModal({
                           className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
                         >
                           <Smartphone className="h-3.5 w-3.5" />
-                          APK ইনস্টল করুন
+                          আবার ইনস্টল চালু করুন
                         </button>
                       )}
                   </div>

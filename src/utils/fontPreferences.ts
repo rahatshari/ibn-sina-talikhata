@@ -13,7 +13,8 @@ export interface AppFontOption {
   canvasFont: string;
 }
 
-const FONT_STORAGE_KEY = 'ibn_sina_app_font_v1';
+export const DEFAULT_FONT_ID: AppFontId = 'noto-sans';
+const FONT_STORAGE_KEY = 'ibn_sina_app_font_v2';
 
 export const APP_FONT_OPTIONS: AppFontOption[] = [
   {
@@ -48,17 +49,21 @@ export const APP_FONT_OPTIONS: AppFontOption[] = [
     id: 'atma',
     label: 'আত্মা স্টাইল',
     sample: 'হাতের লেখা',
-    fontFamily: "'Atma', 'Hind Siliguri', system-ui, sans-serif",
-    canvasFont: '"Atma", "Hind Siliguri", system-ui, sans-serif',
+    fontFamily: "'Atma', 'Noto Sans Bengali', system-ui, sans-serif",
+    canvasFont: '"Atma", "Noto Sans Bengali", system-ui, sans-serif',
   },
 ];
 
 export function getFontOption(fontId: AppFontId): AppFontOption {
-  return APP_FONT_OPTIONS.find((f) => f.id === fontId) ?? APP_FONT_OPTIONS[0];
+  return (
+    APP_FONT_OPTIONS.find((f) => f.id === fontId) ??
+    APP_FONT_OPTIONS.find((f) => f.id === DEFAULT_FONT_ID) ??
+    APP_FONT_OPTIONS[1]
+  );
 }
 
 export function loadSavedFontId(): AppFontId {
-  if (typeof window === 'undefined') return 'hind-siliguri';
+  if (typeof window === 'undefined') return DEFAULT_FONT_ID;
   try {
     const raw = window.localStorage.getItem(FONT_STORAGE_KEY);
     if (raw && APP_FONT_OPTIONS.some((f) => f.id === raw)) {
@@ -67,23 +72,28 @@ export function loadSavedFontId(): AppFontId {
   } catch {
     // Ignore storage errors
   }
-  return 'hind-siliguri';
+  return DEFAULT_FONT_ID;
+}
+
+export function applyAppFont(fontId: AppFontId): AppFontOption {
+  const option = getFontOption(fontId);
+  if (typeof document !== 'undefined') {
+    const root = document.documentElement;
+    root.style.setProperty('--font-sans', option.fontFamily);
+    root.style.setProperty('--font-display', option.fontFamily);
+    document.body.style.fontFamily = option.fontFamily;
+  }
+  return option;
 }
 
 export function saveAndApplyAppFont(fontId: AppFontId): AppFontOption {
-  const option = getFontOption(fontId);
+  const option = applyAppFont(fontId);
   if (typeof window !== 'undefined') {
     try {
       window.localStorage.setItem(FONT_STORAGE_KEY, option.id);
     } catch {
       // Ignore storage errors
     }
-  }
-  if (typeof document !== 'undefined') {
-    const root = document.documentElement;
-    root.style.setProperty('--font-sans', option.fontFamily);
-    root.style.setProperty('--font-display', option.fontFamily);
-    document.body.style.fontFamily = option.fontFamily;
   }
   return option;
 }

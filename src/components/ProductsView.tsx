@@ -105,42 +105,75 @@ export function ProductsView({
             কোনো প্রোডাক্ট খুঁজে পাওয়া যায়নি।
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
-                <tr>
-                  <th className="px-5 py-3 font-medium">প্রোডাক্টের নাম</th>
-                  <th className="px-4 py-3 font-medium">ক্যাটাগরি / গ্রুপ</th>
-                  <th className="px-4 py-3 font-medium">প্যাক সাইজ</th>
-                  <th className="px-4 py-3 text-right font-medium">দাম / বক্স</th>
-                  <th className="px-5 py-3 text-right font-medium">সম্পাদনা</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.map((product) => (
-                  <tr key={product.id} className="hover:bg-slate-50/70">
-                    <td className="px-5 py-3 font-semibold text-slate-900">{product.name}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{product.tier}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{product.packInfo}</td>
-                    <td className="px-4 py-3 text-right font-bold font-mono-num text-slate-900">
+          <>
+            {/* Mobile Single-Screen Cards */}
+            <div className="divide-y divide-slate-100 md:hidden">
+              {filtered.map((product) => (
+                <div key={product.id} className="flex items-center justify-between gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-slate-900">
+                      {product.name}
+                    </div>
+                    <div className="mt-0.5 truncate text-xs text-slate-500">
+                      {product.tier} · {product.packInfo}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="text-right font-bold font-mono-num text-sm text-slate-900">
                       {formatBDT(product.boxPrice)}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onEditProduct(product)}
-                        aria-label={`দাম পরিবর্তন: ${product.name}`}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        দাম পরিবর্তন
-                      </button>
-                    </td>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onEditProduct(product)}
+                      aria-label={`দাম পরিবর্তন: ${product.name}`}
+                      className="inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      এডিট
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
+                  <tr>
+                    <th className="px-5 py-3 font-medium">প্রোডাক্টের নাম</th>
+                    <th className="px-4 py-3 font-medium">ক্যাটাগরি / গ্রুপ</th>
+                    <th className="px-4 py-3 font-medium">প্যাক সাইজ</th>
+                    <th className="px-4 py-3 text-right font-medium">দাম / বক্স</th>
+                    <th className="px-5 py-3 text-right font-medium">সম্পাদনা</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((product) => (
+                    <tr key={product.id} className="hover:bg-slate-50/70">
+                      <td className="px-5 py-3 font-semibold text-slate-900">{product.name}</td>
+                      <td className="px-4 py-3 text-xs text-slate-600">{product.tier}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{product.packInfo}</td>
+                      <td className="px-4 py-3 text-right font-bold font-mono-num text-slate-900">
+                        {formatBDT(product.boxPrice)}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => onEditProduct(product)}
+                          aria-label={`দাম পরিবর্তন: ${product.name}`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          দাম পরিবর্তন
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -86,11 +86,15 @@ export function useAppUpdater(isOnline: boolean) {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const [downloads, setDownloads] = useState<DownloadTask[]>(() => loadDownloadHistory());
+  const [canInstallPackages, setCanInstallPackages] = useState<boolean>(true);
+  const downloadsRef = useRef<DownloadTask[]>(downloads);
   const activeTaskIdRef = useRef<string | null>(null);
   const nativePollRef = useRef<number | null>(null);
+  const autoInstalledIdsRef = useRef<Set<number>>(new Set());
 
-  // Persist download manager history
+  // Keep downloadsRef synced & persist download manager history
   useEffect(() => {
+    downloadsRef.current = downloads;
     try {
       window.localStorage.setItem(DOWNLOAD_HISTORY_KEY, JSON.stringify(downloads.slice(0, 10)));
     } catch {
@@ -98,21 +102,32 @@ export function useAppUpdater(isOnline: boolean) {
     }
   }, [downloads]);
 
-  // Read native Android BuildConfig version & repo when running inside APK
+  // Read native Android BuildConfig version, repo & install permission when running inside APK
   useEffect(() => {
     if (!isNativeAndroid()) return;
-    AppUpdater.getAppInfo()
-      .then((info) => {
-        if (info.versionName) setInstalledVersion(info.versionName);
-        if (info.versionCode) setInstalledCode(info.versionCode);
-        if (info.packageName) setPackageName(info.packageName);
-        if (info.githubRepo) {
-          setGithubRepoState((prev) => prev || info.githubRepo);
-        }
-      })
-      .catch(() => {
-        // Fallback to Vite env constants
-      });
+    const refreshAppInfo = () => {
+      AppUpdater.getAppInfo()
+        .then((info) => {
+          if (info.versionName) setInstalledVersion(info.versionName);
+          if (info.versionCode) setInstalledCode(info.versionCode);
+          if (info.packageName) setPackageName(info.packageName);
+          if (info.githubRepo) {
+            setGithubRepoState((prev) => prev || info.githubRepo);
+          }
+          if (typeof info.canInstallPackages === 'boolean') {
+            setCanInstallPackages(info.canInstallPackages);
+          }
+        })
+        .catch(() => {
+          // Fallback to Vite env constants
+        });
+    };
+    refreshAppInfo();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshAppInfo();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
   const setGithubRepo = useCallback((nextRepo: string) => {
@@ -236,28 +251,87 @@ export function useAppUpdater(isOnline: boolean) {
     }
   }, []);
 
-  // Listen to native DownloadManager progress events
+  const installDownloadedTask = useCallback(
+    async (task: DownloadTask, options?: { openSettingsOnDeny?: boolean }) => {
+      if (!isNativeAndroid()) return;
+      if (task.nativeDownloadId === undefined && !task.fileName) return;
+      try {
+        const res = await AppUpdater.installApk({
+          downloadId: task.nativeDownloadId,
+          fileName: task.fileName,
+          openSettingsOnDeny: options?.openSettingsOnDeny ?? false,
+        });
+        if (res.needsPermission) {
+          setCanInstallPackages(false);
+          updateTask(task.id, {
+            status: 'permission-required',
+            errorMessage:
+              'অটো ইনস্টলের জন্য সেটিংস থেকে "Allow from this source" চালু করে ফিরে এলেই সাথে সাথে ইনস্টলার খুলবে।',
+          });
+        } else if (res.started) {
+          setCanInstallPackages(true);
+          updateTask(task.id, {
+            status: 'completed',
+            errorMessage: undefined,
+          });
+        }
+      } catch {
+        updateTask(task.id, {
+          status: 'failed',
+          errorMessage: 'APK ইনস্টলার চালু করা যায়নি। নিচে থেকে আবার চেষ্টা করুন অথবা নতুন করে ডাউনলোড দিন।',
+        });
+      }
+    },
+    [updateTask],
+  );
+
+  const triggerAutoInstallOnce = useCallback(
+    (task: DownloadTask, downloadId: number) => {
+      if (autoInstalledIdsRef.current.has(downloadId)) return;
+      autoInstalledIdsRef.current.add(downloadId);
+      void installDownloadedTask(
+        { ...task, nativeDownloadId: downloadId },
+        { openSettingsOnDeny: true },
+      );
+    },
+    [installDownloadedTask],
+  );
+
+  // Listen to native DownloadManager progress & resume auto-install events
   useEffect(() => {
     if (!isNativeAndroid()) return;
-    let removeListener: (() => void) | null = null;
+    let removeProgress: (() => void) | null = null;
+    let removeInstallState: (() => void) | null = null;
 
     AppUpdater.addListener('downloadProgress', (data) => {
-      const taskId = activeTaskIdRef.current;
+      const matched =
+        downloadsRef.current.find((d) => d.nativeDownloadId === data.downloadId) ||
+        downloadsRef.current.find((d) => d.id === activeTaskIdRef.current);
+      const taskId = matched?.id || activeTaskIdRef.current;
       if (!taskId) return;
+
       if (data.status === 'successful') {
-        updateTask(taskId, {
+        stopNativePolling();
+        const completedPatch: Partial<DownloadTask> = {
           status: 'completed',
           progress: 100,
           downloadedBytes: data.totalBytes || data.downloadedBytes,
           totalBytes: data.totalBytes,
-        });
-        stopNativePolling();
+          nativeDownloadId: data.downloadId,
+        };
+        updateTask(taskId, completedPatch);
+        if (matched) {
+          triggerAutoInstallOnce(
+            { ...matched, ...completedPatch },
+            data.downloadId,
+          );
+        }
       } else if (data.status === 'failed') {
+        stopNativePolling();
         updateTask(taskId, {
           status: 'failed',
           errorMessage: data.reason || 'APK ডাউনলোড ব্যর্থ হয়েছে।',
         });
-        stopNativePolling();
       } else {
         updateTask(taskId, {
           status: 'downloading',
@@ -268,7 +342,28 @@ export function useAppUpdater(isOnline: boolean) {
       }
     })
       .then((handle) => {
-        removeListener = () => {
+        removeProgress = () => {
+          void handle.remove();
+        };
+      })
+      .catch(() => {
+        // Ignore if native listener unavailable
+      });
+
+    AppUpdater.addListener('installStateChanged', (data) => {
+      if (data.started) {
+        setCanInstallPackages(true);
+        setDownloads((prev) =>
+          prev.map((item) =>
+            item.nativeDownloadId === data.downloadId || item.status === 'permission-required'
+              ? { ...item, status: 'completed', errorMessage: undefined }
+              : item,
+          ),
+        );
+      }
+    })
+      .then((handle) => {
+        removeInstallState = () => {
           void handle.remove();
         };
       })
@@ -278,31 +373,10 @@ export function useAppUpdater(isOnline: boolean) {
 
     return () => {
       stopNativePolling();
-      removeListener?.();
+      removeProgress?.();
+      removeInstallState?.();
     };
-  }, [updateTask, stopNativePolling]);
-
-  const installDownloadedTask = useCallback(
-    async (task: DownloadTask) => {
-      if (!isNativeAndroid() || task.nativeDownloadId === undefined) return;
-      try {
-        const res = await AppUpdater.installApk({ downloadId: task.nativeDownloadId });
-        if (res.needsPermission) {
-          updateTask(task.id, {
-            status: 'permission-required',
-            errorMessage:
-              'অ্যাপ আপডেট ইনস্টল করতে Android সেটিংস থেকে "Install unknown apps" অনুমতি দিন।',
-          });
-        }
-      } catch {
-        updateTask(task.id, {
-          status: 'failed',
-          errorMessage: 'APK ইনস্টলার চালু করা যায়নি। ডাউনলোড ফোল্ডার থেকে ইনস্টল করুন।',
-        });
-      }
-    },
-    [updateTask],
-  );
+  }, [updateTask, stopNativePolling, triggerAutoInstallOnce]);
 
   const startApkDownload = useCallback(
     async (release: ReleaseInfo) => {
@@ -333,6 +407,7 @@ export function useAppUpdater(isOnline: boolean) {
             title: `ইবনে সিনা টালিখাতা v${release.version}`,
             version: release.version,
           });
+          const trackedTask: DownloadTask = { ...newTask, nativeDownloadId: downloadId };
           updateTask(taskId, { nativeDownloadId: downloadId });
 
           stopNativePolling();
@@ -342,15 +417,14 @@ export function useAppUpdater(isOnline: boolean) {
               if (st.status === 'successful') {
                 stopNativePolling();
                 const completedTask: DownloadTask = {
-                  ...newTask,
-                  nativeDownloadId: downloadId,
+                  ...trackedTask,
                   status: 'completed',
                   progress: 100,
                   downloadedBytes: st.totalBytes || asset.size,
                   totalBytes: st.totalBytes || asset.size,
                 };
                 updateTask(taskId, completedTask);
-                await installDownloadedTask(completedTask);
+                triggerAutoInstallOnce(completedTask, downloadId);
               } else if (st.status === 'failed') {
                 stopNativePolling();
                 updateTask(taskId, {
@@ -368,7 +442,7 @@ export function useAppUpdater(isOnline: boolean) {
             } catch {
               stopNativePolling();
             }
-          }, 900);
+          }, 700);
         } catch {
           updateTask(taskId, {
             status: 'failed',
@@ -389,7 +463,7 @@ export function useAppUpdater(isOnline: boolean) {
         });
       }
     },
-    [updateTask, stopNativePolling, installDownloadedTask],
+    [updateTask, stopNativePolling, triggerAutoInstallOnce],
   );
 
   const openInstallPermissionSettings = useCallback(async () => {
@@ -410,6 +484,7 @@ export function useAppUpdater(isOnline: boolean) {
     githubRepo,
     setGithubRepo,
     isNativeApp: isNativeAndroid(),
+    canInstallPackages,
     checking,
     checkError,
     lastCheckedAt,
