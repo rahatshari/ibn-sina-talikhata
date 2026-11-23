@@ -85,31 +85,37 @@ export function DashboardView({
   const activeMonthLabel = formatMonthYearBn(currentMonthKey);
 
   return (
-    <div className="space-y-4">
-      {/* 4-Column KPI Strip */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="text-xs sm:text-sm font-medium text-slate-500">
+    <div className="space-y-6">
+      {/* 4-Column Material You 3 Expressive KPI Cards */}
+      <div className="grid grid-cols-2 gap-3.5 sm:gap-5 lg:grid-cols-4">
+        <div className="rounded-[28px] bg-[#FFFFFF] p-4 sm:p-6 shadow-xs ring-1 ring-[#DCE7DF]/80">
+          <div className="text-[13px] sm:text-[15px] font-semibold text-[#404943]">
             {isMonthly ? `মাসিক বিক্রি (${activeMonthLabel})` : 'মোট নিট বিক্রি'}
           </div>
-          <div className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-slate-900 font-mono-num" data-testid="kpi-total-sales">
+          <div
+            className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold tracking-tight text-[#171D19] font-mono-num"
+            data-testid="kpi-total-sales"
+          >
             {formatBDT(isMonthly ? monthlyMetrics.totalSales : metrics.totalSales)}
           </div>
-          <div className="mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500 font-mono-num">
+          <div className="mt-2 text-xs sm:text-sm text-[#404943] font-mono-num">
             {isMonthly
               ? `${monthlyMetrics.totalBoxesSold} বক্স · ${monthlyMetrics.invoiceCount} চালান`
               : `${metrics.totalBoxesSold} বক্স · ছাড় ${formatBDT(metrics.totalDiscountGiven)}`}
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="text-xs sm:text-sm font-medium text-slate-500">
+        <div className="rounded-[28px] bg-[#006B47] p-4 sm:p-6 text-white shadow-sm">
+          <div className="text-[13px] sm:text-[15px] font-semibold text-[#CBEAD6]">
             {isMonthly ? `মাসিক নগদ আদায় (${activeMonthLabel})` : 'মোট নগদ আদায়'}
           </div>
-          <div className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-emerald-700 font-mono-num" data-testid="kpi-total-collected">
+          <div
+            className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold tracking-tight text-white font-mono-num"
+            data-testid="kpi-total-collected"
+          >
             {formatBDT(isMonthly ? monthlyMetrics.totalCollected : metrics.totalCollected)}
           </div>
-          <div className="mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500 font-mono-num">
+          <div className="mt-2 text-xs sm:text-sm text-[#CBEAD6]/95 font-mono-num">
             {isMonthly
               ? `জমা ${formatBDT(monthlyMetrics.paidAtSale)} · বাকি আদায় ${formatBDT(monthlyMetrics.dueCollections)}`
               : 'বিক্রয়কালীন জমা ও বাকি আদায়'}
@@ -121,135 +127,151 @@ export function DashboardView({
           onClick={onOpenDueList}
           data-testid="kpi-due-card-btn"
           aria-label="মোট বাকি পাওনা — বাকি থাকা দোকানদারের তালিকা দেখুন"
-          className="group w-full rounded-xl border border-slate-200 bg-white p-4 sm:p-5 text-left transition-all hover:border-red-300 hover:bg-red-50/40 active:scale-[0.98]"
+          className="group w-full rounded-[28px] bg-[#FFDAD6]/80 p-4 sm:p-6 text-left transition-all hover:bg-[#FFDAD6] active:scale-[0.98]"
         >
-          <div className="flex items-center justify-between gap-1 text-xs sm:text-sm font-medium text-slate-500">
+          <div className="flex items-center justify-between gap-1 text-[13px] sm:text-[15px] font-semibold text-[#410002]">
             <span>মোট বাকি পাওনা</span>
-            <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-red-600 shrink-0" />
+            <ChevronRight className="h-5 w-5 text-[#BA1A1A] transition-transform group-hover:translate-x-0.5 shrink-0" />
           </div>
-          <div className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-red-600 font-mono-num" data-testid="kpi-total-due">
+          <div
+            className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold tracking-tight text-[#BA1A1A] font-mono-num"
+            data-testid="kpi-total-due"
+          >
             {formatBDT(metrics.totalDue)}
           </div>
-          <div className="mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500">
+          <div className="mt-2 text-xs sm:text-sm font-medium text-[#6E1A18]">
             {metrics.dueShopCount} টি দোকানে বাকি · তালিকা দেখুন
           </div>
         </button>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-          <div className="text-xs sm:text-sm font-medium text-slate-500">মোট দোকানদার</div>
-          <div className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-bold text-slate-900 font-mono-num" data-testid="kpi-shop-count">
+        <div className="rounded-[28px] bg-[#E2EDE5] p-4 sm:p-6">
+          <div className="text-[13px] sm:text-[15px] font-semibold text-[#404943]">মোট দোকানদার</div>
+          <div
+            className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold tracking-tight text-[#002114] font-mono-num"
+            data-testid="kpi-shop-count"
+          >
             {metrics.activeShopCount}
           </div>
-          <div className="mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-slate-500">সক্রিয় ফার্মেসি খাতা</div>
+          <div className="mt-2 text-xs sm:text-sm font-medium text-[#404943]">সক্রিয় ফার্মেসি খাতা</div>
         </div>
       </div>
 
       {/* Main Split: Shop Due Ledger & Recent Activity */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <section className="rounded-xl border border-slate-200 bg-white lg:col-span-7">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
-            <h2 className="text-base font-semibold text-slate-900">দোকানদারের বাকি ও খাতা</h2>
-            <Store className="h-4 w-4 text-slate-400" />
+        <section className="overflow-hidden rounded-[28px] bg-[#FFFFFF] shadow-xs ring-1 ring-[#DCE7DF]/80 lg:col-span-7">
+          <div className="flex items-center justify-between border-b border-[#ECF3ED] px-5 py-4 sm:px-6">
+            <h2 className="text-lg sm:text-xl font-bold text-[#171D19]">দোকানদারের বাকি ও খাতা</h2>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ECF3ED] text-[#006B47]">
+              <Store className="h-4 w-4" />
+            </span>
           </div>
 
           {shopSummaries.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-sm text-slate-500">এখনও কোনো দোকানদার যোগ করা হয়নি।</p>
+            <div className="p-8 sm:p-10 text-center">
+              <p className="text-base text-[#404943]">এখনও কোনো দোকানদার যোগ করা হয়নি।</p>
               <button
                 type="button"
                 onClick={() => onStartNewSale()}
-                className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                className="mt-4 inline-flex min-h-[46px] items-center rounded-full bg-[#006B47] px-6 py-2.5 text-[15px] font-semibold text-white hover:bg-[#005739]"
               >
                 প্রথম বিক্রি শুরু করুন
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
-              {shopSummaries.map(({ shop, summary }) => (
-                <div
-                  key={shop.id}
-                  className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-slate-50/70 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => onOpenShopLedger(shop)}
-                      className="text-left text-sm font-semibold text-slate-900 hover:text-emerald-700 hover:underline"
-                    >
-                      {shop.shopName}
-                    </button>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
-                      <span>{shop.area}</span>
-                      <span aria-hidden="true">·</span>
-                      <span className="font-mono-num">{shop.phone || shop.ownerName}</span>
-                      <span aria-hidden="true">·</span>
-                      <span className="font-mono-num">মোট বিল {formatBDT(summary.totalBilled)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 sm:justify-end">
-                    <div className="text-left sm:text-right">
-                      <div className="text-xs text-slate-500">
-                        {summary.totalDue > 0 ? 'বাকি আছে' : 'হিসাব পরিশোধিত'}
+            <div className="divide-y divide-[#ECF3ED]">
+              {shopSummaries.map(({ shop, summary }) => {
+                const avatarLetter = shop.shopName.trim().charAt(0) || 'দ';
+                return (
+                  <div
+                    key={shop.id}
+                    className="flex flex-col gap-3.5 px-5 py-4 sm:px-6 transition-colors hover:bg-[#F5FAF6] sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-start gap-3.5 min-w-0">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#CBEAD6] text-base font-bold text-[#002114] shrink-0">
+                        {avatarLetter}
                       </div>
-                      <div
-                        className={`text-sm font-bold font-mono-num ${
-                          summary.totalDue > 0 ? 'text-red-600' : 'text-emerald-700'
-                        }`}
-                      >
-                        {formatBDT(summary.totalDue)}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {summary.totalDue > 0 && (
+                      <div className="min-w-0">
                         <button
                           type="button"
-                          onClick={() => onCollectDue(shop, summary.totalDue)}
-                          aria-label={`বাকি আদায়: ${shop.shopName}`}
-                          className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 whitespace-nowrap"
+                          onClick={() => onOpenShopLedger(shop)}
+                          className="text-left text-base sm:text-[17px] font-bold text-[#171D19] hover:text-[#006B47] hover:underline break-words"
                         >
-                          <Banknote className="h-3.5 w-3.5" />
-                          বাকি আদায়
+                          {shop.shopName}
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => onStartNewSale(shop.id)}
-                        aria-label={`নতুন বিক্রি: ${shop.shopName}`}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-                      >
-                        বিক্রি
-                      </button>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] sm:text-sm text-[#404943]">
+                          <span>{shop.area}</span>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-mono-num">{shop.phone || shop.ownerName}</span>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-mono-num">মোট বিল {formatBDT(summary.totalBilled)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 sm:justify-end pl-14 sm:pl-0">
+                      <div className="text-left sm:text-right">
+                        <div className="text-xs sm:text-[13px] font-medium text-[#404943]">
+                          {summary.totalDue > 0 ? 'বাকি আছে' : 'হিসাব পরিশোধিত'}
+                        </div>
+                        <div
+                          className={`text-base sm:text-lg font-bold font-mono-num ${
+                            summary.totalDue > 0 ? 'text-[#BA1A1A]' : 'text-[#006B47]'
+                          }`}
+                        >
+                          {formatBDT(summary.totalDue)}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {summary.totalDue > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => onCollectDue(shop, summary.totalDue)}
+                            aria-label={`বাকি আদায়: ${shop.shopName}`}
+                            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-[#CBEAD6] px-4 py-2 text-sm font-bold text-[#002114] transition-colors hover:bg-[#B4DFC4] whitespace-nowrap"
+                          >
+                            <Banknote className="h-4 w-4" />
+                            বাকি আদায়
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onStartNewSale(shop.id)}
+                          aria-label={`নতুন বিক্রি: ${shop.shopName}`}
+                          className="min-h-[40px] rounded-full bg-[#ECF3ED] px-4 py-2 text-sm font-semibold text-[#171D19] transition-colors hover:bg-[#D7E7DC] whitespace-nowrap"
+                        >
+                          বিক্রি
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white lg:col-span-5">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
-            <h2 className="text-base font-semibold text-slate-900">সাম্প্রতিক লেনদেন</h2>
+        <section className="overflow-hidden rounded-[28px] bg-[#FFFFFF] shadow-xs ring-1 ring-[#DCE7DF]/80 lg:col-span-5">
+          <div className="flex items-center justify-between border-b border-[#ECF3ED] px-5 py-4 sm:px-6">
+            <h2 className="text-lg sm:text-xl font-bold text-[#171D19]">সাম্প্রতিক লেনদেন</h2>
             <button
               type="button"
               onClick={onOpenAllReports}
-              className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline whitespace-nowrap shrink-0"
+              className="inline-flex min-h-[38px] items-center gap-1 rounded-full bg-[#ECF3ED] px-3.5 py-1.5 text-sm font-semibold text-[#006B47] hover:bg-[#CBEAD6] whitespace-nowrap shrink-0"
             >
               সব দেখুন
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight className="h-4 w-4" />
             </button>
           </div>
 
           {recentFeed.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500">এখনও কোনো লেনদেন হয়নি।</div>
+            <div className="p-8 sm:p-10 text-center text-base text-[#404943]">এখনও কোনো লেনদেন হয়নি।</div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-[#ECF3ED]">
               {recentFeed.map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-slate-50/70"
+                  className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6 transition-colors hover:bg-[#F5FAF6]"
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -257,16 +279,16 @@ export function DashboardView({
                         <button
                           type="button"
                           onClick={() => onOpenSaleDetail(entry.sale!)}
-                          className="truncate text-sm font-medium text-slate-900 hover:text-emerald-700 hover:underline"
+                          className="truncate text-base font-bold text-[#171D19] hover:text-[#006B47] hover:underline"
                         >
                           {entry.title}
                         </button>
                       ) : (
-                        <span className="truncate text-sm font-medium text-slate-900">{entry.title}</span>
+                        <span className="truncate text-base font-bold text-[#171D19]">{entry.title}</span>
                       )}
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
-                      <span className="font-mono-num">{entry.code}</span>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] text-[#404943]">
+                      <span className="font-mono-num font-medium">{entry.code}</span>
                       <span aria-hidden="true">·</span>
                       <span>{entry.subtitle}</span>
                       <span aria-hidden="true">·</span>
@@ -277,22 +299,22 @@ export function DashboardView({
                   <div className="text-right shrink-0">
                     {entry.type === 'sale' ? (
                       <>
-                        <div className="text-sm font-semibold text-slate-900 font-mono-num">
+                        <div className="text-base sm:text-[17px] font-bold text-[#171D19] font-mono-num">
                           {formatBDT(entry.amount)}
                         </div>
-                        <div className="text-xs font-mono-num text-slate-500">
+                        <div className="text-xs sm:text-[13px] font-mono-num text-[#404943]">
                           জমা {formatBDT(entry.paid)} ·{' '}
-                          <span className={entry.due > 0 ? 'font-medium text-red-600' : 'text-emerald-700'}>
+                          <span className={entry.due > 0 ? 'font-bold text-[#BA1A1A]' : 'font-semibold text-[#006B47]'}>
                             {entry.due > 0 ? `বাকি ${formatBDT(entry.due)}` : 'পরিশোধিত'}
                           </span>
                         </div>
                       </>
                     ) : (
                       <>
-                        <div className="text-sm font-semibold text-emerald-700 font-mono-num">
+                        <div className="text-base sm:text-[17px] font-bold text-[#006B47] font-mono-num">
                           +{formatBDT(entry.amount)}
                         </div>
-                        <div className="text-xs text-slate-500">বাকি আদায়</div>
+                        <div className="text-xs sm:text-[13px] text-[#404943]">বাকি আদায়</div>
                       </>
                     )}
                   </div>

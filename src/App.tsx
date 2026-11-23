@@ -301,52 +301,52 @@ export default function App() {
     .toUpperCase();
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-slate-50 text-slate-900 pb-24 md:pb-10">
-      {/* 3-Zone Top App Bar */}
-      <header className="no-print sticky top-0 z-30 border-b border-slate-200 bg-white pt-safe">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-6 px-3 py-2.5 sm:px-6 sm:py-3">
+    <div className="min-h-screen overflow-x-clip bg-[#F5FAF6] text-[#171D19] pb-24 md:pb-12">
+      {/* Material You 3 Top App Bar */}
+      <header className="no-print sticky top-0 z-30 border-b border-[#DCE7DF] bg-[#F5FAF6]/95 backdrop-blur-md pt-safe">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-6 px-3.5 py-2.5 sm:px-6 sm:py-3">
           {/* Zone 1: Brand Emblem + Title + Compact Sync Status */}
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               type="button"
               onClick={handleBackToDashboard}
-              className="flex items-center gap-2 text-left min-w-0"
+              className="flex items-center gap-2.5 text-left min-w-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-[#006B47]"
             >
               <img
                 src="/icon.svg"
                 alt=""
-                className="h-8 w-8 rounded-lg border border-emerald-100 shrink-0"
+                className="h-9 w-9 rounded-2xl border border-[#CBEAD6] bg-white p-0.5 shrink-0"
               />
-              <span className="font-display text-[15px] sm:text-lg font-bold tracking-tight text-slate-900 truncate">
+              <span className="font-display text-lg sm:text-[21px] font-bold tracking-tight text-[#171D19] truncate">
                 ব্যক্তিগত টালিখাতা
               </span>
             </button>
             <span
               data-testid="sync-status-text"
               title={store.syncStatus.detail}
-              className={`hidden lg:inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${
+              className={`hidden lg:inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${
                 store.syncStatus.state === 'offline'
-                  ? 'bg-amber-50 text-amber-700'
+                  ? 'bg-[#FFF3E0] text-[#7A4100]'
                   : store.syncStatus.state === 'syncing'
-                    ? 'bg-blue-50 text-blue-700'
+                    ? 'bg-[#E3EEFF] text-[#0D47A1]'
                     : store.user
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-slate-100 text-slate-600'
+                      ? 'bg-[#CBEAD6] text-[#002114]'
+                      : 'bg-[#E2EDE5] text-[#404943]'
               }`}
             >
               {store.syncStatus.state === 'offline' ? (
-                <CloudOff className="h-3 w-3" />
+                <CloudOff className="h-3.5 w-3.5" />
               ) : store.syncStatus.state === 'syncing' ? (
-                <RefreshCw className="h-3 w-3 animate-spin" />
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Cloud className="h-3 w-3" />
+                <Cloud className="h-3.5 w-3.5" />
               )}
               {store.syncStatus.label}
             </span>
           </div>
 
-          {/* Zone 2: Clean Single-line Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-4 lg:gap-5" aria-label="প্রধান নেভিগেশন">
+          {/* Zone 2: Material 3 Desktop Navigation Chips */}
+          <nav className="hidden md:flex items-center gap-1.5" aria-label="প্রধান নেভিগেশন">
             {navItems.map((item) => {
               const active = activeView === item.id;
               return (
@@ -354,10 +354,10 @@ export default function App() {
                   key={item.id}
                   type="button"
                   onClick={() => handleSelectNav(item.id)}
-                  className={`border-b-2 py-1 text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
+                  className={`rounded-full px-4 py-2 text-[15px] font-semibold transition-colors whitespace-nowrap shrink-0 ${
                     active
-                      ? 'border-emerald-600 text-emerald-700'
-                      : 'border-transparent text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#CBEAD6] text-[#002114]'
+                      : 'text-[#404943] hover:bg-[#E2EDE5] hover:text-[#171D19]'
                   }`}
                 >
                   {item.label}
@@ -366,12 +366,12 @@ export default function App() {
             })}
           </nav>
 
-          {/* Zone 3: Primary CTA + Modern Account Chip + 3-Dot Overflow Menu */}
+          {/* Zone 3: Primary M3 Pill CTA + Tonal Account Chip + 3-Dot Overflow Menu */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={() => openNewSale()}
-              className="inline-flex min-h-[40px] items-center gap-1 rounded-lg bg-emerald-600 px-2.5 sm:px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 whitespace-nowrap shrink-0"
+              className="hidden sm:inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-[#006B47] px-4 py-2 text-sm font-semibold text-white shadow-xs transition-all hover:bg-[#005739] active:scale-[0.98] whitespace-nowrap shrink-0"
             >
               <Plus className="h-4 w-4" />
               <span>নতুন বিক্রি</span>
@@ -381,7 +381,7 @@ export default function App() {
               type="button"
               onClick={() => setAccountModalOpen(true)}
               aria-label={store.user ? 'অ্যাকাউন্ট প্রোফাইল ও লগআউট' : 'জিমেইল দিয়ে লগইন'}
-              className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-1.5 sm:px-2.5 text-xs font-semibold text-slate-800 transition-colors hover:bg-slate-100 shrink-0"
+              className="inline-flex min-h-[42px] min-w-[42px] items-center justify-center gap-2 rounded-full bg-[#E2EDE5] px-2 sm:px-3 text-sm font-semibold text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0"
             >
               {store.user ? (
                 <>
@@ -393,17 +393,17 @@ export default function App() {
                       className="h-7 w-7 rounded-full object-cover"
                     />
                   ) : (
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#006B47] text-xs font-bold text-white">
                       {userInitial}
                     </span>
                   )}
-                  <span className="hidden sm:inline max-w-[90px] truncate">
+                  <span className="hidden sm:inline max-w-[96px] truncate">
                     {store.user.displayName?.split(' ')[0] || 'অ্যাকাউন্ট'}
                   </span>
                 </>
               ) : (
                 <>
-                  <UserCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <UserCircle2 className="h-5 w-5 text-[#006B47] shrink-0" />
                   <span className="hidden sm:inline">লগইন</span>
                 </>
               )}
@@ -417,13 +417,13 @@ export default function App() {
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen((prev) => !prev)}
-                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-100 shrink-0"
+                className="relative inline-flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[#ECF3ED] text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0"
               >
                 <MoreVertical className="h-5 w-5" />
                 {updater.updateAvailable && (
                   <span
                     aria-hidden="true"
-                    className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-600 ring-2 ring-white"
+                    className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-[#006B47] ring-2 ring-[#ECF3ED]"
                   />
                 )}
               </button>
@@ -432,7 +432,7 @@ export default function App() {
                 <div
                   role="menu"
                   aria-label="অতিরিক্ত অপশন মেনু"
-                  className="absolute right-0 mt-2 w-[min(90vw,330px)] max-h-[82vh] overflow-y-auto origin-top-right rounded-2xl border border-slate-200 bg-white p-2 shadow-xl z-40"
+                  className="absolute right-0 mt-2.5 w-[min(92vw,350px)] max-h-[82vh] overflow-y-auto origin-top-right rounded-[28px] border border-[#DCE7DF] bg-[#FFFFFF] p-2.5 shadow-2xl z-40"
                 >
                   <button
                     type="button"
@@ -441,18 +441,18 @@ export default function App() {
                       setMenuOpen(false);
                       setUpdateModalOpen(true);
                     }}
-                    className="flex w-full min-h-[48px] items-center justify-between gap-2.5 rounded-xl px-3.5 py-3 text-left text-[15px] sm:text-base font-medium text-slate-800 hover:bg-slate-50"
+                    className="flex w-full min-h-[50px] items-center justify-between gap-2.5 rounded-2xl px-4 py-3 text-left text-base font-semibold text-[#171D19] transition-colors hover:bg-[#ECF3ED]"
                   >
                     <span className="flex items-center gap-3 whitespace-nowrap">
-                      <FolderDown className="h-5 w-5 text-emerald-600 shrink-0" />
+                      <FolderDown className="h-5 w-5 text-[#006B47] shrink-0" />
                       <span>ডাউনলোড ও আপডেট</span>
                     </span>
                     {updater.updateAvailable ? (
-                      <span className="rounded-md bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 whitespace-nowrap shrink-0">
+                      <span className="rounded-full bg-[#CBEAD6] px-2.5 py-0.5 text-xs font-bold text-[#002114] whitespace-nowrap shrink-0">
                         নতুন আপডেট
                       </span>
                     ) : (
-                      <span className="text-xs font-mono-num text-slate-400 whitespace-nowrap shrink-0">
+                      <span className="text-xs font-mono-num font-medium text-[#404943] whitespace-nowrap shrink-0">
                         v{updater.installedVersion}
                       </span>
                     )}
@@ -465,13 +465,13 @@ export default function App() {
                       setMenuOpen(false);
                       setAccountModalOpen(true);
                     }}
-                    className="flex w-full min-h-[48px] items-center justify-between gap-2.5 rounded-xl px-3.5 py-3 text-left text-[15px] sm:text-base font-medium text-slate-800 hover:bg-slate-50"
+                    className="flex w-full min-h-[50px] items-center justify-between gap-2.5 rounded-2xl px-4 py-3 text-left text-base font-semibold text-[#171D19] transition-colors hover:bg-[#ECF3ED]"
                   >
                     <span className="flex items-center gap-3 min-w-0">
                       {store.user ? (
-                        <Cloud className="h-5 w-5 text-emerald-600 shrink-0" />
+                        <Cloud className="h-5 w-5 text-[#006B47] shrink-0" />
                       ) : (
-                        <LogIn className="h-5 w-5 text-emerald-600 shrink-0" />
+                        <LogIn className="h-5 w-5 text-[#006B47] shrink-0" />
                       )}
                       <span className="truncate">
                         {store.user ? 'অ্যাকাউন্ট ও ক্লাউড সিঙ্ক' : 'জিমেইল লগইন করুন'}
@@ -486,19 +486,19 @@ export default function App() {
                       setMenuOpen(false);
                       handleSelectNav('reports');
                     }}
-                    className="flex w-full min-h-[48px] items-center gap-3 rounded-xl px-3.5 py-3 text-left text-[15px] sm:text-base font-medium text-slate-800 hover:bg-slate-50"
+                    className="flex w-full min-h-[50px] items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-semibold text-[#171D19] transition-colors hover:bg-[#ECF3ED]"
                   >
-                    <BarChart3 className="h-5 w-5 text-slate-600 shrink-0" />
+                    <BarChart3 className="h-5 w-5 text-[#404943] shrink-0" />
                     <span>ডাটা ব্যাকআপ ও রিপোর্ট</span>
                   </button>
 
-                  <div className="my-2 border-t border-slate-100" />
+                  <div className="my-2 border-t border-[#DCE7DF]" />
                   <div className="px-3 py-2" data-testid="menu-kpi-period-section">
-                    <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-slate-600">
-                      <CalendarDays className="h-4 w-4 text-emerald-600" />
+                    <div className="mb-2.5 flex items-center gap-2 text-sm font-bold text-[#404943]">
+                      <CalendarDays className="h-4 w-4 text-[#006B47]" />
                       <span>ড্যাশবোর্ড হিসাবের ধরন</span>
                     </div>
-                    <div className="grid grid-cols-1 gap-1.5">
+                    <div className="grid grid-cols-1 gap-2">
                       {(
                         [
                           {
@@ -525,25 +525,25 @@ export default function App() {
                               handleSelectPeriodMode(option.id);
                               setMenuOpen(false);
                             }}
-                            className={`flex w-full min-h-[48px] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                            className={`flex w-full min-h-[52px] items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-left transition-colors ${
                               active
-                                ? 'bg-emerald-50 font-semibold text-emerald-900 ring-1 ring-emerald-200'
-                                : 'text-slate-700 hover:bg-slate-50'
+                                ? 'bg-[#CBEAD6] font-bold text-[#002114]'
+                                : 'bg-[#F5FAF6] text-[#171D19] hover:bg-[#ECF3ED]'
                             }`}
                           >
                             <span className="min-w-0">
                               <span className="block text-[15px] leading-snug">{option.label}</span>
-                              <span className="block text-[11px] font-normal text-slate-500">
+                              <span className="block text-xs font-normal text-[#404943]">
                                 {option.desc}
                               </span>
                             </span>
                             {active ? (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white shrink-0">
-                                <Check className="h-3 w-3" />
+                              <span className="inline-flex items-center gap-1 rounded-full bg-[#006B47] px-2.5 py-0.5 text-xs font-bold text-white shrink-0">
+                                <Check className="h-3.5 w-3.5" />
                                 চালু
                               </span>
                             ) : (
-                              <span className="text-[11px] font-medium text-slate-400 shrink-0">
+                              <span className="text-xs font-semibold text-[#707972] shrink-0">
                                 বন্ধ
                               </span>
                             )}
@@ -553,10 +553,10 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="my-2 border-t border-slate-100" />
+                  <div className="my-2 border-t border-[#DCE7DF]" />
                   <div className="px-3 py-2">
-                    <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-slate-600">
-                      <Type className="h-4 w-4 text-emerald-600" />
+                    <div className="mb-2.5 flex items-center gap-2 text-sm font-bold text-[#404943]">
+                      <Type className="h-4 w-4 text-[#006B47]" />
                       <span>লেখার ফন্ট পরিবর্তন</span>
                     </div>
                     <div className="grid grid-cols-1 gap-1.5">
@@ -573,17 +573,17 @@ export default function App() {
                               saveAndApplyAppFont(font.id);
                             }}
                             style={{ fontFamily: font.fontFamily }}
-                            className={`flex w-full min-h-[44px] items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                            className={`flex w-full min-h-[46px] items-center justify-between rounded-2xl px-3.5 py-2.5 text-[15px] transition-colors ${
                               active
-                                ? 'bg-emerald-50 font-semibold text-emerald-800'
-                                : 'text-slate-700 hover:bg-slate-50'
+                                ? 'bg-[#CBEAD6] font-bold text-[#002114]'
+                                : 'text-[#171D19] hover:bg-[#ECF3ED]'
                             }`}
                           >
                             <span className="flex items-center gap-2">
                               <span>{font.label}</span>
-                              <span className="text-xs text-slate-400">({font.sample})</span>
+                              <span className="text-xs text-[#404943]">({font.sample})</span>
                             </span>
-                            {active && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
+                            {active && <Check className="h-4 w-4 text-[#006B47] shrink-0" />}
                           </button>
                         );
                       })}
@@ -592,7 +592,7 @@ export default function App() {
 
                   {store.user && (
                     <>
-                      <div className="my-1.5 border-t border-slate-100" />
+                      <div className="my-2 border-t border-[#DCE7DF]" />
                       <button
                         type="button"
                         role="menuitem"
@@ -600,7 +600,7 @@ export default function App() {
                           setMenuOpen(false);
                           setAccountModalOpen(true);
                         }}
-                        className="flex w-full min-h-[48px] items-center gap-3 rounded-xl px-3.5 py-3 text-left text-[15px] sm:text-base font-medium text-red-600 hover:bg-red-50"
+                        className="flex w-full min-h-[50px] items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-semibold text-[#BA1A1A] transition-colors hover:bg-[#FFDAD6]/60"
                       >
                         <LogOut className="h-5 w-5 shrink-0" />
                         <span>লগআউট</span>
@@ -627,25 +627,27 @@ export default function App() {
           return (
             <div
               role="status"
-              className="no-print mb-4 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3"
+              className="no-print mb-5 rounded-[24px] bg-[#CBEAD6] px-4 py-3.5 text-[#002114]"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                  <Download className="mt-0.5 h-4 w-4 text-emerald-700 shrink-0" />
-                  <div className="min-w-0 space-y-1 text-xs sm:text-sm text-emerald-950">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-[#006B47] text-white shrink-0">
+                    <Download className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1.5 text-sm sm:text-[15px]">
                     <div className="font-bold">
                       নতুন আপডেট v{updater.latestRelease.version} এসেছে
                     </div>
                     {visibleChanges.length > 0 && (
-                      <ul className="space-y-0.5 text-xs text-emerald-900">
+                      <ul className="space-y-1 text-[13px] sm:text-sm leading-relaxed text-[#002114]/90">
                         {visibleChanges.map((item, idx) => (
-                          <li key={idx} className="flex items-start gap-1.5">
-                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" />
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#006B47] shrink-0" />
                             <span>{item}</span>
                           </li>
                         ))}
                         {changelogItems.length > visibleChanges.length && (
-                          <li className="text-[11px] font-medium text-emerald-700">
+                          <li className="text-xs font-semibold text-[#006B47]">
                             + আরও {changelogItems.length - visibleChanges.length}টি পরিবর্তন
                           </li>
                         )}
@@ -653,20 +655,20 @@ export default function App() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center justify-end gap-2 shrink-0 self-end sm:self-center">
                   <button
                     type="button"
                     onClick={() => setDismissedUpdateTag(updater.latestRelease?.tagName ?? null)}
-                    className="min-h-[36px] rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
+                    className="min-h-[42px] rounded-full px-4 py-2 text-sm font-semibold text-[#002114] hover:bg-white/50"
                   >
                     পরে
                   </button>
                   <button
                     type="button"
                     onClick={() => setUpdateModalOpen(true)}
-                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 whitespace-nowrap"
+                    className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-[#006B47] px-4 py-2 text-sm font-semibold text-white hover:bg-[#005739] whitespace-nowrap"
                   >
-                    <Download className="h-3.5 w-3.5" />
+                    <Download className="h-4 w-4" />
                     আপডেট করুন
                   </button>
                 </div>
@@ -675,25 +677,25 @@ export default function App() {
           );
         })()}
 
-        {/* Contextual Offline / Sync / Auth Notice (Only shown when needed, no bulky legacy bar) */}
+        {/* Contextual Offline / Sync / Auth Notice */}
         {(store.syncStatus.state === 'offline' ||
           store.syncStatus.state === 'syncing' ||
           store.justSyncedNotice ||
           store.authError) && (
-          <div className="no-print mb-5 space-y-2">
+          <div className="no-print mb-5 space-y-2.5">
             {(store.syncStatus.state === 'offline' || store.syncStatus.state === 'syncing') && (
               <div
-                className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-xs ${
+                className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm ${
                   store.syncStatus.state === 'offline'
-                    ? 'border-amber-200 bg-amber-50 text-amber-900'
-                    : 'border-blue-200 bg-blue-50 text-blue-900'
+                    ? 'bg-[#FFF3E0] text-[#7A4100]'
+                    : 'bg-[#E3EEFF] text-[#0D47A1]'
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   {store.syncStatus.state === 'offline' ? (
-                    <CloudOff className="h-4 w-4 text-amber-600 shrink-0" />
+                    <CloudOff className="h-4 w-4 shrink-0" />
                   ) : (
-                    <RefreshCw className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
+                    <RefreshCw className="h-4 w-4 animate-spin shrink-0" />
                   )}
                   <span>
                     <strong>{store.syncStatus.label}:</strong> {store.syncStatus.detail}
@@ -705,15 +707,15 @@ export default function App() {
             {store.justSyncedNotice && (
               <div
                 role="status"
-                className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-medium text-emerald-800"
+                className="flex items-center gap-2.5 rounded-2xl bg-[#CBEAD6] px-4 py-3 text-sm font-semibold text-[#002114]"
               >
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <CheckCircle2 className="h-5 w-5 text-[#006B47] shrink-0" />
                 অফলাইনে করা সকল ডাটা স্বয়ংক্রিয়ভাবে ক্লাউডে আপলোড ও সিঙ্ক হয়েছে।
               </div>
             )}
 
             {store.authError && (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700" role="alert">
+              <p className="rounded-2xl bg-[#FFDAD6] px-4 py-3 text-sm font-medium text-[#410002]" role="alert">
                 {store.authError}
               </p>
             )}
@@ -815,10 +817,10 @@ export default function App() {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation (5 Primary Tabs: ড্যাশবোর্ড, বিক্রি, দোকানদার, প্রোডাক্ট, রিপোর্ট) */}
+      {/* Material You 3 Mobile Bottom Navigation Bar with Pill Indicator */}
       <nav
         aria-label="মোবাইল নেভিগেশন"
-        className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 min-h-[64px] pb-safe items-center border-t border-slate-200 bg-white md:hidden"
+        className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 min-h-[72px] pb-safe items-center border-t border-[#DCE7DF] bg-[#ECF3ED] md:hidden"
       >
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -828,12 +830,18 @@ export default function App() {
               key={item.id}
               type="button"
               onClick={() => handleSelectNav(item.id)}
-              className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] font-semibold transition-colors ${
-                active ? 'text-emerald-700' : 'text-slate-500'
+              className={`flex min-h-[58px] flex-col items-center justify-center gap-1 px-1 py-1.5 text-xs transition-colors ${
+                active ? 'font-bold text-[#002114]' : 'font-semibold text-[#404943]'
               }`}
             >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span className="max-w-full truncate whitespace-nowrap">{item.mobileLabel}</span>
+              <span
+                className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${
+                  active ? 'bg-[#CBEAD6] text-[#002114]' : 'bg-transparent text-[#404943]'
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+              </span>
+              <span className="max-w-full truncate whitespace-nowrap leading-none">{item.mobileLabel}</span>
             </button>
           );
         })}

@@ -49,31 +49,31 @@ export function DueCustomersView({
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight text-[#171D19]">
           বাকি পাওনা তালিকা
         </h1>
-        <p className="mt-1 text-xs sm:text-sm text-slate-600">
+        <p className="mt-1 text-sm sm:text-[15px] text-[#404943]">
           কার কার কাছে কত টাকা বাকি আছে তা একসাথে দেখুন ও আদায় করুন
         </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        <div className="rounded-xl border border-red-200 bg-red-50/60 p-4">
-          <div className="text-xs sm:text-sm font-medium text-red-800">মোট বাকি পাওনা</div>
+      <div className="grid grid-cols-2 gap-3.5 sm:gap-5">
+        <div className="rounded-[28px] bg-[#FFDAD6]/80 p-4 sm:p-6">
+          <div className="text-[13px] sm:text-[15px] font-semibold text-[#410002]">মোট বাকি পাওনা</div>
           <div
-            className="mt-1 text-lg sm:text-2xl font-bold font-mono-num text-red-700"
+            className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold font-mono-num text-[#BA1A1A]"
             data-testid="due-view-total"
           >
             {formatBDT(totalDueSum)}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs sm:text-sm font-medium text-slate-600">বাকি আছে</div>
+        <div className="rounded-[28px] bg-[#E2EDE5] p-4 sm:p-6">
+          <div className="text-[13px] sm:text-[15px] font-semibold text-[#404943]">বাকি আছে</div>
           <div
-            className="mt-1 text-lg sm:text-2xl font-bold font-mono-num text-slate-900"
+            className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold font-mono-num text-[#002114]"
             data-testid="due-view-count"
           >
             {dueRows.length} টি দোকান
@@ -82,25 +82,25 @@ export function DueCustomersView({
       </div>
 
       {/* Search & Sort Bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3.5 sm:p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3.5 rounded-[24px] bg-[#FFFFFF] p-4 sm:p-5 shadow-xs ring-1 ring-[#DCE7DF]/80 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 sm:max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#404943]" />
           <input
             type="text"
             aria-label="বাকি দোকান খুঁজুন"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="দোকানের নাম, এলাকা বা ফোন দিয়ে খুঁজুন..."
-            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+            className="w-full min-h-[46px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] py-2.5 pl-10 pr-4 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+        <div className="grid grid-cols-2 sm:inline-flex items-center gap-1 rounded-full bg-[#E2EDE5] p-1">
           <button
             type="button"
             onClick={() => setSortBy('due')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
-              sortBy === 'due' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            className={`min-h-[38px] rounded-full px-4 py-1.5 text-sm font-bold transition-colors whitespace-nowrap ${
+              sortBy === 'due' ? 'bg-white text-[#002114] shadow-xs' : 'text-[#404943] hover:text-[#171D19]'
             }`}
           >
             সর্বোচ্চ বাকি আগে
@@ -108,8 +108,8 @@ export function DueCustomersView({
           <button
             type="button"
             onClick={() => setSortBy('name')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
-              sortBy === 'name' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            className={`min-h-[38px] rounded-full px-4 py-1.5 text-sm font-bold transition-colors whitespace-nowrap ${
+              sortBy === 'name' ? 'bg-white text-[#002114] shadow-xs' : 'text-[#404943] hover:text-[#171D19]'
             }`}
           >
             নাম অনুযায়ী
@@ -118,22 +118,22 @@ export function DueCustomersView({
       </div>
 
       {/* Due List */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-[28px] bg-[#FFFFFF] shadow-xs ring-1 ring-[#DCE7DF]/80">
         {dueRows.length === 0 ? (
-          <div className="p-8 text-center space-y-2">
-            <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600" />
-            <p className="text-sm font-medium text-slate-800">
+          <div className="p-8 sm:p-10 text-center space-y-2.5">
+            <CheckCircle2 className="mx-auto h-9 w-9 text-[#006B47]" />
+            <p className="text-base font-semibold text-[#171D19]">
               {search.trim()
                 ? 'এই নামে কোনো বাকি থাকা দোকান পাওয়া যায়নি।'
                 : 'সকল দোকানদারের হিসাব পরিশোধিত — কোনো বাকি নেই।'}
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[#ECF3ED]">
             {dueRows.map(({ shop, summary }) => (
               <div
                 key={shop.id}
-                className="flex flex-col gap-3 p-4 transition-colors hover:bg-slate-50/70 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+                className="flex flex-col gap-3.5 p-4 sm:px-6 sm:py-5 transition-colors hover:bg-[#F5FAF6] sm:flex-row sm:items-center sm:justify-between"
               >
                 <button
                   type="button"
@@ -141,12 +141,12 @@ export function DueCustomersView({
                   className="min-w-0 flex-1 text-left group"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className="truncate text-sm sm:text-base font-semibold text-slate-900 group-hover:text-emerald-700 group-hover:underline">
+                    <span className="truncate text-base sm:text-[17px] font-bold text-[#171D19] group-hover:text-[#006B47] group-hover:underline">
                       {shop.shopName}
                     </span>
-                    <ChevronRight className="h-4 w-4 text-slate-400 shrink-0 group-hover:text-emerald-600" />
+                    <ChevronRight className="h-4 w-4 text-[#707972] shrink-0 group-hover:text-[#006B47]" />
                   </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] sm:text-sm text-[#404943]">
                     <span>{shop.ownerName}</span>
                     <span aria-hidden="true">·</span>
                     <span>{shop.area}</span>
@@ -165,13 +165,13 @@ export function DueCustomersView({
                   </div>
                 </button>
 
-                <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2.5 sm:border-t-0 sm:pt-0 sm:justify-end">
+                <div className="flex items-center justify-between gap-3 border-t border-[#ECF3ED] pt-3 sm:border-t-0 sm:pt-0 sm:justify-end">
                   <div className="text-left sm:text-right">
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-xs sm:text-[13px] text-[#404943]">
                       মোট বিল <span className="font-mono-num">{formatBDT(summary.totalBilled)}</span> · জমা{' '}
-                      <span className="font-mono-num text-emerald-700">{formatBDT(summary.totalPaid)}</span>
+                      <span className="font-mono-num font-semibold text-[#006B47]">{formatBDT(summary.totalPaid)}</span>
                     </div>
-                    <div className="text-base font-bold font-mono-num text-red-600">
+                    <div className="text-base sm:text-lg font-bold font-mono-num text-[#BA1A1A]">
                       বাকি {formatBDT(summary.totalDue)}
                     </div>
                   </div>
@@ -180,9 +180,9 @@ export function DueCustomersView({
                     type="button"
                     onClick={() => onCollectDue(shop, summary.totalDue)}
                     aria-label={`বাকি আদায়: ${shop.shopName}`}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 whitespace-nowrap shrink-0"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-[#006B47] px-4 py-2 text-sm font-bold text-white hover:bg-[#005739] whitespace-nowrap shrink-0"
                   >
-                    <Banknote className="h-3.5 w-3.5" />
+                    <Banknote className="h-4 w-4" />
                     বাকি আদায়
                   </button>
                 </div>

@@ -5,6 +5,24 @@
     --font-sans: 'Noto Sans Bengali', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     --font-display: 'Noto Sans Bengali', 'Plus Jakarta Sans', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+    /* Material You 3 — Emerald Sage Expressive Tokens */
+    --m3-surface: #f5faf6;
+    --m3-surface-low: #ecf3ed;
+    --m3-surface-container: #e2ede5;
+    --m3-surface-high: #d7e7dc;
+    --m3-surface-lowest: #ffffff;
+    --m3-on-surface: #171d19;
+    --m3-on-surface-variant: #404943;
+    --m3-outline: #707972;
+    --m3-outline-variant: #dce7df;
+    --m3-primary: #006b47;
+    --m3-primary-hover: #005739;
+    --m3-primary-container: #cbead6;
+    --m3-on-primary-container: #002114;
+    --m3-error: #ba1a1a;
+    --m3-error-container: #ffdad6;
+    --m3-on-error-container: #410002;
   }
 
   html,
@@ -17,9 +35,19 @@
 
   body {
     font-family: var(--font-sans);
-    background-color: #f8fafc;
-    color: #0f172a;
+    font-size: 16px;
+    line-height: 1.55;
+    background-color: var(--m3-surface);
+    color: var(--m3-on-surface);
     -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
   }
 }
 
@@ -50,5 +78,6 @@
   }
   body {
     background: #ffffff !important;
+    color: #0f172a !important;
   }
 }

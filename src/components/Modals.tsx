@@ -38,7 +38,7 @@ export function ModalShell({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-3 sm:p-4 backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#171D19]/50 p-3 sm:p-4 backdrop-blur-[2px]"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -47,20 +47,20 @@ export function ModalShell({
       }}
     >
       <div
-        className={`w-full ${maxWidthClass} max-h-[90dvh] flex flex-col rounded-xl border border-slate-200 bg-white shadow-xl`}
+        className={`w-full ${maxWidthClass} max-h-[90dvh] flex flex-col rounded-[28px] bg-[#FFFFFF] shadow-2xl`}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+        <div className="flex shrink-0 items-center justify-between border-b border-[#ECF3ED] px-5 py-4 sm:px-6">
+          <h2 className="text-lg sm:text-xl font-bold text-[#171D19] pr-2">{title}</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label={`বন্ধ করুন: ${title}`}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-emerald-600"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#ECF3ED] text-[#171D19] transition-colors hover:bg-[#D7E7DC] focus-visible:outline-2 focus-visible:outline-[#006B47] shrink-0"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6">{children}</div>
       </div>
     </div>
   );
@@ -120,12 +120,12 @@ export function AddShopModal({ open, editingShop, onClose, onSave }: AddShopModa
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <p className="rounded-2xl bg-[#FFDAD6] px-4 py-2.5 text-[15px] font-medium text-[#410002]" role="alert">
             {error}
           </p>
         )}
         <div>
-          <label htmlFor="shop-name-input" className="mb-1.5 block text-sm font-medium text-slate-700">
+          <label htmlFor="shop-name-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
             দোকান / ফার্মেসির নাম *
           </label>
           <input
@@ -137,12 +137,12 @@ export function AddShopModal({ open, editingShop, onClose, onSave }: AddShopModa
               setError('');
             }}
             placeholder="দোকান বা ফার্মেসির নাম লিখুন"
-            className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+            className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
           />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="owner-name-input" className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="owner-name-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
               মালিকের নাম
             </label>
             <input
@@ -151,11 +151,11 @@ export function AddShopModal({ open, editingShop, onClose, onSave }: AddShopModa
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
               placeholder="মালিকের নাম লিখুন"
-              className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+              className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
             />
           </div>
           <div>
-            <label htmlFor="shop-phone-input" className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="shop-phone-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
               মোবাইল নম্বর
             </label>
             <input
@@ -164,12 +164,12 @@ export function AddShopModal({ open, editingShop, onClose, onSave }: AddShopModa
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="017XX-XXXXXX"
-              className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 font-mono-num focus:border-emerald-600 focus:outline-none"
+              className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] font-mono-num focus:border-[#006B47] focus:bg-white focus:outline-none"
             />
           </div>
         </div>
         <div>
-          <label htmlFor="shop-area-input" className="mb-1.5 block text-sm font-medium text-slate-700">
+          <label htmlFor="shop-area-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
             এলাকা / বাজার
           </label>
           <input
@@ -178,20 +178,20 @@ export function AddShopModal({ open, editingShop, onClose, onSave }: AddShopModa
             value={area}
             onChange={(e) => setArea(e.target.value)}
             placeholder="এলাকা বা বাজারের নাম"
-            className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+            className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
           />
         </div>
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[44px] rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="min-h-[46px] rounded-full bg-[#ECF3ED] px-5 py-2 text-[15px] font-semibold text-[#171D19] hover:bg-[#D7E7DC]"
           >
             বাতিল
           </button>
           <button
             type="submit"
-            className="min-h-[44px] rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className="min-h-[46px] rounded-full bg-[#006B47] px-6 py-2 text-[15px] font-bold text-white hover:bg-[#005739]"
           >
             {editingShop ? 'পরিবর্তন সেভ করুন' : 'দোকান সেভ করুন'}
           </button>
@@ -256,16 +256,16 @@ export function CollectPaymentModal({
   return (
     <ModalShell open={open} onClose={onClose} title={`বাকি টাকা আদায় — ${shop.shopName}`}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#FFDAD6]/75 px-4 py-3.5">
           <div>
-            <div className="text-xs text-slate-500">বর্তমান মোট বাকি</div>
-            <div className="text-lg font-bold text-red-600 font-mono-num">{formatBDT(currentDue)}</div>
+            <div className="text-xs sm:text-sm font-semibold text-[#410002]">বর্তমান মোট বাকি</div>
+            <div className="text-xl font-bold text-[#BA1A1A] font-mono-num">{formatBDT(currentDue)}</div>
           </div>
           {currentDue > 0 && (
             <button
               type="button"
               onClick={() => setAmount(String(currentDue))}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 whitespace-nowrap shrink-0"
+              className="min-h-[38px] rounded-full bg-white px-4 py-1.5 text-xs sm:text-sm font-bold text-[#410002] hover:bg-[#FFF8F7] whitespace-nowrap shrink-0"
             >
               সম্পূর্ণ বাকি লিখুন
             </button>
@@ -273,14 +273,14 @@ export function CollectPaymentModal({
         </div>
 
         {error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <p className="rounded-2xl bg-[#FFDAD6] px-4 py-2.5 text-[15px] font-medium text-[#410002]" role="alert">
             {error}
           </p>
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="collect-amount-input" className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="collect-amount-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
               আদায়কৃত টাকা (৳) *
             </label>
             <input
@@ -294,18 +294,18 @@ export function CollectPaymentModal({
                 setError('');
               }}
               placeholder="টাকার পরিমাণ"
-              className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 font-mono-num focus:border-emerald-600 focus:outline-none"
+              className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base font-bold text-[#171D19] font-mono-num focus:border-[#006B47] focus:bg-white focus:outline-none"
             />
           </div>
           <div>
-            <label htmlFor="collect-method-select" className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="collect-method-select" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
               পেমেন্ট মাধ্যম
             </label>
             <select
               id="collect-method-select"
               value={method}
               onChange={(e) => setMethod(e.target.value as PaymentRecord['method'])}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+              className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
             >
               <option value="Cash">নগদ (Cash)</option>
               <option value="bKash">বিকাশ (bKash)</option>
@@ -316,7 +316,7 @@ export function CollectPaymentModal({
         </div>
 
         <div>
-          <label htmlFor="collect-note-input" className="mb-1.5 block text-sm font-medium text-slate-700">
+          <label htmlFor="collect-note-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
             মন্তব্য (ঐচ্ছিক)
           </label>
           <input
@@ -325,7 +325,7 @@ export function CollectPaymentModal({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="যেমন: নগদ পরিশোধ / রসিদ নম্বর"
-            className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+            className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
           />
         </div>
 
@@ -333,13 +333,13 @@ export function CollectPaymentModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="min-h-[46px] rounded-full bg-[#ECF3ED] px-5 py-2 text-[15px] font-semibold text-[#171D19] hover:bg-[#D7E7DC]"
           >
             বাতিল
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className="min-h-[46px] rounded-full bg-[#006B47] px-6 py-2 text-[15px] font-bold text-white hover:bg-[#005739]"
           >
             আদায় সেভ করুন
           </button>
@@ -499,12 +499,12 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
       maxWidthClass="max-w-2xl"
     >
       <div className="space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#ECF3ED] pb-4">
           <div>
-            <div className="text-xs font-medium text-slate-500">THE IBN SINA&apos;S Production — MR Sales</div>
-            <h3 className="mt-1 text-lg font-bold text-slate-900">{sale.shopName}</h3>
-            <div className="mt-0.5 text-xs text-slate-500">
-              <span>{sale.invoiceNo}</span>
+            <div className="text-xs sm:text-sm font-semibold text-[#404943]">THE IBN SINA&apos;S Production — MR Sales</div>
+            <h3 className="mt-1 text-xl font-bold text-[#171D19]">{sale.shopName}</h3>
+            <div className="mt-1 text-[13px] sm:text-sm text-[#404943]">
+              <span className="font-mono-num font-semibold">{sale.invoiceNo}</span>
               <span className="mx-1.5" aria-hidden="true">·</span>
               <span>{formatDateTimeBn(sale.date)}</span>
               <span className="mx-1.5" aria-hidden="true">·</span>
@@ -517,9 +517,9 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
                 type="button"
                 disabled={actionBusy !== null}
                 onClick={() => onEditSale(sale)}
-                className="inline-flex min-h-[42px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap shrink-0"
+                className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-[#ECF3ED] px-4 py-2 text-sm font-bold text-[#171D19] hover:bg-[#D7E7DC] disabled:opacity-60 whitespace-nowrap shrink-0"
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil className="h-4 w-4" />
                 এডিট করুন
               </button>
             )}
@@ -527,27 +527,27 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
               type="button"
               disabled={actionBusy !== null}
               onClick={() => void handleDownloadImage()}
-              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 whitespace-nowrap shrink-0"
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-[#006B47] px-4 py-2 text-sm font-bold text-white hover:bg-[#005739] disabled:opacity-60 whitespace-nowrap shrink-0"
             >
-              <Download className="h-3.5 w-3.5" />
+              <Download className="h-4 w-4" />
               {actionBusy === 'download' ? 'তৈরি হচ্ছে...' : 'ছবি ডাউনলোড'}
             </button>
             <button
               type="button"
               disabled={actionBusy !== null}
               onClick={() => void handleShareReceipt()}
-              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-60 whitespace-nowrap shrink-0"
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-[#CBEAD6] px-4 py-2 text-sm font-bold text-[#002114] hover:bg-[#B4DFC4] disabled:opacity-60 whitespace-nowrap shrink-0"
             >
-              <Share2 className="h-3.5 w-3.5" />
+              <Share2 className="h-4 w-4" />
               শেয়ার করুন
             </button>
             <button
               type="button"
               disabled={actionBusy !== null}
               onClick={() => void handlePrintReceipt()}
-              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap shrink-0"
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-[#ECF3ED] px-4 py-2 text-sm font-semibold text-[#171D19] hover:bg-[#D7E7DC] disabled:opacity-60 whitespace-nowrap shrink-0"
             >
-              <Printer className="h-3.5 w-3.5" />
+              <Printer className="h-4 w-4" />
               প্রিন্ট করুন
             </button>
           </div>
@@ -556,39 +556,39 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
         {actionNotice && (
           <div
             role="status"
-            className={`no-print flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-xs font-medium ${
+            className={`no-print flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold ${
               actionNotice.type === 'ok'
-                ? 'border border-emerald-200 bg-emerald-50 text-emerald-800'
-                : 'border border-red-200 bg-red-50 text-red-700'
+                ? 'bg-[#CBEAD6] text-[#002114]'
+                : 'bg-[#FFDAD6] text-[#410002]'
             }`}
           >
-            {actionNotice.type === 'ok' && <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />}
+            {actionNotice.type === 'ok' && <CheckCircle2 className="h-4 w-4 text-[#006B47] shrink-0" />}
             <span>{actionNotice.text}</span>
           </div>
         )}
 
-        <div className="overflow-hidden rounded-lg border border-slate-200">
+        <div className="overflow-hidden rounded-2xl bg-[#F5FAF6] ring-1 ring-[#DCE7DF]/80">
           {/* Mobile Line Item Cards */}
-          <div className="divide-y divide-slate-100 sm:hidden">
+          <div className="divide-y divide-[#DCE7DF] sm:hidden">
             {sale.items.map((item, idx) => (
-              <div key={`${item.productId}-${idx}`} className="p-3 space-y-1.5 text-xs">
+              <div key={`${item.productId}-${idx}`} className="p-3.5 space-y-1.5 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-900">{item.productName}</div>
-                    <div className="text-[11px] text-slate-500">{item.tier}</div>
+                    <div className="font-bold text-[#171D19]">{item.productName}</div>
+                    <div className="text-xs text-[#404943]">{item.tier}</div>
                   </div>
-                  <div className="font-bold font-mono-num text-slate-900 shrink-0">
+                  <div className="font-bold font-mono-num text-[#171D19] shrink-0">
                     {formatBDT(item.netTotal)}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 font-mono-num">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#404943] font-mono-num">
                   <span>
                     {item.boxes} বক্স × {formatBDT(item.boxPrice)}
                   </span>
-                  <span className="text-amber-700">
+                  <span className="text-[#9A5B00]">
                     ছাড় {item.discountPercent}% (-{formatBDT(item.discountAmount)})
                   </span>
-                  <span className="text-emerald-700">
+                  <span className="font-semibold text-[#006B47]">
                     {formatBDT(item.effectiveBoxPrice)}/বক্স
                   </span>
                 </div>
@@ -598,35 +598,35 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
 
           {/* Desktop Line Item Table */}
           <div className="hidden sm:block">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
+            <table className="w-full text-left text-[15px]">
+              <thead className="border-b border-[#DCE7DF] bg-[#ECF3ED] text-xs sm:text-sm text-[#404943]">
                 <tr>
-                  <th className="px-3 py-2.5 font-medium">প্রোডাক্ট</th>
-                  <th className="px-3 py-2.5 text-right font-medium">বক্স</th>
-                  <th className="px-3 py-2.5 text-right font-medium">দাম/বক্স</th>
-                  <th className="px-3 py-2.5 text-right font-medium">ডিসকাউন্ট</th>
-                  <th className="px-3 py-2.5 text-right font-medium">ছাড়ের পর বক্স</th>
-                  <th className="px-3 py-2.5 text-right font-medium">মোট দাম</th>
+                  <th className="px-4 py-3 font-bold">প্রোডাক্ট</th>
+                  <th className="px-3 py-3 text-right font-bold">বক্স</th>
+                  <th className="px-3 py-3 text-right font-bold">দাম/বক্স</th>
+                  <th className="px-3 py-3 text-right font-bold">ডিসকাউন্ট</th>
+                  <th className="px-3 py-3 text-right font-bold">ছাড়ের পর বক্স</th>
+                  <th className="px-4 py-3 text-right font-bold">মোট দাম</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#DCE7DF] bg-white">
                 {sale.items.map((item, idx) => (
-                  <tr key={`${item.productId}-${idx}`} className="hover:bg-slate-50/70">
-                    <td className="px-3 py-2.5">
-                      <div className="font-medium text-slate-900">{item.productName}</div>
-                      <div className="text-xs text-slate-500">{item.tier}</div>
+                  <tr key={`${item.productId}-${idx}`} className="hover:bg-[#F5FAF6]">
+                    <td className="px-4 py-3">
+                      <div className="font-bold text-[#171D19]">{item.productName}</div>
+                      <div className="text-xs text-[#404943]">{item.tier}</div>
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono-num text-slate-800">{item.boxes}</td>
-                    <td className="px-3 py-2.5 text-right font-mono-num text-slate-600">
+                    <td className="px-3 py-3 text-right font-mono-num text-[#171D19]">{item.boxes}</td>
+                    <td className="px-3 py-3 text-right font-mono-num text-[#404943]">
                       {formatBDT(item.boxPrice)}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono-num text-amber-700">
+                    <td className="px-3 py-3 text-right font-mono-num text-[#9A5B00]">
                       {item.discountPercent}% (-{formatBDT(item.discountAmount)})
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono-num text-emerald-700">
+                    <td className="px-3 py-3 text-right font-mono-num font-semibold text-[#006B47]">
                       {formatBDT(item.effectiveBoxPrice)}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-semibold font-mono-num text-slate-900">
+                    <td className="px-4 py-3 text-right font-bold font-mono-num text-[#171D19]">
                       {formatBDT(item.netTotal)}
                     </td>
                   </tr>
@@ -636,35 +636,35 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-2">
-          <div className="text-sm text-slate-600">
+        <div className="grid grid-cols-1 gap-4 border-t border-[#ECF3ED] pt-4 sm:grid-cols-2">
+          <div className="text-[15px] text-[#404943]">
             {sale.note ? (
               <div>
-                <span className="font-medium text-slate-800">মন্তব্য: </span>
+                <span className="font-bold text-[#171D19]">মন্তব্য: </span>
                 <span>{sale.note}</span>
               </div>
             ) : (
-              <span className="text-slate-400">কোনো অতিরিক্ত মন্তব্য নেই</span>
+              <span className="text-[#707972]">কোনো অতিরিক্ত মন্তব্য নেই</span>
             )}
           </div>
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between text-slate-600">
+          <div className="space-y-2 rounded-2xl bg-[#ECF3ED]/70 p-4 text-[15px]">
+            <div className="flex justify-between text-[#404943]">
               <span>মোট আসল দাম</span>
               <span className="font-mono-num">{formatBDT(sale.grossTotal)}</span>
             </div>
-            <div className="flex justify-between text-amber-700">
+            <div className="flex justify-between text-[#9A5B00]">
               <span>মোট ডিসকাউন্ট ছাড়</span>
               <span className="font-mono-num">-{formatBDT(sale.totalDiscount)}</span>
             </div>
-            <div className="flex justify-between border-t border-slate-200 pt-1.5 font-semibold text-slate-900">
+            <div className="flex justify-between border-t border-[#DCE7DF] pt-2 font-bold text-[#171D19]">
               <span>সর্বমোট প্রদেয় বিল</span>
               <span className="font-mono-num">{formatBDT(sale.netTotal)}</span>
             </div>
-            <div className="flex justify-between text-emerald-700">
+            <div className="flex justify-between text-[#006B47]">
               <span>দোকানদার দিয়েছে (নগদ/জমা)</span>
-              <span className="font-semibold font-mono-num">{formatBDT(sale.paidAmount)}</span>
+              <span className="font-bold font-mono-num">{formatBDT(sale.paidAmount)}</span>
             </div>
-            <div className="flex justify-between font-bold text-red-600">
+            <div className="flex justify-between text-lg font-bold text-[#BA1A1A]">
               <span>বাকি আছে</span>
               <span className="font-mono-num">{formatBDT(sale.dueAmount)}</span>
             </div>
@@ -758,14 +758,14 @@ export function ProductFormModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <p className="rounded-2xl bg-[#FFDAD6] px-4 py-2.5 text-[15px] font-medium text-[#410002]" role="alert">
             {error}
           </p>
         )}
         {!editingProduct && (
           <>
             <div>
-              <label htmlFor="prod-name-input" className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label htmlFor="prod-name-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
                 প্রোডাক্টের নাম *
               </label>
               <input
@@ -777,18 +777,18 @@ export function ProductFormModal({
                   setError('');
                 }}
                 placeholder="যেমন: Dexlan"
-                className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+                className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
               />
             </div>
             <div>
-              <label htmlFor="prod-tier-select" className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label htmlFor="prod-tier-select" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
                 গ্রুপ / ক্যাটাগরি
               </label>
               <select
                 id="prod-tier-select"
                 value={tier}
                 onChange={(e) => setTier(e.target.value as ProductTier)}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+                className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
               >
                 {TIERS.map((t) => (
                   <option key={t} value={t}>
@@ -801,7 +801,7 @@ export function ProductFormModal({
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="prod-price-input" className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="prod-price-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
               প্রতি বক্সের দাম (৳) *
             </label>
             <input
@@ -815,11 +815,11 @@ export function ProductFormModal({
                 setError('');
               }}
               placeholder="480"
-              className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 font-mono-num focus:border-emerald-600 focus:outline-none"
+              className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base font-bold text-[#171D19] font-mono-num focus:border-[#006B47] focus:bg-white focus:outline-none"
             />
           </div>
           <div>
-            <label htmlFor="prod-pack-input" className="mb-1.5 block text-sm font-medium text-slate-700">
+            <label htmlFor="prod-pack-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
               প্যাক সাইজ
             </label>
             <input
@@ -828,7 +828,7 @@ export function ProductFormModal({
               value={packInfo}
               onChange={(e) => setPackInfo(e.target.value)}
               placeholder="1 Box (30 Caps)"
-              className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
+              className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
             />
           </div>
         </div>
@@ -836,13 +836,13 @@ export function ProductFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="min-h-[46px] rounded-full bg-[#ECF3ED] px-5 py-2 text-[15px] font-semibold text-[#171D19] hover:bg-[#D7E7DC]"
           >
             বাতিল
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className="min-h-[46px] rounded-full bg-[#006B47] px-6 py-2 text-[15px] font-bold text-white hover:bg-[#005739]"
           >
             সেভ করুন
           </button>

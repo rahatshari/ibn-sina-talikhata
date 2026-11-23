@@ -105,40 +105,40 @@ export function AccountModal({
     >
       {user ? (
         <div className="space-y-5">
-          {/* Modern User Profile Card */}
-          <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+          {/* Material 3 User Profile Card */}
+          <div className="flex items-center gap-4 rounded-3xl bg-[#ECF3ED] p-4">
             {user.photoURL ? (
               <img
                 src={user.photoURL}
                 alt={user.displayName || 'User'}
                 referrerPolicy="no-referrer"
-                className="h-14 w-14 rounded-full border-2 border-white object-cover shadow-sm shrink-0"
+                className="h-14 w-14 rounded-full border-2 border-white object-cover shadow-xs shrink-0"
               />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-lg font-bold text-white shadow-sm shrink-0">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#006B47] text-xl font-bold text-white shadow-xs shrink-0">
                 {initialLetter}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <div className="truncate text-base font-bold text-slate-900">
+              <div className="truncate text-lg font-bold text-[#171D19]">
                 {user.displayName || 'MR অ্যাকাউন্ট'}
               </div>
-              <div className="truncate text-xs text-slate-500">{user.email}</div>
-              <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold border border-slate-200">
+              <div className="truncate text-sm text-[#404943]">{user.email}</div>
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold">
                 {syncStatus.state === 'offline' ? (
-                  <CloudOff className="h-3 w-3 text-amber-600" />
+                  <CloudOff className="h-3.5 w-3.5 text-[#9A5B00]" />
                 ) : syncStatus.state === 'syncing' ? (
-                  <RefreshCw className="h-3 w-3 animate-spin text-blue-600" />
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-[#0D47A1]" />
                 ) : (
-                  <Cloud className="h-3 w-3 text-emerald-600" />
+                  <Cloud className="h-3.5 w-3.5 text-[#006B47]" />
                 )}
                 <span
                   className={
                     syncStatus.state === 'offline'
-                      ? 'text-amber-700'
+                      ? 'text-[#9A5B00]'
                       : syncStatus.state === 'syncing'
-                        ? 'text-blue-700'
-                        : 'text-emerald-700'
+                        ? 'text-[#0D47A1]'
+                        : 'text-[#006B47]'
                   }
                 >
                   {syncStatus.label}
@@ -148,12 +148,12 @@ export function AccountModal({
           </div>
 
           {/* Sync Information */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
-              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+          <div className="rounded-3xl bg-[#F5FAF6] p-4 sm:p-5 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-bold text-[#171D19]">
+              <ShieldCheck className="h-5 w-5 text-[#006B47]" />
               <span>অটোমেটিক ক্লাউড ব্যাকআপ ও অফলাইন সিঙ্ক</span>
             </div>
-            <p className="text-xs leading-relaxed text-slate-600">
+            <p className="text-sm leading-relaxed text-[#404943]">
               {syncStatus.detail} — আপনি ইন্টারনেট ছাড়াই যেকোনো হিসাব লিখতে পারবেন; নেট পেলেই সব তথ্য এই জিমেইলে স্বয়ংক্রিয়ভাবে জমা হবে।
             </p>
           </div>
@@ -162,7 +162,7 @@ export function AccountModal({
             <button
               type="button"
               onClick={() => void onSyncLocalToCloud()}
-              className="inline-flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
+              className="inline-flex w-full min-h-[48px] items-center justify-center gap-2 rounded-full bg-[#CBEAD6] px-5 py-3 text-[15px] font-bold text-[#002114] hover:bg-[#B4DFC4]"
             >
               <UploadCloud className="h-4 w-4" />
               লোকাল হিসাবগুলো ক্লাউডে আনুন
@@ -170,32 +170,32 @@ export function AccountModal({
           )}
 
           {authError && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700" role="alert">
+            <p className="rounded-2xl bg-[#FFDAD6] px-4 py-3 text-sm font-medium text-[#410002]" role="alert">
               {authError}
             </p>
           )}
 
-          {/* Modern Logout Section with Confirmation */}
-          <div className="border-t border-slate-200 pt-4">
+          {/* Logout Section with Confirmation */}
+          <div className="border-t border-[#ECF3ED] pt-4">
             {!confirmLogout ? (
               <button
                 type="button"
                 onClick={() => setConfirmLogout(true)}
-                className="inline-flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50/70 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100"
+                className="inline-flex w-full min-h-[48px] items-center justify-center gap-2 rounded-full bg-[#FFDAD6]/80 px-5 py-3 text-[15px] font-bold text-[#BA1A1A] transition-colors hover:bg-[#FFDAD6]"
               >
                 <LogOut className="h-4 w-4" />
                 অ্যাকাউন্ট থেকে লগআউট করুন
               </button>
             ) : (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 space-y-3">
-                <p className="text-xs font-medium text-red-900">
+              <div className="rounded-3xl bg-[#FFDAD6]/75 p-4 space-y-3">
+                <p className="text-sm font-semibold text-[#410002]">
                   আপনি কি নিশ্চিতভাবে লগআউট করতে চান? আপনার সকল হিসাব আপনার জিমেইল ক্লাউডে নিরাপদ থাকবে।
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => setConfirmLogout(false)}
-                    className="flex-1 min-h-[42px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    className="flex-1 min-h-[44px] rounded-full bg-white px-4 py-2 text-sm font-bold text-[#171D19] hover:bg-[#ECF3ED]"
                   >
                     থাক, বাতিল করুন
                   </button>
@@ -203,7 +203,7 @@ export function AccountModal({
                     type="button"
                     disabled={signingOut}
                     onClick={() => void handleLogout()}
-                    className="flex-1 min-h-[42px] rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                    className="flex-1 min-h-[44px] rounded-full bg-[#BA1A1A] px-4 py-2 text-sm font-bold text-white hover:bg-[#93000A] disabled:opacity-60"
                   >
                     {signingOut ? 'লগআউট হচ্ছে...' : 'হ্যাঁ, লগআউট'}
                   </button>
@@ -214,44 +214,44 @@ export function AccountModal({
         </div>
       ) : (
         <div className="space-y-5">
-          {/* Modern App Login Hero Card */}
+          {/* App Login Hero Card */}
           <div className="flex flex-col items-center text-center pt-1 pb-2">
             <img
               src="/icon.svg"
               alt="ব্যক্তিগত টালিখাতা"
-              className="h-16 w-16 rounded-2xl shadow-sm border border-emerald-100"
+              className="h-16 w-16 rounded-3xl border border-[#CBEAD6] bg-white p-1 shadow-xs"
             />
-            <h3 className="mt-3 text-lg font-bold text-slate-900">
+            <h3 className="mt-3 text-xl font-bold text-[#171D19]">
               জিমেইল দিয়ে নিরাপদ লগইন
             </h3>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500 max-w-xs">
+            <p className="mt-1.5 text-sm leading-relaxed text-[#404943] max-w-xs">
               একবার লগইন করলে আপনার দোকানদার, বিক্রি ও বাকি হিসাব স্বয়ংক্রিয়ভাবে ক্লাউডে সুরক্ষিত থাকবে।
             </p>
           </div>
 
-          <div className="space-y-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          <div className="space-y-3 rounded-3xl bg-[#ECF3ED] p-4 sm:p-5 text-sm text-[#171D19]">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="h-5 w-5 text-[#006B47] shrink-0" />
               <span>ইন্টারনেট না থাকলেও অফলাইনে সব এন্ট্রি চালু থাকবে</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <Cloud className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div className="flex items-center gap-3">
+              <Cloud className="h-5 w-5 text-[#006B47] shrink-0" />
               <span>নেট সংযোগ পেলেই অটোমেটিক ডাটা আপলোড ও সিঙ্ক</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <Smartphone className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div className="flex items-center gap-3">
+              <Smartphone className="h-5 w-5 text-[#006B47] shrink-0" />
               <span>নতুন ফোনে অ্যাপ নামিয়ে একই জিমেইলে সব হিসাব ফিরে পাবেন</span>
             </div>
           </div>
 
           {!isOnline && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-800">
+            <div className="rounded-2xl bg-[#FFF3E0] px-4 py-3 text-sm font-medium text-[#7A4100]">
               এখন ডিভাইসটি অফলাইনে আছে। আপনি অফলাইনেই কাজ চালিয়ে যেতে পারেন; নেট পেলেই লগইন করুন।
             </div>
           )}
 
           {authError && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700" role="alert">
+            <p className="rounded-2xl bg-[#FFDAD6] px-4 py-3 text-sm font-medium text-[#410002]" role="alert">
               {authError}
             </p>
           )}
@@ -260,17 +260,17 @@ export function AccountModal({
             type="button"
             disabled={signingIn}
             onClick={() => void handleGoogleLogin()}
-            className="flex w-full min-h-[48px] items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-xs transition-all hover:bg-slate-50 active:scale-[0.99] disabled:opacity-70"
+            className="flex w-full min-h-[52px] items-center justify-center gap-3 rounded-full border border-[#C3D2C8] bg-white px-5 py-3 text-base font-bold text-[#171D19] shadow-xs transition-all hover:bg-[#ECF3ED] active:scale-[0.99] disabled:opacity-70"
           >
             {signingIn ? (
-              <RefreshCw className="h-5 w-5 animate-spin text-emerald-600 shrink-0" />
+              <RefreshCw className="h-5 w-5 animate-spin text-[#006B47] shrink-0" />
             ) : (
               <GoogleLogoIcon />
             )}
             <span>{signingIn ? 'গুগল অ্যাকাউন্ট লোড হচ্ছে...' : 'Google (Gmail) দিয়ে এগিয়ে যান'}</span>
           </button>
           {signingIn && (
-            <p className="text-center text-[11px] text-slate-500">
+            <p className="text-center text-xs text-[#404943]">
               ফোনের Google Play Services থেকে জিমেইল তালিকা আনতে ২–৪ সেকেন্ড সময় লাগতে পারে।
             </p>
           )}
