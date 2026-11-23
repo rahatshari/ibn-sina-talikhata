@@ -5,12 +5,15 @@ import type { PaymentRecord, Product, SaleRecord, Shopkeeper } from '../types/ta
 import {
   computeMonthlySalesAndCollection,
   formatBDT,
+  formatCount,
   formatDateTimeBn,
   formatMonthYearBn,
   getAvailableMonthKeys,
   getMonthKeyFromIso,
 } from '../utils/ledger';
+import { useNumeralMode } from '../utils/NumeralContext';
 import { textToBase64 } from '../utils/receiptGenerator';
+import { M3SelectPopup, type M3SelectOption } from './M3SelectPopup';
 
 interface ReportsViewProps {
   products: Product[];
@@ -43,6 +46,7 @@ export function ReportsView({
   onDeletePayment,
   onImportBackup,
 }: ReportsViewProps) {
+  const { numeralMode } = useNumeralMode();
   const [tab, setTab] = useState<'all' | 'sales' | 'payments'>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -52,6 +56,17 @@ export function ReportsView({
   const availableMonths = useMemo(
     () => getAvailableMonthKeys(sales, payments),
     [sales, payments],
+  );
+
+  const monthOptions = useMemo<Array<M3SelectOption<string>>>(
+    () => [
+      { value: 'all', label: 'সকল মাস' },
+      ...availableMonths.map((monthKey) => ({
+        value: monthKey,
+        label: formatMonthYearBn(monthKey, numeralMode),
+      })),
+    ],
+    [availableMonths, numeralMode],
   );
 
   const selectedMonthMetrics = useMemo(() => {
@@ -67,7 +82,7 @@ export function ReportsView({
       code: s.invoiceNo,
       shopName: s.shopName,
       date: s.date,
-      details: `${s.totalBoxes} বক্স (${s.items.length} আইটেম) · ছাড় ${formatBDT(s.totalDiscount)}`,
+      details: `${formatCount(s.totalBoxes, numeralMode)} বক্স (${formatCount(s.items.length, numeralMode)} আইটেম) · ছাড় ${formatBDT(s.totalDiscount, numeralMode)}`,
       total: s.netTotal,
       paid: s.paidAmount,
       due: s.dueAmount,
@@ -102,7 +117,7 @@ export function ReportsView({
         );
       })
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [sales, payments, tab, monthFilter, search]);
+  }, [sales, payments, tab, monthFilter, search, numeralMode]);
 
   const handleDownloadBackup = async () => {
     const fileName = `ibn-sina-tally-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -187,23 +202,17 @@ export function ReportsView({
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-5 w-5 shrink-0 text-[#006B47]" aria-hidden="true" />
-            <select
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              aria-label="মাস অনুযায়ী রিপোর্ট দেখুন"
-              data-testid="reports-month-select"
-              className="min-h-[44px] w-full sm:w-auto rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2 text-sm sm:text-[15px] font-semibold text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
-            >
-              <option value="all">সকল মাস</option>
-              {availableMonths.map((monthKey) => (
-                <option key={monthKey} value={monthKey}>
-                  {formatMonthYearBn(monthKey)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <M3SelectPopup
+            value={monthFilter}
+            options={monthOptions}
+            onChange={setMonthFilter}
+            ariaLabel="মাস অনুযায়ী রিপোর্ট দেখুন"
+            menuTitle="মাস বেছে নিন"
+            icon={<CalendarDays className="h-4 w-4" />}
+            variant="pill"
+            testId="reports-month-select"
+            className="w-full sm:w-auto"
+          />
         </div>
 
         <div className="grid grid-cols-3 sm:inline-flex sm:self-start items-center gap-1 rounded-full bg-[#E2EDE5] p-1">
@@ -214,7 +223,7 @@ export function ReportsView({
               tab === 'all' ? 'bg-white text-[#002114] shadow-xs' : 'text-[#404943] hover:text-[#171D19]'
             }`}
           >
-            সব ({entries.length})
+            সব ({formatCount(entries.length, numeralMode)})
           </button>
           <button
             type="button"
@@ -244,19 +253,19 @@ export function ReportsView({
             <div>
               <div className="text-xs font-medium text-[#002114]/80">মাসের বিক্রি</div>
               <div className="mt-0.5 text-base font-bold font-mono-num text-[#171D19]">
-                {formatBDT(selectedMonthMetrics.totalSales)}
+                {formatBDT(selectedMonthMetrics.totalSales, numeralMode)}
               </div>
             </div>
             <div>
               <div className="text-xs font-medium text-[#002114]/80">মাসের আদায়</div>
               <div className="mt-0.5 text-base font-bold font-mono-num text-[#006B47]">
-                {formatBDT(selectedMonthMetrics.totalCollected)}
+                {formatBDT(selectedMonthMetrics.totalCollected, numeralMode)}
               </div>
             </div>
             <div className="text-right">
               <div className="text-xs font-medium text-[#002114]/80">চালান ও বক্স</div>
               <div className="mt-0.5 text-base font-bold font-mono-num text-[#171D19]">
-                {selectedMonthMetrics.invoiceCount}টি · {selectedMonthMetrics.totalBoxesSold} বক্স
+                {formatCount(selectedMonthMetrics.invoiceCount, numeralMode)}টি · {formatCount(selectedMonthMetrics.totalBoxesSold, numeralMode)} বক্স
               </div>
             </div>
           </div>
@@ -280,7 +289,7 @@ export function ReportsView({
                           {entry.code}
                         </span>
                         <span className="text-xs text-[#404943]">
-                          {formatDateTimeBn(entry.date)}
+                          {formatDateTimeBn(entry.date, numeralMode)}
                         </span>
                       </div>
                       <div className="mt-0.5 truncate text-base font-bold text-[#171D19]">
@@ -319,14 +328,14 @@ export function ReportsView({
                   <div className="flex items-center justify-between gap-2 rounded-2xl bg-[#F5FAF6] px-3.5 py-2.5 text-sm">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono-num">
                       {entry.kind === 'sale' && (
-                        <span className="text-[#171D19]">বিল {formatBDT(entry.total)}</span>
+                        <span className="text-[#171D19]">বিল {formatBDT(entry.total, numeralMode)}</span>
                       )}
                       <span className="font-bold text-[#006B47]">
-                        জমা {formatBDT(entry.paid)}
+                        জমা {formatBDT(entry.paid, numeralMode)}
                       </span>
                       {entry.kind === 'sale' && (
                         <span className={entry.due > 0 ? 'font-bold text-[#BA1A1A]' : 'text-[#404943]'}>
-                          বাকি {formatBDT(entry.due)}
+                          বাকি {formatBDT(entry.due, numeralMode)}
                         </span>
                       )}
                     </div>
@@ -362,24 +371,24 @@ export function ReportsView({
                     <tr key={entry.id} className="hover:bg-[#F5FAF6]">
                       <td className="px-6 py-4">
                         <div className="font-bold font-mono-num text-[#171D19]">{entry.code}</div>
-                        <div className="text-xs text-[#404943]">{formatDateTimeBn(entry.date)}</div>
+                        <div className="text-xs text-[#404943]">{formatDateTimeBn(entry.date, numeralMode)}</div>
                       </td>
                       <td className="px-4 py-4">
                         <div className="font-bold text-[#171D19]">{entry.shopName}</div>
                         <div className="text-[13px] text-[#404943]">{entry.details}</div>
                       </td>
                       <td className="px-4 py-4 text-right font-mono-num text-[#171D19]">
-                        {entry.kind === 'sale' ? formatBDT(entry.total) : '—'}
+                        {entry.kind === 'sale' ? formatBDT(entry.total, numeralMode) : '—'}
                       </td>
                       <td className="px-4 py-4 text-right font-bold font-mono-num text-[#006B47]">
-                        {formatBDT(entry.paid)}
+                        {formatBDT(entry.paid, numeralMode)}
                       </td>
                       <td
                         className={`px-4 py-4 text-right font-bold font-mono-num ${
                           entry.due > 0 ? 'text-[#BA1A1A]' : 'text-[#707972]'
                         }`}
                       >
-                        {entry.kind === 'sale' ? formatBDT(entry.due) : '—'}
+                        {entry.kind === 'sale' ? formatBDT(entry.due, numeralMode) : '—'}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="inline-flex items-center justify-end gap-1.5">
@@ -485,7 +494,7 @@ export function ReportsView({
           </h2>
           <p className="mt-0.5 text-sm text-[#404943]">
             বর্তমান ভার্সন: <span className="font-mono-num font-bold text-[#171D19]">v{appVersion}</span> (Build{' '}
-            <span className="font-mono-num">{appVersionCode}</span>) · নতুন GitHub Release এলে অটো নোটিফিকেশন ও ইন-অ্যাপ আপডেট পাবেন
+            <span className="font-mono-num">{formatCount(appVersionCode, numeralMode)}</span>) · নতুন GitHub Release এলে অটো নোটিফিকেশন ও ইন-অ্যাপ আপডেট পাবেন
           </p>
         </div>
         <button

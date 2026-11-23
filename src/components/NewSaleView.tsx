@@ -1,12 +1,29 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronDown, MapPin, Minus, Plus, Search, Store, Trash2, UserPlus, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Layers,
+  MapPin,
+  Minus,
+  Plus,
+  Search,
+  Store,
+  Trash2,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import type { PaymentRecord, Product, ProductTier, SaleRecord, Shopkeeper } from '../types/tally';
 import {
   calculateInvoiceTotals,
   calculateLineItem,
   computeShopSummary,
   formatBDT,
+  formatCount,
 } from '../utils/ledger';
+import { useNumeralMode } from '../utils/NumeralContext';
+import { M3SelectPopup, type M3SelectOption } from './M3SelectPopup';
 
 interface DraftRow {
   productId: string;
@@ -53,6 +70,7 @@ export function NewSaleView({
   onSaveSale,
   onSaleCreated,
 }: NewSaleViewProps) {
+  const { numeralMode } = useNumeralMode();
   const [selectedShopId, setSelectedShopId] = useState<string>(
     preselectedShopId || shops[0]?.id || '',
   );
@@ -60,11 +78,26 @@ export function NewSaleView({
   const [shopSearch, setShopSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [tierFilter, setTierFilter] = useState<'All' | ProductTier>('All');
+  const [saleStep, setSaleStep] = useState<'catalog' | 'checkout'>('catalog');
   const [draftRows, setDraftRows] = useState<DraftRow[]>([]);
   const [bulkDiscount, setBulkDiscount] = useState<string>('');
   const [paidInput, setPaidInput] = useState<string>('');
   const [note, setNote] = useState('');
   const [formError, setFormError] = useState('');
+
+  const groupOptions = useMemo<Array<M3SelectOption<'All' | ProductTier>>>(() => {
+    const customCount = products.filter((p) => p.tier === 'Custom').length;
+    const tiers = customCount > 0 ? [...FILTER_TIERS, 'Custom' as ProductTier] : FILTER_TIERS;
+    return tiers.map((tier) => {
+      const count =
+        tier === 'All' ? products.length : products.filter((p) => p.tier === tier).length;
+      return {
+        value: tier,
+        label: tier === 'All' ? 'সকল প্রোডাক্ট' : tier,
+        badge: formatCount(count, numeralMode),
+      };
+    });
+  }, [products, numeralMode]);
 
   useEffect(() => {
     if (preselectedShopId) {
@@ -75,13 +108,20 @@ export function NewSaleView({
   }, [preselectedShopId, shops, selectedShopId]);
 
   useEffect(() => {
-    if (!shopPickerOpen) return;
+    if (!shopPickerOpen && saleStep !== 'checkout') return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShopPickerOpen(false);
+      if (e.key === 'Escape' && shopPickerOpen) {
+        setShopPickerOpen(false);
+      }
     };
     const onBack = (e: Event) => {
       e.preventDefault();
-      setShopPickerOpen(false);
+      if (shopPickerOpen) {
+        setShopPickerOpen(false);
+      } else if (saleStep === 'checkout') {
+        setSaleStep('catalog');
+        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      }
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('talikhata:back', onBack);
@@ -89,7 +129,7 @@ export function NewSaleView({
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('talikhata:back', onBack);
     };
-  }, [shopPickerOpen]);
+  }, [shopPickerOpen, saleStep]);
 
   const selectedShop = useMemo(
     () => shops.find((s) => s.id === selectedShopId) ?? null,
@@ -178,6 +218,21 @@ export function NewSaleView({
     });
   };
 
+  const decrementProductFromCart = (productId: string) => {
+    setFormError('');
+    setDraftRows((prev) => {
+      const existing = prev.find((r) => r.productId === productId);
+      if (!existing) return prev;
+      const currentBoxes = Number.parseInt(existing.boxesInput, 10) || 0;
+      if (currentBoxes <= 1) {
+        return prev.filter((r) => r.productId !== productId);
+      }
+      return prev.map((r) =>
+        r.productId === productId ? { ...r, boxesInput: String(currentBoxes - 1) } : r,
+      );
+    });
+  };
+
   const updateRow = (productId: string, patch: Partial<DraftRow>) => {
     setDraftRows((prev) =>
       prev.map((r) => (r.productId === productId ? { ...r, ...patch } : r)),
@@ -185,7 +240,13 @@ export function NewSaleView({
   };
 
   const removeRow = (productId: string) => {
-    setDraftRows((prev) => prev.filter((r) => r.productId !== productId));
+    setDraftRows((prev) => {
+      const next = prev.filter((r) => r.productId !== productId);
+      if (next.length === 0 && saleStep === 'checkout') {
+        setSaleStep('catalog');
+      }
+      return next;
+    });
   };
 
   const applyDiscountToAll = () => {
@@ -216,7 +277,7 @@ export function NewSaleView({
       return;
     }
     if (rawPaid > totals.netTotal) {
-      setFormError(`জমা টাকা সর্বমোট বিল (${formatBDT(totals.netTotal)}) এর চেয়ে বেশি হতে পারবে না।`);
+      setFormError(`জমা টাকা সর্বমোট বিল (${formatBDT(totals.netTotal, numeralMode)}) এর চেয়ে বেশি হতে পারবে না।`);
       return;
     }
 
@@ -229,11 +290,29 @@ export function NewSaleView({
 
     if (created) {
       setDraftRows([]);
+      setSaleStep('catalog');
       setPaidInput('');
       setNote('');
       setFormError('');
       onSaleCreated(created);
     }
+  };
+
+  const goToCheckoutStep = () => {
+    const validItems = computedItems.filter((item) => item.boxes > 0);
+    if (validItems.length === 0) {
+      setFormError('অনুগ্রহ করে অন্তত একটি প্রোডাক্ট যোগ করুন।');
+      return;
+    }
+    setFormError('');
+    setSaleStep('checkout');
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  };
+
+  const goToCatalogStep = () => {
+    setFormError('');
+    setSaleStep('catalog');
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   };
 
   return (
@@ -242,14 +321,16 @@ export function NewSaleView({
         <div>
           <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight text-[#171D19]">নতুন বিক্রি ও বিল তৈরি</h1>
           <p className="mt-1 text-sm sm:text-[15px] text-[#404943]">
-            দোকানদার ও প্রোডাক্ট বেছে নিন, বক্স সংখ্যা ও পার্সেন্ট (%) ডিসকাউন্ট বসিয়ে সাথে সাথে ডিসকাউন্টের পর দাম ও বাকি দেখুন
+            {saleStep === 'catalog'
+              ? 'দোকানদার ও প্রোডাক্ট যোগ করে নিচের "পরবর্তী" বাটনে ক্লিক করুন'
+              : 'নির্বাচিত প্রোডাক্টের বক্স, ডিসকাউন্ট (%) এবং নগদ জমা ও বাকি হিসাব যাচাই করে সেভ করুন'}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        {/* Left Column: Shop Picker & Product Selector */}
-        <div className="space-y-5 xl:col-span-5">
+      <div className="mx-auto max-w-4xl space-y-5">
+        {saleStep === 'catalog' ? (
+          <div className="space-y-5" data-testid="sale-step-catalog">
           {/* Material 3 Shopkeeper Selector */}
           <div className="rounded-[28px] bg-[#FFFFFF] p-4 sm:p-6 shadow-xs ring-1 ring-[#DCE7DF]/80">
             <div className="flex items-center justify-between gap-2">
@@ -293,7 +374,7 @@ export function NewSaleView({
                       {selectedShop.phone && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span className="font-mono-num shrink-0">{selectedShop.phone}</span>
+                          <span className="font-mono-num shrink-0">{formatCount(selectedShop.phone, numeralMode)}</span>
                         </>
                       )}
                     </div>
@@ -315,7 +396,7 @@ export function NewSaleView({
                 <span>
                   পূর্বের মোট বিল:{' '}
                   <strong className="font-mono-num text-[#171D19]">
-                    {formatBDT(selectedShopSummary.totalBilled)}
+                    {formatBDT(selectedShopSummary.totalBilled, numeralMode)}
                   </strong>
                 </span>
                 <span>
@@ -325,7 +406,7 @@ export function NewSaleView({
                       selectedShopSummary.totalDue > 0 ? 'text-[#BA1A1A]' : 'text-[#006B47]'
                     }`}
                   >
-                    {formatBDT(selectedShopSummary.totalDue)}
+                    {formatBDT(selectedShopSummary.totalDue, numeralMode)}
                   </strong>
                 </span>
               </div>
@@ -335,10 +416,20 @@ export function NewSaleView({
           {/* Product Catalog Selector */}
           <div className="overflow-hidden rounded-[28px] bg-[#FFFFFF] shadow-xs ring-1 ring-[#DCE7DF]/80">
             <div className="border-b border-[#ECF3ED] p-4 sm:p-5 space-y-3.5">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
                 <h2 className="text-base sm:text-lg font-bold text-[#171D19]">
-                  ২. প্রোডাক্ট যোগ করুন ({filteredProducts.length})
+                  ২. প্রোডাক্ট যোগ করুন ({formatCount(filteredProducts.length, numeralMode)})
                 </h2>
+                <M3SelectPopup
+                  value={tierFilter}
+                  options={groupOptions}
+                  onChange={setTierFilter}
+                  ariaLabel="ঔষধের গ্রুপ বেছে নিন"
+                  menuTitle="ঔষধের গ্রুপ বেছে নিন"
+                  icon={<Layers className="h-4 w-4" />}
+                  variant="pill"
+                  testId="sale-group-filter"
+                />
               </div>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#404943]" />
@@ -350,22 +441,6 @@ export function NewSaleView({
                   placeholder="ওষুধের নাম লিখে খুঁজুন (যেমন: Dexlan)..."
                   className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] py-2.5 pl-10 pr-4 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
                 />
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {FILTER_TIERS.map((tier) => (
-                  <button
-                    key={tier}
-                    type="button"
-                    onClick={() => setTierFilter(tier)}
-                    className={`min-h-[38px] rounded-full px-3.5 py-1.5 text-[13px] sm:text-sm font-semibold transition-colors whitespace-nowrap ${
-                      tierFilter === tier
-                        ? 'bg-[#006B47] text-white'
-                        : 'bg-[#ECF3ED] text-[#171D19] hover:bg-[#D7E7DC]'
-                    }`}
-                  >
-                    {tier === 'All' ? 'সব প্রোডাক্ট' : tier.replace(' (Group B)', ' B')}
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -391,53 +466,120 @@ export function NewSaleView({
                           <span>{product.tier}</span>
                           <span aria-hidden="true"> · </span>
                           <span className="font-mono-num font-semibold text-[#171D19]">
-                            {formatBDT(product.boxPrice)}/বক্স
+                            {formatBDT(product.boxPrice, numeralMode)}/বক্স
                           </span>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => addProductToCart(product)}
-                        aria-label={`যোগ করুন: ${product.name}`}
-                        className={`group inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-transform duration-100 active:scale-[0.97] whitespace-nowrap shrink-0 ${
-                          inCart
-                            ? 'bg-[#006B47] text-white shadow-xs hover:bg-[#005739]'
-                            : 'bg-[#CBEAD6] text-[#002114] hover:bg-[#006B47] hover:text-white'
-                        }`}
-                      >
-                        <span
-                          className={`flex h-5 w-5 items-center justify-center rounded-full transition-colors ${
-                            inCart
-                              ? 'bg-white/20 text-white'
-                              : 'bg-[#006B47]/15 text-[#006B47] group-hover:bg-white/20 group-hover:text-white'
-                          }`}
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </span>
-                        {inCart ? (
-                          <span className="flex items-center gap-1.5">
-                            <span>আরও</span>
-                            <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold font-mono-num">
-                              {cartBoxes}
-                            </span>
+                      {cartBoxes > 0 ? (
+                        <div className="inline-flex min-h-[44px] items-center gap-1 rounded-full bg-[#CBEAD6] p-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => decrementProductFromCart(product.id)}
+                            aria-label={`কমান: ${product.name}`}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#002114] shadow-2xs transition-transform active:scale-95 hover:bg-[#FFDAD6] hover:text-[#BA1A1A]"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span
+                            data-testid={`catalog-qty-${product.id}`}
+                            className="min-w-[28px] px-1 text-center text-[15px] font-bold font-mono-num text-[#002114]"
+                          >
+                            {formatCount(cartBoxes, numeralMode)}
                           </span>
-                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => addProductToCart(product)}
+                            aria-label={`যোগ করুন: ${product.name}`}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#006B47] text-white shadow-2xs transition-transform active:scale-95 hover:bg-[#005739]"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => addProductToCart(product)}
+                          aria-label={`যোগ করুন: ${product.name}`}
+                          className="group inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#CBEAD6] px-4 py-2 text-sm font-bold text-[#002114] transition-transform duration-100 hover:bg-[#006B47] hover:text-white active:scale-[0.97] whitespace-nowrap shrink-0"
+                        >
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#006B47]/15 text-[#006B47] transition-colors group-hover:bg-white/20 group-hover:text-white">
+                            <Plus className="h-3.5 w-3.5" />
+                          </span>
                           <span>যোগ করুন</span>
-                        )}
-                      </button>
+                        </button>
+                      )}
                     </div>
                   );
                 })
               )}
             </div>
           </div>
-        </div>
 
-        {/* Right Column: Live Invoice Line Items & Calculation */}
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col overflow-hidden rounded-[28px] bg-[#FFFFFF] shadow-xs ring-1 ring-[#DCE7DF]/80 xl:col-span-7"
-        >
+          {/* Step 1 -> Step 2 Next Action Bar */}
+          {computedItems.length > 0 ? (
+            <div
+              data-testid="sale-next-bar"
+              className="sticky bottom-[78px] md:static z-20 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-[#B4DFC4] bg-[#CBEAD6] p-4 shadow-lg"
+            >
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-bold text-[#002114]/80 font-mono-num">
+                  নির্বাচিত: {formatCount(computedItems.length, numeralMode)}টি ওষুধ ·{' '}
+                  {formatCount(totals.totalBoxes, numeralMode)} বক্স
+                </div>
+                <div className="text-lg sm:text-xl font-bold font-mono-num text-[#002114]">
+                  মোট {formatBDT(totals.netTotal, numeralMode)}
+                </div>
+              </div>
+              <button
+                type="button"
+                data-testid="sale-next-step-btn"
+                onClick={goToCheckoutStep}
+                className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-[#006B47] px-6 py-2.5 text-base font-bold text-white shadow-sm transition-all hover:bg-[#005739] active:scale-[0.98] whitespace-nowrap shrink-0"
+              >
+                <span>পরবর্তী</span>
+                <ArrowRight className="h-5 w-5" />
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-[24px] bg-[#ECF3ED] px-4 py-3.5 text-center text-sm font-medium text-[#404943]">
+              তালিকা থেকে প্রোডাক্ট যোগ করলে নিচে &ldquo;পরবর্তী&rdquo; অপশন চালু হবে।
+            </div>
+          )}
+        </div>
+        ) : (
+        /* Step 2: Selected Products, Discounts, Cash/Due Summary & Save */
+        <div className="space-y-4" data-testid="sale-step-checkout">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-[#FFFFFF] px-4 py-3.5 sm:px-6 shadow-xs ring-1 ring-[#DCE7DF]/80">
+            <button
+              type="button"
+              data-testid="sale-prev-step-btn"
+              onClick={goToCatalogStep}
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-[#ECF3ED] px-4 py-2 text-sm font-bold text-[#171D19] transition-colors hover:bg-[#CBEAD6] hover:text-[#002114] whitespace-nowrap"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              <span>আরও প্রোডাক্ট যোগ করুন</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShopSearch('');
+                setShopPickerOpen(true);
+              }}
+              className="inline-flex min-h-[40px] max-w-full items-center gap-2 rounded-full bg-[#CBEAD6]/70 px-3.5 py-1.5 text-sm font-bold text-[#002114] hover:bg-[#CBEAD6]"
+            >
+              <Store className="h-4 w-4 text-[#006B47] shrink-0" />
+              <span className="truncate">
+                {selectedShop ? selectedShop.shopName : 'দোকানদার বেছে নিন'}
+              </span>
+              <ChevronDown className="h-4 w-4 text-[#006B47] shrink-0" />
+            </button>
+          </div>
+
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col overflow-hidden rounded-[28px] bg-[#FFFFFF] shadow-xs ring-1 ring-[#DCE7DF]/80"
+          >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ECF3ED] px-5 py-4 sm:px-6">
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-[#171D19]">
@@ -496,7 +638,7 @@ export function NewSaleView({
                       <div className="min-w-0">
                         <div className="text-base font-bold text-[#171D19] truncate">{item.productName}</div>
                         <div className="text-[13px] sm:text-sm text-[#404943]">
-                          {item.tier} · আসল মোট {formatBDT(item.grossTotal)}
+                          {item.tier} · আসল মোট {formatBDT(item.grossTotal, numeralMode)}
                         </div>
                       </div>
                       <button
@@ -611,10 +753,10 @@ export function NewSaleView({
                           className="text-base font-bold font-mono-num text-[#006B47]"
                           data-testid={`line-net-${item.productId}`}
                         >
-                          {formatBDT(item.netTotal)}
+                          {formatBDT(item.netTotal, numeralMode)}
                         </div>
                         <div className="text-xs font-mono-num text-[#404943]">
-                          {formatBDT(item.effectiveBoxPrice)}/বক্স · ছাড় {formatBDT(item.discountAmount)}
+                          {formatBDT(item.effectiveBoxPrice, numeralMode)}/বক্স · ছাড় {formatBDT(item.discountAmount, numeralMode)}
                         </div>
                       </div>
                     </div>
@@ -650,7 +792,7 @@ export function NewSaleView({
                     onClick={() => setPaidInput(String(totals.netTotal))}
                     className="min-h-[36px] rounded-full bg-white px-3.5 py-1 text-[13px] font-semibold text-[#171D19] ring-1 ring-[#DCE7DF] hover:bg-[#CBEAD6]"
                   >
-                    পুরো টাকা ({formatBDT(totals.netTotal)})
+                    পুরো টাকা ({formatBDT(totals.netTotal, numeralMode)})
                   </button>
                   <button
                     type="button"
@@ -673,27 +815,27 @@ export function NewSaleView({
                 <div className="flex justify-between text-[#404943]">
                   <span>মোট বক্স / আসল দাম</span>
                   <span className="font-mono-num">
-                    {totals.totalBoxes} বক্স · {formatBDT(totals.grossTotal)}
+                    {formatCount(totals.totalBoxes, numeralMode)} বক্স · {formatBDT(totals.grossTotal, numeralMode)}
                   </span>
                 </div>
                 <div className="flex justify-between text-[#9A5B00]">
                   <span>মোট ডিসকাউন্ট ছাড়</span>
-                  <span className="font-mono-num">-{formatBDT(totals.totalDiscount)}</span>
+                  <span className="font-mono-num">-{formatBDT(totals.totalDiscount, numeralMode)}</span>
                 </div>
                 <div className="flex justify-between border-t border-[#ECF3ED] pt-2 font-bold text-[#171D19]">
                   <span>ডিসকাউন্টের পর মোট বিল</span>
                   <span className="font-mono-num" data-testid="invoice-net-total">
-                    {formatBDT(totals.netTotal)}
+                    {formatBDT(totals.netTotal, numeralMode)}
                   </span>
                 </div>
                 <div className="flex justify-between text-[#006B47]">
                   <span>দিয়েছে (জমা)</span>
-                  <span className="font-bold font-mono-num">{formatBDT(totals.paidAmount)}</span>
+                  <span className="font-bold font-mono-num">{formatBDT(totals.paidAmount, numeralMode)}</span>
                 </div>
                 <div className="flex justify-between border-t border-[#ECF3ED] pt-2 text-lg font-bold text-[#BA1A1A]">
                   <span>বাকি আছে</span>
                   <span className="font-mono-num" data-testid="invoice-due-total">
-                    {formatBDT(totals.dueAmount)}
+                    {formatBDT(totals.dueAmount, numeralMode)}
                   </span>
                 </div>
               </div>
@@ -716,7 +858,9 @@ export function NewSaleView({
               </button>
             </div>
           </div>
-        </form>
+          </form>
+        </div>
+        )}
       </div>
 
       {/* Material 3 Shopkeeper Selection Sheet / Modal */}
@@ -739,7 +883,7 @@ export function NewSaleView({
                   দোকানদার নির্বাচন করুন
                 </h2>
                 <p className="text-xs sm:text-sm text-[#404943]">
-                  তালিকা থেকে ফার্মেসি বেছে নিন ({shops.length} টি)
+                  তালিকা থেকে ফার্মেসি বেছে নিন ({formatCount(shops.length, numeralMode)} টি)
                 </p>
               </div>
               <button
@@ -814,7 +958,7 @@ export function NewSaleView({
                           </div>
                           <div className="mt-0.5 truncate text-[13px] text-[#404943]">
                             {shop.area} · {shop.ownerName}
-                            {shop.phone ? ` · ${shop.phone}` : ''}
+                            {shop.phone ? ` · ${formatCount(shop.phone, numeralMode)}` : ''}
                           </div>
                         </div>
                       </div>
@@ -829,7 +973,7 @@ export function NewSaleView({
                               due > 0 ? 'text-[#BA1A1A]' : 'text-[#006B47]'
                             }`}
                           >
-                            {due > 0 ? formatBDT(due) : 'পরিশোধিত'}
+                            {due > 0 ? formatBDT(due, numeralMode) : 'পরিশোধিত'}
                           </div>
                         </div>
                         {isSelected && (

@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import type { PaymentRecord, SaleRecord, Shopkeeper } from '../types/tally';
-import { computeShopSummary, formatBDT, formatDateTimeBn } from '../utils/ledger';
+import { computeShopSummary, formatBDT, formatCount, formatDateTimeBn } from '../utils/ledger';
+import { useNumeralMode } from '../utils/NumeralContext';
 import {
   buildShopLedgerRows,
   buildShopStatementHtml,
@@ -48,6 +49,7 @@ export function ShopkeepersView({
   onEditSale,
   onEditPayment,
 }: ShopkeepersViewProps) {
+  const { numeralMode } = useNumeralMode();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'due' | 'paid'>('all');
   const [ledgerTab, setLedgerTab] = useState<'statement' | 'timeline'>('statement');
@@ -163,7 +165,7 @@ export function ShopkeepersView({
               {liveLedgerShop.phone && (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span className="font-mono-num">{liveLedgerShop.phone}</span>
+                  <span className="font-mono-num">{formatCount(liveLedgerShop.phone, numeralMode)}</span>
                 </>
               )}
             </div>
@@ -226,19 +228,19 @@ export function ShopkeepersView({
           <div className="rounded-[24px] bg-[#FFFFFF] p-4 sm:p-5 shadow-xs ring-1 ring-[#DCE7DF]/80 min-w-0">
             <div className="text-xs sm:text-sm font-semibold text-[#404943] truncate">মোট বিল</div>
             <div className="mt-1.5 text-base sm:text-2xl font-bold font-mono-num text-[#171D19] truncate">
-              {formatBDT(activeShopSummary.totalBilled)}
+              {formatBDT(activeShopSummary.totalBilled, numeralMode)}
             </div>
             <div className="mt-1 text-xs sm:text-[13px] text-[#404943] font-mono-num">
-              {activeShopSummary.totalBoxes} বক্স
+              {formatCount(activeShopSummary.totalBoxes, numeralMode)} বক্স
             </div>
           </div>
           <div className="rounded-[24px] bg-[#CBEAD6]/70 p-4 sm:p-5 min-w-0">
             <div className="text-xs sm:text-sm font-semibold text-[#002114] truncate">মোট জমা</div>
             <div className="mt-1.5 text-base sm:text-2xl font-bold font-mono-num text-[#006B47] truncate">
-              {formatBDT(activeShopSummary.totalPaid)}
+              {formatBDT(activeShopSummary.totalPaid, numeralMode)}
             </div>
             <div className="mt-1 text-xs sm:text-[13px] text-[#002114]/80 font-mono-num">
-              {activeShopSummary.paymentCount} আদায়
+              {formatCount(activeShopSummary.paymentCount, numeralMode)} আদায়
             </div>
           </div>
           <div
@@ -252,10 +254,10 @@ export function ShopkeepersView({
                 activeShopSummary.totalDue > 0 ? 'text-[#BA1A1A]' : 'text-[#006B47]'
               }`}
             >
-              {formatBDT(activeShopSummary.totalDue)}
+              {formatBDT(activeShopSummary.totalDue, numeralMode)}
             </div>
             <div className="mt-1 text-xs sm:text-[13px] text-[#404943] font-mono-num">
-              {activeShopSummary.invoiceCount} চালান
+              {formatCount(activeShopSummary.invoiceCount, numeralMode)} চালান
             </div>
           </div>
         </div>
@@ -272,7 +274,7 @@ export function ShopkeepersView({
             }`}
           >
             <FileText className="h-4 w-4 shrink-0" />
-            সম্পূর্ণ রিপোর্ট ({activeShopStatementRows.length})
+            সম্পূর্ণ রিপোর্ট ({formatCount(activeShopStatementRows.length, numeralMode)})
           </button>
           <button
             type="button"
@@ -326,7 +328,7 @@ export function ShopkeepersView({
                             {row.code}
                           </span>
                         )}
-                        <div className="text-xs text-[#404943]">{formatDateTimeBn(row.date)}</div>
+                        <div className="text-xs text-[#404943]">{formatDateTimeBn(row.date, numeralMode)}</div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {(matchingSale || matchingPayment) && (
@@ -355,18 +357,18 @@ export function ShopkeepersView({
                         )}
                       </div>
                     </div>
-                    <p className="text-sm text-[#404943] break-words">{row.details}</p>
+                    <p className="text-sm text-[#404943] break-words">{formatCount(row.details, numeralMode)}</p>
                     <div className="grid grid-cols-3 gap-2 rounded-2xl bg-[#F5FAF6] p-3 text-sm">
                       <div>
                         <div className="text-xs text-[#404943]">বিল</div>
                         <div className="font-bold font-mono-num text-[#171D19]">
-                          {row.billed > 0 ? formatBDT(row.billed) : '—'}
+                          {row.billed > 0 ? formatBDT(row.billed, numeralMode) : '—'}
                         </div>
                       </div>
                       <div>
                         <div className="text-xs text-[#404943]">জমা/আদায়</div>
                         <div className="font-bold font-mono-num text-[#006B47]">
-                          {row.paid > 0 ? formatBDT(row.paid) : '—'}
+                          {row.paid > 0 ? formatBDT(row.paid, numeralMode) : '—'}
                         </div>
                       </div>
                       <div className="text-right">
@@ -376,7 +378,7 @@ export function ShopkeepersView({
                             row.runningDue > 0 ? 'text-[#BA1A1A]' : 'text-[#006B47]'
                           }`}
                         >
-                          {formatBDT(row.runningDue)}
+                          {formatBDT(row.runningDue, numeralMode)}
                         </div>
                       </div>
                     </div>
@@ -420,21 +422,21 @@ export function ShopkeepersView({
                               {row.code}
                             </span>
                           )}
-                          <div className="text-xs text-[#404943]">{formatDateTimeBn(row.date)}</div>
+                          <div className="text-xs text-[#404943]">{formatDateTimeBn(row.date, numeralMode)}</div>
                         </td>
-                        <td className="px-4 py-3.5 text-[#404943]">{row.details}</td>
+                        <td className="px-4 py-3.5 text-[#404943]">{formatCount(row.details, numeralMode)}</td>
                         <td className="px-4 py-3.5 text-right font-mono-num text-[#171D19] whitespace-nowrap">
-                          {row.billed > 0 ? formatBDT(row.billed) : '—'}
+                          {row.billed > 0 ? formatBDT(row.billed, numeralMode) : '—'}
                         </td>
                         <td className="px-4 py-3.5 text-right font-bold font-mono-num text-[#006B47] whitespace-nowrap">
-                          {row.paid > 0 ? formatBDT(row.paid) : '—'}
+                          {row.paid > 0 ? formatBDT(row.paid, numeralMode) : '—'}
                         </td>
                         <td
                           className={`px-4 py-3.5 text-right font-bold font-mono-num whitespace-nowrap ${
                             row.runningDue > 0 ? 'text-[#BA1A1A]' : 'text-[#006B47]'
                           }`}
                         >
-                          {formatBDT(row.runningDue)}
+                          {formatBDT(row.runningDue, numeralMode)}
                         </td>
                         <td className="px-5 py-3.5 text-right whitespace-nowrap">
                           {(matchingSale || matchingPayment) && (
@@ -476,7 +478,7 @@ export function ShopkeepersView({
                       </button>
                       <span className="text-[#C3D2C8]" aria-hidden="true">·</span>
                       <span className="text-[13px] text-[#404943]">
-                        {formatDateTimeBn(entry.sale.date)} · {entry.sale.totalBoxes} বক্স
+                        {formatDateTimeBn(entry.sale.date, numeralMode)} · {formatCount(entry.sale.totalBoxes, numeralMode)} বক্স
                       </span>
                       <button
                         type="button"
@@ -490,13 +492,13 @@ export function ShopkeepersView({
                     </div>
                     <div className="text-sm font-mono-num">
                       <span className="font-bold text-[#171D19]">
-                        বিল {formatBDT(entry.sale.netTotal)}
+                        বিল {formatBDT(entry.sale.netTotal, numeralMode)}
                       </span>
                       <span className="mx-1.5 text-[#C3D2C8]">|</span>
-                      <span className="text-[#006B47] font-semibold">জমা {formatBDT(entry.sale.paidAmount)}</span>
+                      <span className="text-[#006B47] font-semibold">জমা {formatBDT(entry.sale.paidAmount, numeralMode)}</span>
                       <span className="mx-1.5 text-[#C3D2C8]">|</span>
                       <span className={entry.sale.dueAmount > 0 ? 'font-bold text-[#BA1A1A]' : 'text-[#404943]'}>
-                        বাকি {formatBDT(entry.sale.dueAmount)}
+                        বাকি {formatBDT(entry.sale.dueAmount, numeralMode)}
                       </span>
                     </div>
                   </div>
@@ -504,10 +506,10 @@ export function ShopkeepersView({
                     {entry.sale.items.map((item, i) => (
                       <div key={`${item.productId}-${i}`} className="flex items-start justify-between gap-2">
                         <span className="min-w-0 break-words">
-                          {item.productName} ({item.boxes} বক্স · {item.discountPercent}% ছাড়)
+                          {item.productName} ({formatCount(item.boxes, numeralMode)} বক্স · {formatCount(item.discountPercent, numeralMode)}% ছাড়)
                         </span>
                         <span className="font-mono-num font-semibold text-[#171D19] shrink-0 text-right">
-                          {formatBDT(item.netTotal)}
+                          {formatBDT(item.netTotal, numeralMode)}
                         </span>
                       </div>
                     ))}
@@ -521,13 +523,13 @@ export function ShopkeepersView({
                         বাকি আদায় · <span className="font-mono-num">{entry.payment.receiptNo}</span>
                       </div>
                       <div className="text-[13px] sm:text-sm text-[#404943] break-words">
-                        {formatDateTimeBn(entry.payment.date)} · {entry.payment.method}
+                        {formatDateTimeBn(entry.payment.date, numeralMode)} · {entry.payment.method}
                         {entry.payment.note ? ` · ${entry.payment.note}` : ''}
                       </div>
                     </div>
                     <div className="flex items-center gap-2.5 shrink-0">
                       <div className="text-base font-bold font-mono-num text-[#006B47]">
-                        +{formatBDT(entry.payment.amount)}
+                        +{formatBDT(entry.payment.amount, numeralMode)}
                       </div>
                       <button
                         type="button"
@@ -590,7 +592,7 @@ export function ShopkeepersView({
               filter === 'all' ? 'bg-white text-[#002114] shadow-xs' : 'text-[#404943] hover:text-[#171D19]'
             }`}
           >
-            সব ({shops.length})
+            সব ({formatCount(shops.length, numeralMode)})
           </button>
           <button
             type="button"
@@ -647,7 +649,7 @@ export function ShopkeepersView({
                         {shop.ownerName} · {shop.area}
                       </div>
                       <div className="mt-0.5 text-xs font-mono-num text-[#404943]">
-                        মোট বিল {formatBDT(summary.totalBilled)} · জমা {formatBDT(summary.totalPaid)}
+                        মোট বিল {formatBDT(summary.totalBilled, numeralMode)} · জমা {formatBDT(summary.totalPaid, numeralMode)}
                       </div>
                     </div>
                   </div>
@@ -661,7 +663,7 @@ export function ShopkeepersView({
                           summary.totalDue > 0 ? 'text-[#BA1A1A]' : 'text-[#006B47]'
                         }`}
                       >
-                        {formatBDT(summary.totalDue)}
+                        {formatBDT(summary.totalDue, numeralMode)}
                       </div>
                     </div>
                     <ChevronRight className="h-5 w-5 text-[#707972]" />
@@ -710,26 +712,26 @@ export function ShopkeepersView({
                           {shop.phone && (
                             <>
                               <span aria-hidden="true"> · </span>
-                              <span className="font-mono-num">{shop.phone}</span>
+                              <span className="font-mono-num">{formatCount(shop.phone, numeralMode)}</span>
                             </>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-4 text-right font-mono-num text-[#404943]">
-                        {summary.totalBoxes}
+                        {formatCount(summary.totalBoxes, numeralMode)}
                       </td>
                       <td className="px-4 py-4 text-right font-mono-num text-[#171D19]">
-                        {formatBDT(summary.totalBilled)}
+                        {formatBDT(summary.totalBilled, numeralMode)}
                       </td>
                       <td className="px-4 py-4 text-right font-semibold font-mono-num text-[#006B47]">
-                        {formatBDT(summary.totalPaid)}
+                        {formatBDT(summary.totalPaid, numeralMode)}
                       </td>
                       <td
                         className={`px-6 py-4 text-right text-base font-bold font-mono-num ${
                           summary.totalDue > 0 ? 'text-[#BA1A1A]' : 'text-[#006B47]'
                         }`}
                       >
-                        {formatBDT(summary.totalDue)}
+                        {formatBDT(summary.totalDue, numeralMode)}
                       </td>
                     </tr>
                   ))}

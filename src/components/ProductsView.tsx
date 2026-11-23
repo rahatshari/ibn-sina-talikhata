@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Pencil, Plus, Search } from 'lucide-react';
+import { Layers, Pencil, Plus, Search } from 'lucide-react';
 import type { Product, ProductTier } from '../types/tally';
-import { formatBDT } from '../utils/ledger';
+import { formatBDT, formatCount } from '../utils/ledger';
+import { useNumeralMode } from '../utils/NumeralContext';
+import { M3SelectPopup, type M3SelectOption } from './M3SelectPopup';
 
 interface ProductsViewProps {
   products: Product[];
@@ -25,8 +27,26 @@ export function ProductsView({
   onEditProduct,
   onAddProduct,
 }: ProductsViewProps) {
+  const { numeralMode } = useNumeralMode();
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState<'All' | ProductTier>('All');
+
+  const groupOptions = useMemo<Array<M3SelectOption<'All' | ProductTier>>>(() => {
+    return TIERS.flatMap((tier) => {
+      const count =
+        tier === 'All'
+          ? products.length
+          : products.filter((p) => p.tier === tier).length;
+      if (tier === 'Custom' && count === 0) return [];
+      return [
+        {
+          value: tier,
+          label: tier === 'All' ? 'সকল প্রোডাক্ট' : tier,
+          badge: formatCount(count, numeralMode),
+        },
+      ];
+    });
+  }, [products, numeralMode]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -42,7 +62,7 @@ export function ProductsView({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight text-[#171D19]">
-            প্রোডাক্ট তালিকা ({products.length})
+            প্রোডাক্ট তালিকা ({formatCount(products.length, numeralMode)})
           </h1>
           <p className="mt-1 text-sm sm:text-[15px] text-[#404943]">
             THE IBN SINA&apos;S Production — সকল প্রোডাক্টের তালিকা ও প্রতি বক্সের নির্ধারিত দাম
@@ -60,41 +80,31 @@ export function ProductsView({
         </div>
       </div>
 
-      {/* Search & Tier Tabs */}
-      <div className="space-y-3.5 rounded-[28px] bg-[#FFFFFF] p-4 sm:p-5 shadow-xs ring-1 ring-[#DCE7DF]/80">
-        <div className="relative max-w-md">
+      {/* Search & Sleek Group Popup Selector */}
+      <div className="flex flex-col gap-3 rounded-[28px] bg-[#FFFFFF] p-4 sm:p-5 shadow-xs ring-1 ring-[#DCE7DF]/80 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-md">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#404943]" />
           <input
             type="text"
             aria-label="প্রোডাক্ট খুঁজুন"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="প্রোডাক্টের নাম লিখুন (যেমন: Dexlan, Esolok MUPS, Glipatab)..."
+            placeholder="প্রোডাক্টের নাম লিখুন (যেমন: Dexlan, Esolok MUPS)..."
             className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] py-2.5 pl-10 pr-4 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
-          {TIERS.map((tier) => {
-            const count =
-              tier === 'All'
-                ? products.length
-                : products.filter((p) => p.tier === tier).length;
-            if (tier === 'Custom' && count === 0) return null;
-            return (
-              <button
-                key={tier}
-                type="button"
-                onClick={() => setTierFilter(tier)}
-                className={`min-h-[38px] rounded-full px-3.5 py-1.5 text-[13px] sm:text-sm font-semibold transition-colors whitespace-nowrap ${
-                  tierFilter === tier
-                    ? 'bg-[#006B47] text-white'
-                    : 'bg-[#ECF3ED] text-[#171D19] hover:bg-[#D7E7DC]'
-                }`}
-              >
-                {tier === 'All' ? 'সব প্রোডাক্ট' : tier} ({count})
-              </button>
-            );
-          })}
+        <div className="flex items-center justify-between gap-3 sm:justify-end">
+          <M3SelectPopup
+            value={tierFilter}
+            options={groupOptions}
+            onChange={setTierFilter}
+            ariaLabel="ঔষধের গ্রুপ বেছে নিন"
+            menuTitle="ঔষধের গ্রুপ বেছে নিন"
+            icon={<Layers className="h-4 w-4" />}
+            variant="pill"
+            testId="products-group-filter"
+            className="w-full sm:w-auto"
+          />
         </div>
       </div>
 
@@ -120,7 +130,7 @@ export function ProductsView({
                   </div>
                   <div className="flex items-center gap-2.5 shrink-0">
                     <div className="text-right font-bold font-mono-num text-base text-[#006B47]">
-                      {formatBDT(product.boxPrice)}
+                      {formatBDT(product.boxPrice, numeralMode)}
                     </div>
                     <button
                       type="button"
@@ -155,7 +165,7 @@ export function ProductsView({
                       <td className="px-4 py-3.5 text-sm text-[#404943]">{product.tier}</td>
                       <td className="px-4 py-3.5 text-sm text-[#404943]">{product.packInfo}</td>
                       <td className="px-4 py-3.5 text-right text-base font-bold font-mono-num text-[#006B47]">
-                        {formatBDT(product.boxPrice)}
+                        {formatBDT(product.boxPrice, numeralMode)}
                       </td>
                       <td className="px-6 py-3.5 text-right">
                         <button

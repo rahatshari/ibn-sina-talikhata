@@ -8,6 +8,8 @@ import {
   computeMonthlySalesAndCollection,
   computeShopSummary,
   computeDashboardMetrics,
+  formatBDT,
+  formatCount,
   formatDateTimeBn,
   formatMonthYearBn,
   getAvailableMonthKeys,
@@ -248,15 +250,24 @@ test('getDueShopSummaries returns only shops with due > 0 sorted highest first',
   assert.equal(dueList[1]?.summary.totalDue, 1500);
 });
 
-test('formatDateTimeBn displays both Bengali date and 12-hour time for ISO timestamps', () => {
-  const formatted = formatDateTimeBn('2026-11-18T10:30:00.000Z');
-  assert.match(formatted, /২০২৬/);
-  assert.match(formatted, /:/);
-  assert.match(formatted, /(AM|PM|পূর্বাহ্ণ|অপরাহ্ণ)/i);
+test('formatDateTimeBn displays date and 12-hour time in Bengali or English numerals', () => {
+  const formattedBn = formatDateTimeBn('2026-11-18T10:30:00.000Z', 'bn');
+  assert.match(formattedBn, /২০২৬/);
+  assert.match(formattedBn, /:/);
+  assert.match(formattedBn, /(AM|PM|পূর্বাহ্ণ|অপরাহ্ণ)/i);
 
-  const dateOnly = formatDateTimeBn('2026-11-18');
+  const formattedEn = formatDateTimeBn('2026-11-18T10:30:00.000Z', 'en');
+  assert.match(formattedEn, /2026/);
+  assert.match(formattedEn, /:/);
+
+  const dateOnly = formatDateTimeBn('2026-11-18', 'bn');
   assert.match(dateOnly, /২০২৬/);
   assert.doesNotMatch(dateOnly, /:/);
+
+  assert.equal(formatBDT(1250, 'bn'), '৳১,২৫০');
+  assert.equal(formatBDT(1250, 'en'), '৳1,250');
+  assert.equal(formatCount(55, 'bn'), '৫৫');
+  assert.equal(formatCount(55, 'en'), '55');
 });
 
 test('getMonthKeyFromIso, getAvailableMonthKeys, and formatMonthYearBn parse and sort months accurately', () => {
@@ -309,8 +320,10 @@ test('getMonthKeyFromIso, getAvailableMonthKeys, and formatMonthYearBn parse and
   const months = getAvailableMonthKeys(sales, payments, new Date(2026, 10, 19));
   assert.deepEqual(months, ['2026-11', '2026-10']);
 
-  assert.match(formatMonthYearBn('2026-11'), /নভেম্বর/);
-  assert.match(formatMonthYearBn('2026-11'), /২০২৬/);
+  assert.match(formatMonthYearBn('2026-11', 'bn'), /নভেম্বর/);
+  assert.match(formatMonthYearBn('2026-11', 'bn'), /২০২৬/);
+  assert.match(formatMonthYearBn('2026-11', 'en'), /নভেম্বর/);
+  assert.match(formatMonthYearBn('2026-11', 'en'), /2026/);
 });
 
 test('computeMonthlySalesAndCollection isolates sales and collections for the selected month', () => {

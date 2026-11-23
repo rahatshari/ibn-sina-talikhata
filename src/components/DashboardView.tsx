@@ -5,11 +5,13 @@ import {
   computeMonthlySalesAndCollection,
   computeShopSummary,
   formatBDT,
+  formatCount,
   formatDateTimeBn,
   formatMonthYearBn,
   getMonthKeyFromDate,
   type KpiPeriodMode,
 } from '../utils/ledger';
+import { useNumeralMode } from '../utils/NumeralContext';
 
 interface DashboardViewProps {
   metrics: DashboardMetrics;
@@ -38,6 +40,7 @@ export function DashboardView({
   onOpenAllReports,
   onOpenDueList,
 }: DashboardViewProps) {
+  const { numeralMode } = useNumeralMode();
   const currentMonthKey = getMonthKeyFromDate(new Date());
 
   const monthlyMetrics = useMemo(
@@ -59,7 +62,7 @@ export function DashboardView({
       date: s.date,
       title: s.shopName,
       code: s.invoiceNo,
-      subtitle: `${s.totalBoxes} বক্স · ছাড় ${formatBDT(s.totalDiscount)}`,
+      subtitle: `${formatCount(s.totalBoxes, numeralMode)} বক্স · ছাড় ${formatBDT(s.totalDiscount, numeralMode)}`,
       amount: s.netTotal,
       paid: s.paidAmount,
       due: s.dueAmount,
@@ -82,7 +85,7 @@ export function DashboardView({
     .slice(0, 7);
 
   const isMonthly = periodMode === 'monthly';
-  const activeMonthLabel = formatMonthYearBn(currentMonthKey);
+  const activeMonthLabel = formatMonthYearBn(currentMonthKey, numeralMode);
 
   return (
     <div className="space-y-6">
@@ -96,12 +99,12 @@ export function DashboardView({
             className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold tracking-tight text-[#171D19] font-mono-num"
             data-testid="kpi-total-sales"
           >
-            {formatBDT(isMonthly ? monthlyMetrics.totalSales : metrics.totalSales)}
+            {formatBDT(isMonthly ? monthlyMetrics.totalSales : metrics.totalSales, numeralMode)}
           </div>
           <div className="mt-2 text-xs sm:text-sm text-[#404943] font-mono-num">
             {isMonthly
-              ? `${monthlyMetrics.totalBoxesSold} বক্স · ${monthlyMetrics.invoiceCount} চালান`
-              : `${metrics.totalBoxesSold} বক্স · ছাড় ${formatBDT(metrics.totalDiscountGiven)}`}
+              ? `${formatCount(monthlyMetrics.totalBoxesSold, numeralMode)} বক্স · ${formatCount(monthlyMetrics.invoiceCount, numeralMode)} চালান`
+              : `${formatCount(metrics.totalBoxesSold, numeralMode)} বক্স · ছাড় ${formatBDT(metrics.totalDiscountGiven, numeralMode)}`}
           </div>
         </div>
 
@@ -113,11 +116,11 @@ export function DashboardView({
             className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold tracking-tight text-white font-mono-num"
             data-testid="kpi-total-collected"
           >
-            {formatBDT(isMonthly ? monthlyMetrics.totalCollected : metrics.totalCollected)}
+            {formatBDT(isMonthly ? monthlyMetrics.totalCollected : metrics.totalCollected, numeralMode)}
           </div>
           <div className="mt-2 text-xs sm:text-sm text-[#CBEAD6]/95 font-mono-num">
             {isMonthly
-              ? `জমা ${formatBDT(monthlyMetrics.paidAtSale)} · বাকি আদায় ${formatBDT(monthlyMetrics.dueCollections)}`
+              ? `জমা ${formatBDT(monthlyMetrics.paidAtSale, numeralMode)} · বাকি আদায় ${formatBDT(monthlyMetrics.dueCollections, numeralMode)}`
               : 'বিক্রয়কালীন জমা ও বাকি আদায়'}
           </div>
         </div>
@@ -137,10 +140,10 @@ export function DashboardView({
             className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold tracking-tight text-[#BA1A1A] font-mono-num"
             data-testid="kpi-total-due"
           >
-            {formatBDT(metrics.totalDue)}
+            {formatBDT(metrics.totalDue, numeralMode)}
           </div>
           <div className="mt-2 text-xs sm:text-sm font-medium text-[#6E1A18]">
-            {metrics.dueShopCount} টি দোকানে বাকি · তালিকা দেখুন
+            {formatCount(metrics.dueShopCount, numeralMode)} টি দোকানে বাকি · তালিকা দেখুন
           </div>
         </button>
 
@@ -150,7 +153,7 @@ export function DashboardView({
             className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold tracking-tight text-[#002114] font-mono-num"
             data-testid="kpi-shop-count"
           >
-            {metrics.activeShopCount}
+            {formatCount(metrics.activeShopCount, numeralMode)}
           </div>
           <div className="mt-2 text-xs sm:text-sm font-medium text-[#404943]">সক্রিয় ফার্মেসি খাতা</div>
         </div>
@@ -201,9 +204,11 @@ export function DashboardView({
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px] sm:text-sm text-[#404943]">
                           <span>{shop.area}</span>
                           <span aria-hidden="true">·</span>
-                          <span className="font-mono-num">{shop.phone || shop.ownerName}</span>
+                          <span className="font-mono-num">
+                            {shop.phone ? formatCount(shop.phone, numeralMode) : shop.ownerName}
+                          </span>
                           <span aria-hidden="true">·</span>
-                          <span className="font-mono-num">মোট বিল {formatBDT(summary.totalBilled)}</span>
+                          <span className="font-mono-num">মোট বিল {formatBDT(summary.totalBilled, numeralMode)}</span>
                         </div>
                       </div>
                     </div>
@@ -218,7 +223,7 @@ export function DashboardView({
                             summary.totalDue > 0 ? 'text-[#BA1A1A]' : 'text-[#006B47]'
                           }`}
                         >
-                          {formatBDT(summary.totalDue)}
+                          {formatBDT(summary.totalDue, numeralMode)}
                         </div>
                       </div>
 
@@ -292,7 +297,7 @@ export function DashboardView({
                       <span aria-hidden="true">·</span>
                       <span>{entry.subtitle}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{formatDateTimeBn(entry.date)}</span>
+                      <span>{formatDateTimeBn(entry.date, numeralMode)}</span>
                     </div>
                   </div>
 
@@ -300,19 +305,19 @@ export function DashboardView({
                     {entry.type === 'sale' ? (
                       <>
                         <div className="text-base sm:text-[17px] font-bold text-[#171D19] font-mono-num">
-                          {formatBDT(entry.amount)}
+                          {formatBDT(entry.amount, numeralMode)}
                         </div>
                         <div className="text-xs sm:text-[13px] font-mono-num text-[#404943]">
-                          জমা {formatBDT(entry.paid)} ·{' '}
+                          জমা {formatBDT(entry.paid, numeralMode)} ·{' '}
                           <span className={entry.due > 0 ? 'font-bold text-[#BA1A1A]' : 'font-semibold text-[#006B47]'}>
-                            {entry.due > 0 ? `বাকি ${formatBDT(entry.due)}` : 'পরিশোধিত'}
+                            {entry.due > 0 ? `বাকি ${formatBDT(entry.due, numeralMode)}` : 'পরিশোধিত'}
                           </span>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="text-base sm:text-[17px] font-bold text-[#006B47] font-mono-num">
-                          +{formatBDT(entry.amount)}
+                          +{formatBDT(entry.amount, numeralMode)}
                         </div>
                         <div className="text-xs sm:text-[13px] text-[#404943]">বাকি আদায়</div>
                       </>

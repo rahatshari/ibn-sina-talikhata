@@ -8,6 +8,7 @@ import {
   CloudOff,
   Download,
   FolderDown,
+  Hash,
   LayoutDashboard,
   LogIn,
   LogOut,
@@ -40,10 +41,13 @@ import { useTallyStore } from './hooks/useTallyStore';
 import type { PaymentRecord, Product, SaleRecord, Shopkeeper } from './types/tally';
 import {
   computeDashboardMetrics,
+  formatCount,
   loadKpiPeriodMode,
   saveKpiPeriodMode,
   type KpiPeriodMode,
 } from './utils/ledger';
+import { NumeralProvider, useNumeralMode } from './utils/NumeralContext';
+import type { NumeralMode } from './utils/numberFormat';
 import {
   resolveBackNavigation,
   type AppView,
@@ -65,8 +69,17 @@ declare global {
 }
 
 export default function App() {
+  return (
+    <NumeralProvider>
+      <AppContent />
+    </NumeralProvider>
+  );
+}
+
+function AppContent() {
   const store = useTallyStore();
   const updater = useAppUpdater(store.isOnline);
+  const { numeralMode, setNumeralMode } = useNumeralMode();
 
   const [activeView, setActiveView] = useState<AppView>('dashboard');
   const [preselectedShopId, setPreselectedShopId] = useState<string | undefined>(undefined);
@@ -453,7 +466,7 @@ export default function App() {
                       </span>
                     ) : (
                       <span className="text-xs font-mono-num font-medium text-[#404943] whitespace-nowrap shrink-0">
-                        v{updater.installedVersion}
+                        v{formatCount(updater.installedVersion, numeralMode)}
                       </span>
                     )}
                   </button>
@@ -554,6 +567,58 @@ export default function App() {
                   </div>
 
                   <div className="my-2 border-t border-[#DCE7DF]" />
+                  <div className="px-3 py-2" data-testid="menu-numeral-mode-section">
+                    <div className="mb-2.5 flex items-center gap-2 text-sm font-bold text-[#404943]">
+                      <Hash className="h-4 w-4 text-[#006B47]" />
+                      <span>সংখ্যার ভাষা</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {(
+                        [
+                          {
+                            id: 'en' as NumeralMode,
+                            label: 'ইংরেজি সংখ্যা (0, 1, 2)',
+                            sample: '৳1,250 · 24 বক্স',
+                          },
+                          {
+                            id: 'bn' as NumeralMode,
+                            label: 'বাংলা সংখ্যা (০, ১, ২)',
+                            sample: '৳১,২৫০ · ২৪ বক্স',
+                          },
+                        ] as const
+                      ).map((option) => {
+                        const active = numeralMode === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={active}
+                            data-testid={`menu-numeral-mode-${option.id}`}
+                            onClick={() => {
+                              setNumeralMode(option.id);
+                              setMenuOpen(false);
+                            }}
+                            className={`flex w-full min-h-[48px] items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-left transition-colors ${
+                              active
+                                ? 'bg-[#CBEAD6] font-bold text-[#002114]'
+                                : 'bg-[#F5FAF6] text-[#171D19] hover:bg-[#ECF3ED]'
+                            }`}
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-[15px] leading-snug">{option.label}</span>
+                              <span className="block text-xs font-normal font-mono-num text-[#404943]">
+                                {option.sample}
+                              </span>
+                            </span>
+                            {active && <Check className="h-4 w-4 text-[#006B47] shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="my-2 border-t border-[#DCE7DF]" />
                   <div className="px-3 py-2">
                     <div className="mb-2.5 flex items-center gap-2 text-sm font-bold text-[#404943]">
                       <Type className="h-4 w-4 text-[#006B47]" />
@@ -636,7 +701,7 @@ export default function App() {
                   </div>
                   <div className="min-w-0 flex-1 space-y-1.5 text-sm sm:text-[15px]">
                     <div className="font-bold">
-                      নতুন আপডেট v{updater.latestRelease.version} এসেছে
+                      নতুন আপডেট v{formatCount(updater.latestRelease.version, numeralMode)} এসেছে
                     </div>
                     {visibleChanges.length > 0 && (
                       <ul className="space-y-1 text-[13px] sm:text-sm leading-relaxed text-[#002114]/90">
@@ -648,7 +713,7 @@ export default function App() {
                         ))}
                         {changelogItems.length > visibleChanges.length && (
                           <li className="text-xs font-semibold text-[#006B47]">
-                            + আরও {changelogItems.length - visibleChanges.length}টি পরিবর্তন
+                            + আরও {formatCount(changelogItems.length - visibleChanges.length, numeralMode)}টি পরিবর্তন
                           </li>
                         )}
                       </ul>
@@ -829,8 +894,9 @@ export default function App() {
             <button
               key={item.id}
               type="button"
+              data-testid={`mobile-nav-${item.id}`}
               onClick={() => handleSelectNav(item.id)}
-              className={`flex min-h-[58px] flex-col items-center justify-center gap-1 px-1 py-1.5 text-xs transition-colors ${
+              className={`flex min-h-[60px] flex-col items-center justify-center gap-0.5 px-0.5 py-1.5 text-xs transition-colors ${
                 active ? 'font-bold text-[#002114]' : 'font-semibold text-[#404943]'
               }`}
             >
@@ -841,7 +907,9 @@ export default function App() {
               >
                 <Icon className="h-5 w-5 shrink-0" />
               </span>
-              <span className="max-w-full truncate whitespace-nowrap leading-none">{item.mobileLabel}</span>
+              <span className="whitespace-nowrap leading-[1.4] py-0.5 text-[11px] sm:text-xs overflow-visible">
+                {item.mobileLabel}
+              </span>
             </button>
           );
         })}

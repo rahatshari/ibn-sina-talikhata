@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Minus, Plus, Search, Trash2 } from 'lucide-react';
+import { Minus, Plus, Search, Trash2, Wallet } from 'lucide-react';
 import type {
   PaymentRecord,
   Product,
@@ -11,9 +11,19 @@ import {
   calculateInvoiceTotals,
   calculateLineItem,
   formatBDT,
+  formatCount,
   formatDateTimeBn,
 } from '../utils/ledger';
+import { useNumeralMode } from '../utils/NumeralContext';
+import { M3SelectPopup } from './M3SelectPopup';
 import { ModalShell } from './Modals';
+
+const PAYMENT_METHOD_OPTIONS: Array<{ value: PaymentRecord['method']; label: string }> = [
+  { value: 'Cash', label: 'নগদ (Cash)' },
+  { value: 'bKash', label: 'বিকাশ (bKash)' },
+  { value: 'Nagad', label: 'নগদ (Nagad)' },
+  { value: 'Bank', label: 'ব্যাংক (Bank)' },
+];
 
 interface DraftEditRow {
   productId: string;
@@ -35,6 +45,7 @@ interface EditSaleModalProps {
 }
 
 export function EditSaleModal({ sale, products, onClose, onSave }: EditSaleModalProps) {
+  const { numeralMode } = useNumeralMode();
   const [rows, setRows] = useState<DraftEditRow[]>([]);
   const [paidInput, setPaidInput] = useState('');
   const [note, setNote] = useState('');
@@ -138,7 +149,7 @@ export function EditSaleModal({ sale, products, onClose, onSave }: EditSaleModal
       return;
     }
     if (rawPaid > totals.netTotal) {
-      setError(`জমা টাকা সর্বমোট বিল (${formatBDT(totals.netTotal)}) এর চেয়ে বেশি হতে পারবে না।`);
+      setError(`জমা টাকা সর্বমোট বিল (${formatBDT(totals.netTotal, numeralMode)}) এর চেয়ে বেশি হতে পারবে না।`);
       return;
     }
 
@@ -166,7 +177,7 @@ export function EditSaleModal({ sale, products, onClose, onSave }: EditSaleModal
         <div className="rounded-2xl bg-[#ECF3ED] px-4 py-3 text-sm">
           <div className="font-bold text-[#171D19] text-base">{sale.shopName}</div>
           <div className="mt-0.5 text-[13px] text-[#404943]">
-            <span className="font-mono-num font-semibold">{sale.invoiceNo}</span> · {formatDateTimeBn(sale.date)}
+            <span className="font-mono-num font-semibold">{sale.invoiceNo}</span> · {formatDateTimeBn(sale.date, numeralMode)}
           </div>
         </div>
 
@@ -207,7 +218,7 @@ export function EditSaleModal({ sale, products, onClose, onSave }: EditSaleModal
                   <div className="min-w-0">
                     <div className="font-bold text-[#171D19] truncate">{product.name}</div>
                     <div className="text-xs text-[#404943]">
-                      {product.tier} · {formatBDT(product.boxPrice)}/বক্স
+                      {product.tier} · {formatBDT(product.boxPrice, numeralMode)}/বক্স
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1 rounded-full bg-[#CBEAD6] px-3 py-1 text-xs font-bold text-[#002114] shrink-0">
@@ -237,7 +248,7 @@ export function EditSaleModal({ sale, products, onClose, onSave }: EditSaleModal
                         {item.productName}
                       </div>
                       <div className="text-xs text-[#404943]">
-                        {item.tier} · আসল মোট {formatBDT(item.grossTotal)}
+                        {item.tier} · আসল মোট {formatBDT(item.grossTotal, numeralMode)}
                       </div>
                     </div>
                     <button
@@ -340,10 +351,10 @@ export function EditSaleModal({ sale, products, onClose, onSave }: EditSaleModal
                     <div className="rounded-2xl bg-[#ECF3ED] px-3 py-2 text-right">
                       <div className="text-[11px] font-medium text-[#404943]">ছাড়ের পর দাম</div>
                       <div className="text-base font-bold font-mono-num text-[#006B47]">
-                        {formatBDT(item.netTotal)}
+                        {formatBDT(item.netTotal, numeralMode)}
                       </div>
                       <div className="text-[11px] font-mono-num text-[#404943]">
-                        {formatBDT(item.effectiveBoxPrice)}/বক্স
+                        {formatBDT(item.effectiveBoxPrice, numeralMode)}/বক্স
                       </div>
                     </div>
                   </div>
@@ -381,7 +392,7 @@ export function EditSaleModal({ sale, products, onClose, onSave }: EditSaleModal
                 }}
                 className="min-h-[34px] rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#171D19] hover:bg-[#CBEAD6]"
               >
-                পুরো টাকা ({formatBDT(totals.netTotal)})
+                পুরো টাকা ({formatBDT(totals.netTotal, numeralMode)})
               </button>
               <button
                 type="button"
@@ -391,7 +402,7 @@ export function EditSaleModal({ sale, products, onClose, onSave }: EditSaleModal
                 }}
                 className="min-h-[34px] rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#171D19] hover:bg-[#CBEAD6]"
               >
-                সব বাকি (০)
+                সব বাকি ({formatCount(0, numeralMode)})
               </button>
             </div>
           </div>
@@ -400,27 +411,27 @@ export function EditSaleModal({ sale, products, onClose, onSave }: EditSaleModal
             <div className="flex justify-between text-[#404943]">
               <span>মোট বক্স / আসল দাম</span>
               <span className="font-mono-num">
-                {totals.totalBoxes} বক্স · {formatBDT(totals.grossTotal)}
+                {formatCount(totals.totalBoxes, numeralMode)} বক্স · {formatBDT(totals.grossTotal, numeralMode)}
               </span>
             </div>
             <div className="flex justify-between text-[#9A5B00]">
               <span>মোট ছাড়</span>
-              <span className="font-mono-num">-{formatBDT(totals.totalDiscount)}</span>
+              <span className="font-mono-num">-{formatBDT(totals.totalDiscount, numeralMode)}</span>
             </div>
             <div className="flex justify-between border-t border-[#ECF3ED] pt-1.5 font-bold text-[#171D19]">
               <span>সর্বমোট প্রদেয় বিল</span>
               <span className="font-mono-num" data-testid="edit-sale-net-total">
-                {formatBDT(totals.netTotal)}
+                {formatBDT(totals.netTotal, numeralMode)}
               </span>
             </div>
             <div className="flex justify-between text-[#006B47]">
               <span>জমা</span>
-              <span className="font-bold font-mono-num">{formatBDT(totals.paidAmount)}</span>
+              <span className="font-bold font-mono-num">{formatBDT(totals.paidAmount, numeralMode)}</span>
             </div>
             <div className="flex justify-between border-t border-[#ECF3ED] pt-1.5 text-base font-bold text-[#BA1A1A]">
               <span>বাকি আছে</span>
               <span className="font-mono-num" data-testid="edit-sale-due-total">
-                {formatBDT(totals.dueAmount)}
+                {formatBDT(totals.dueAmount, numeralMode)}
               </span>
             </div>
           </div>
@@ -470,6 +481,7 @@ interface EditPaymentModalProps {
 }
 
 export function EditPaymentModal({ payment, onClose, onSave }: EditPaymentModalProps) {
+  const { numeralMode } = useNumeralMode();
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentRecord['method']>('Cash');
   const [note, setNote] = useState('');
@@ -514,7 +526,7 @@ export function EditPaymentModal({ payment, onClose, onSave }: EditPaymentModalP
         <div className="rounded-2xl bg-[#ECF3ED] px-4 py-3 text-sm">
           <div className="font-bold text-[#171D19] text-base">{payment.shopName}</div>
           <div className="mt-0.5 text-[13px] text-[#404943]">
-            <span className="font-mono-num font-semibold">{payment.receiptNo}</span> · {formatDateTimeBn(payment.date)}
+            <span className="font-mono-num font-semibold">{payment.receiptNo}</span> · {formatDateTimeBn(payment.date, numeralMode)}
           </div>
         </div>
 
@@ -547,17 +559,17 @@ export function EditPaymentModal({ payment, onClose, onSave }: EditPaymentModalP
             <label htmlFor="edit-pay-method-select" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
               পেমেন্ট মাধ্যম
             </label>
-            <select
+            <M3SelectPopup
               id="edit-pay-method-select"
+              testId="edit-pay-method-select"
+              variant="field"
               value={method}
-              onChange={(e) => setMethod(e.target.value as PaymentRecord['method'])}
-              className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
-            >
-              <option value="Cash">নগদ (Cash)</option>
-              <option value="bKash">বিকাশ (bKash)</option>
-              <option value="Nagad">নগদ (Nagad)</option>
-              <option value="Bank">ব্যাংক (Bank)</option>
-            </select>
+              onChange={(next) => setMethod(next as PaymentRecord['method'])}
+              options={PAYMENT_METHOD_OPTIONS}
+              menuTitle="পেমেন্ট মাধ্যম নির্বাচন করুন"
+              ariaLabel="পেমেন্ট মাধ্যম"
+              icon={<Wallet className="h-4 w-4 text-[#006B47] shrink-0" />}
+            />
           </div>
         </div>
 

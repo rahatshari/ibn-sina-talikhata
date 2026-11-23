@@ -1,14 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Download, Pencil, Printer, Share2, X } from 'lucide-react';
+import { CheckCircle2, Download, Layers, Pencil, Printer, Share2, Wallet, X } from 'lucide-react';
 import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import type { PaymentRecord, Product, ProductTier, SaleRecord, Shopkeeper } from '../types/tally';
-import { formatBDT, formatDateTimeBn } from '../utils/ledger';
+import { formatBDT, formatCount, formatDateTimeBn } from '../utils/ledger';
+import { useNumeralMode } from '../utils/NumeralContext';
 import {
   buildPrintableReceiptHtml,
   buildReceiptSummaryText,
   getCachedReceiptPng,
   printHtmlInBrowser,
 } from '../utils/receiptGenerator';
+import { M3SelectPopup } from './M3SelectPopup';
+
+const PAYMENT_METHOD_OPTIONS: Array<{ value: PaymentRecord['method']; label: string }> = [
+  { value: 'Cash', label: 'নগদ (Cash)' },
+  { value: 'bKash', label: 'বিকাশ (bKash)' },
+  { value: 'Nagad', label: 'নগদ (Nagad)' },
+  { value: 'Bank', label: 'ব্যাংক (Bank)' },
+];
 
 interface ModalShellProps {
   open: boolean;
@@ -221,6 +230,7 @@ export function CollectPaymentModal({
   onClose,
   onCollect,
 }: CollectPaymentModalProps) {
+  const { numeralMode } = useNumeralMode();
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentRecord['method']>('Cash');
   const [note, setNote] = useState('');
@@ -259,7 +269,7 @@ export function CollectPaymentModal({
         <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#FFDAD6]/75 px-4 py-3.5">
           <div>
             <div className="text-xs sm:text-sm font-semibold text-[#410002]">বর্তমান মোট বাকি</div>
-            <div className="text-xl font-bold text-[#BA1A1A] font-mono-num">{formatBDT(currentDue)}</div>
+            <div className="text-xl font-bold text-[#BA1A1A] font-mono-num">{formatBDT(currentDue, numeralMode)}</div>
           </div>
           {currentDue > 0 && (
             <button
@@ -301,17 +311,17 @@ export function CollectPaymentModal({
             <label htmlFor="collect-method-select" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
               পেমেন্ট মাধ্যম
             </label>
-            <select
+            <M3SelectPopup
               id="collect-method-select"
+              testId="collect-method-select"
+              variant="field"
               value={method}
-              onChange={(e) => setMethod(e.target.value as PaymentRecord['method'])}
-              className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
-            >
-              <option value="Cash">নগদ (Cash)</option>
-              <option value="bKash">বিকাশ (bKash)</option>
-              <option value="Nagad">নগদ (Nagad)</option>
-              <option value="Bank">ব্যাংক (Bank)</option>
-            </select>
+              onChange={(next) => setMethod(next as PaymentRecord['method'])}
+              options={PAYMENT_METHOD_OPTIONS}
+              menuTitle="পেমেন্ট মাধ্যম নির্বাচন করুন"
+              ariaLabel="পেমেন্ট মাধ্যম"
+              icon={<Wallet className="h-4 w-4 text-[#006B47] shrink-0" />}
+            />
           </div>
         </div>
 
@@ -356,6 +366,7 @@ interface InvoiceDetailModalProps {
 }
 
 export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailModalProps) {
+  const { numeralMode } = useNumeralMode();
   const [actionBusy, setActionBusy] = useState<'download' | 'share' | 'print' | null>(null);
   const [actionNotice, setActionNotice] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -506,9 +517,9 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
             <div className="mt-1 text-[13px] sm:text-sm text-[#404943]">
               <span className="font-mono-num font-semibold">{sale.invoiceNo}</span>
               <span className="mx-1.5" aria-hidden="true">·</span>
-              <span>{formatDateTimeBn(sale.date)}</span>
+              <span>{formatDateTimeBn(sale.date, numeralMode)}</span>
               <span className="mx-1.5" aria-hidden="true">·</span>
-              <span>মোট {sale.totalBoxes} বক্স</span>
+              <span>মোট {formatCount(sale.totalBoxes, numeralMode)} বক্স</span>
             </div>
           </div>
           <div className="no-print flex flex-wrap items-center gap-2">
@@ -578,18 +589,18 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
                     <div className="text-xs text-[#404943]">{item.tier}</div>
                   </div>
                   <div className="font-bold font-mono-num text-[#171D19] shrink-0">
-                    {formatBDT(item.netTotal)}
+                    {formatBDT(item.netTotal, numeralMode)}
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#404943] font-mono-num">
                   <span>
-                    {item.boxes} বক্স × {formatBDT(item.boxPrice)}
+                    {formatCount(item.boxes, numeralMode)} বক্স × {formatBDT(item.boxPrice, numeralMode)}
                   </span>
                   <span className="text-[#9A5B00]">
-                    ছাড় {item.discountPercent}% (-{formatBDT(item.discountAmount)})
+                    ছাড় {formatCount(item.discountPercent, numeralMode)}% (-{formatBDT(item.discountAmount, numeralMode)})
                   </span>
                   <span className="font-semibold text-[#006B47]">
-                    {formatBDT(item.effectiveBoxPrice)}/বক্স
+                    {formatBDT(item.effectiveBoxPrice, numeralMode)}/বক্স
                   </span>
                 </div>
               </div>
@@ -616,18 +627,20 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
                       <div className="font-bold text-[#171D19]">{item.productName}</div>
                       <div className="text-xs text-[#404943]">{item.tier}</div>
                     </td>
-                    <td className="px-3 py-3 text-right font-mono-num text-[#171D19]">{item.boxes}</td>
+                    <td className="px-3 py-3 text-right font-mono-num text-[#171D19]">
+                      {formatCount(item.boxes, numeralMode)}
+                    </td>
                     <td className="px-3 py-3 text-right font-mono-num text-[#404943]">
-                      {formatBDT(item.boxPrice)}
+                      {formatBDT(item.boxPrice, numeralMode)}
                     </td>
                     <td className="px-3 py-3 text-right font-mono-num text-[#9A5B00]">
-                      {item.discountPercent}% (-{formatBDT(item.discountAmount)})
+                      {formatCount(item.discountPercent, numeralMode)}% (-{formatBDT(item.discountAmount, numeralMode)})
                     </td>
                     <td className="px-3 py-3 text-right font-mono-num font-semibold text-[#006B47]">
-                      {formatBDT(item.effectiveBoxPrice)}
+                      {formatBDT(item.effectiveBoxPrice, numeralMode)}
                     </td>
                     <td className="px-4 py-3 text-right font-bold font-mono-num text-[#171D19]">
-                      {formatBDT(item.netTotal)}
+                      {formatBDT(item.netTotal, numeralMode)}
                     </td>
                   </tr>
                 ))}
@@ -650,23 +663,23 @@ export function InvoiceDetailModal({ sale, onClose, onEditSale }: InvoiceDetailM
           <div className="space-y-2 rounded-2xl bg-[#ECF3ED]/70 p-4 text-[15px]">
             <div className="flex justify-between text-[#404943]">
               <span>মোট আসল দাম</span>
-              <span className="font-mono-num">{formatBDT(sale.grossTotal)}</span>
+              <span className="font-mono-num">{formatBDT(sale.grossTotal, numeralMode)}</span>
             </div>
             <div className="flex justify-between text-[#9A5B00]">
               <span>মোট ডিসকাউন্ট ছাড়</span>
-              <span className="font-mono-num">-{formatBDT(sale.totalDiscount)}</span>
+              <span className="font-mono-num">-{formatBDT(sale.totalDiscount, numeralMode)}</span>
             </div>
             <div className="flex justify-between border-t border-[#DCE7DF] pt-2 font-bold text-[#171D19]">
               <span>সর্বমোট প্রদেয় বিল</span>
-              <span className="font-mono-num">{formatBDT(sale.netTotal)}</span>
+              <span className="font-mono-num">{formatBDT(sale.netTotal, numeralMode)}</span>
             </div>
             <div className="flex justify-between text-[#006B47]">
               <span>দোকানদার দিয়েছে (নগদ/জমা)</span>
-              <span className="font-bold font-mono-num">{formatBDT(sale.paidAmount)}</span>
+              <span className="font-bold font-mono-num">{formatBDT(sale.paidAmount, numeralMode)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold text-[#BA1A1A]">
               <span>বাকি আছে</span>
-              <span className="font-mono-num">{formatBDT(sale.dueAmount)}</span>
+              <span className="font-mono-num">{formatBDT(sale.dueAmount, numeralMode)}</span>
             </div>
           </div>
         </div>
@@ -784,18 +797,17 @@ export function ProductFormModal({
               <label htmlFor="prod-tier-select" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
                 গ্রুপ / ক্যাটাগরি
               </label>
-              <select
+              <M3SelectPopup
                 id="prod-tier-select"
+                testId="prod-tier-select"
+                variant="field"
                 value={tier}
-                onChange={(e) => setTier(e.target.value as ProductTier)}
-                className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
-              >
-                {TIERS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                onChange={(next) => setTier(next as ProductTier)}
+                options={TIERS.map((t) => ({ value: t, label: t }))}
+                menuTitle="ওষুধের গ্রুপ নির্বাচন করুন"
+                ariaLabel="গ্রুপ বা ক্যাটাগরি"
+                icon={<Layers className="h-4 w-4 text-[#006B47] shrink-0" />}
+              />
             </div>
           </>
         )}

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Banknote, CheckCircle2, ChevronRight, Search } from 'lucide-react';
 import type { PaymentRecord, SaleRecord, Shopkeeper } from '../types/tally';
-import { formatBDT, formatDateTimeBn, getDueShopSummaries, roundCurrency } from '../utils/ledger';
+import { formatBDT, formatCount, formatDateTimeBn, getDueShopSummaries, roundCurrency } from '../utils/ledger';
+import { useNumeralMode } from '../utils/NumeralContext';
 
 interface DueCustomersViewProps {
   shops: Shopkeeper[];
@@ -18,6 +19,7 @@ export function DueCustomersView({
   onOpenShopLedger,
   onCollectDue,
 }: DueCustomersViewProps) {
+  const { numeralMode } = useNumeralMode();
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'due' | 'name'>('due');
 
@@ -67,7 +69,7 @@ export function DueCustomersView({
             className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold font-mono-num text-[#BA1A1A]"
             data-testid="due-view-total"
           >
-            {formatBDT(totalDueSum)}
+            {formatBDT(totalDueSum, numeralMode)}
           </div>
         </div>
         <div className="rounded-[28px] bg-[#E2EDE5] p-4 sm:p-6">
@@ -76,7 +78,7 @@ export function DueCustomersView({
             className="mt-2 text-2xl sm:text-[32px] leading-tight font-bold font-mono-num text-[#002114]"
             data-testid="due-view-count"
           >
-            {dueRows.length} টি দোকান
+            {formatCount(dueRows.length, numeralMode)} টি দোকান
           </div>
         </div>
       </div>
@@ -153,13 +155,13 @@ export function DueCustomersView({
                     {shop.phone && (
                       <>
                         <span aria-hidden="true">·</span>
-                        <span className="font-mono-num">{shop.phone}</span>
+                        <span className="font-mono-num">{formatCount(shop.phone, numeralMode)}</span>
                       </>
                     )}
                     {summary.lastActivityAt && (
                       <>
                         <span aria-hidden="true">·</span>
-                        <span>সর্বশেষ: {formatDateTimeBn(summary.lastActivityAt)}</span>
+                        <span>সর্বশেষ: {formatDateTimeBn(summary.lastActivityAt, numeralMode)}</span>
                       </>
                     )}
                   </div>
@@ -168,11 +170,11 @@ export function DueCustomersView({
                 <div className="flex items-center justify-between gap-3 border-t border-[#ECF3ED] pt-3 sm:border-t-0 sm:pt-0 sm:justify-end">
                   <div className="text-left sm:text-right">
                     <div className="text-xs sm:text-[13px] text-[#404943]">
-                      মোট বিল <span className="font-mono-num">{formatBDT(summary.totalBilled)}</span> · জমা{' '}
-                      <span className="font-mono-num font-semibold text-[#006B47]">{formatBDT(summary.totalPaid)}</span>
+                      মোট বিল <span className="font-mono-num">{formatBDT(summary.totalBilled, numeralMode)}</span> · জমা{' '}
+                      <span className="font-mono-num font-semibold text-[#006B47]">{formatBDT(summary.totalPaid, numeralMode)}</span>
                     </div>
                     <div className="text-base sm:text-lg font-bold font-mono-num text-[#BA1A1A]">
-                      বাকি {formatBDT(summary.totalDue)}
+                      বাকি {formatBDT(summary.totalDue, numeralMode)}
                     </div>
                   </div>
 

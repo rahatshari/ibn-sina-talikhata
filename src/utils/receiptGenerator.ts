@@ -1,6 +1,7 @@
 import type { PaymentRecord, SaleRecord, Shopkeeper } from '../types/tally';
 import { getActiveFontOption } from './fontPreferences';
-import { computeShopSummary, formatBDT, formatDateTimeBn } from './ledger';
+import { computeShopSummary, formatBDT, formatCount, formatDateTimeBn } from './ledger';
+import { getActiveNumeralMode } from './numberFormat';
 
 export function escapeHtml(raw: string): string {
   return raw
@@ -31,11 +32,11 @@ export function buildReceiptSummaryText(sale: SaleRecord): string {
     `দোকান: ${sale.shopName}`,
     `ইনভয়েস: ${sale.invoiceNo}`,
     `তারিখ ও সময়: ${formatDateTimeBn(sale.date)}`,
-    `মোট আইটেম: ${sale.items.length}টি (${sale.totalBoxes} বক্স)`,
+    `মোট আইটেম: ${formatCount(sale.items.length)}টি (${formatCount(sale.totalBoxes)} বক্স)`,
     '--------------------------------',
     ...sale.items.map(
       (item, idx) =>
-        `${idx + 1}. ${item.productName} (${item.boxes} বক্স × ${formatBDT(item.effectiveBoxPrice)}) = ${formatBDT(item.netTotal)}`,
+        `${formatCount(idx + 1)}. ${item.productName} (${formatCount(item.boxes)} বক্স × ${formatBDT(item.effectiveBoxPrice)}) = ${formatBDT(item.netTotal)}`,
     ),
     '--------------------------------',
     `আসল দাম: ${formatBDT(sale.grossTotal)}`,
@@ -56,12 +57,12 @@ export function buildPrintableReceiptHtml(sale: SaleRecord): string {
       (item, idx) => `
       <tr>
         <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;">
-          <div style="font-weight:600;color:#0f172a;">${idx + 1}. ${escapeHtml(item.productName)}</div>
+          <div style="font-weight:600;color:#0f172a;">${formatCount(idx + 1)}. ${escapeHtml(item.productName)}</div>
           <div style="font-size:11px;color:#64748b;">${escapeHtml(item.tier)}</div>
         </td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;">${item.boxes}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;">${formatCount(item.boxes)}</td>
         <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;">${escapeHtml(formatBDT(item.boxPrice))}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;color:#b45309;">${item.discountPercent}%</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;color:#b45309;">${formatCount(item.discountPercent)}%</td>
         <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;color:#047857;">${escapeHtml(formatBDT(item.effectiveBoxPrice))}</td>
         <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;">${escapeHtml(formatBDT(item.netTotal))}</td>
       </tr>`,
@@ -93,7 +94,7 @@ export function buildPrintableReceiptHtml(sale: SaleRecord): string {
   <div class="header">
     <div class="brand">ব্যক্তিগত টালিখাতা</div>
     <div class="shop">${escapeHtml(sale.shopName)}</div>
-    <div class="meta">ইনভয়েস: ${escapeHtml(sale.invoiceNo)} · ${escapeHtml(formatDateTimeBn(sale.date))} · মোট ${sale.totalBoxes} বক্স</div>
+    <div class="meta">ইনভয়েস: ${escapeHtml(sale.invoiceNo)} · ${escapeHtml(formatDateTimeBn(sale.date))} · মোট ${formatCount(sale.totalBoxes)} বক্স</div>
   </div>
   <table>
     <thead>
@@ -146,7 +147,7 @@ export function buildShopLedgerRows(
         date: s.date,
         code: s.invoiceNo,
         details: s.items
-          .map((item) => `${item.productName} (${item.boxes} বক্স, ${item.discountPercent}% ছাড়)`)
+          .map((item) => `${item.productName} (${formatCount(item.boxes)} বক্স, ${formatCount(item.discountPercent)}% ছাড়)`)
           .join(', '),
         boxes: s.totalBoxes,
         billed: s.netTotal,
@@ -250,7 +251,7 @@ export function buildShopStatementHtml(
   </div>
 
   <div class="kpis">
-    <div class="kpi"><div class="kpi-label">মোট বক্স</div><div class="kpi-val">${summary.totalBoxes} বক্স</div></div>
+    <div class="kpi"><div class="kpi-label">মোট বক্স</div><div class="kpi-val">${formatCount(summary.totalBoxes)} বক্স</div></div>
     <div class="kpi"><div class="kpi-label">মোট বিল</div><div class="kpi-val">${escapeHtml(formatBDT(summary.totalBilled))}</div></div>
     <div class="kpi"><div class="kpi-label">মোট জমা / আদায়</div><div class="kpi-val" style="color:#047857;">${escapeHtml(formatBDT(summary.totalPaid))}</div></div>
     <div class="kpi"><div class="kpi-label">বর্তমান মোট বাকি</div><div class="kpi-val" style="color:${summary.totalDue > 0 ? '#dc2626' : '#047857'};">${escapeHtml(formatBDT(summary.totalDue))}</div></div>
@@ -378,7 +379,7 @@ export async function renderReceiptPng(
   ctx.fillStyle = '#ECFDF5';
   ctx.font = `500 18px ${fontFamily}`;
   ctx.fillText(
-    `রসিদ নং: ${sale.invoiceNo}   |   তারিখ: ${formatDateTimeBn(sale.date)}   |   মোট: ${sale.totalBoxes} বক্স`,
+    `রসিদ নং: ${sale.invoiceNo}   |   তারিখ: ${formatDateTimeBn(sale.date)}   |   মোট: ${formatCount(sale.totalBoxes)} বক্স`,
     padding + 28,
     padding + 114,
   );
@@ -414,7 +415,7 @@ export async function renderReceiptPng(
     ctx.fillStyle = '#0F172A';
     ctx.font = '700 19px "Hind Siliguri", system-ui, sans-serif';
     const maxName = item.productName.length > 25 ? `${item.productName.slice(0, 23)}…` : item.productName;
-    ctx.fillText(`${i + 1}. ${maxName}`, padding + 16, cursorY + 28);
+    ctx.fillText(`${formatCount(i + 1)}. ${maxName}`, padding + 16, cursorY + 28);
 
     ctx.fillStyle = '#64748B';
     ctx.font = '500 14px "Hind Siliguri", system-ui, sans-serif';
@@ -423,13 +424,13 @@ export async function renderReceiptPng(
     ctx.textAlign = 'right';
     ctx.font = '600 18px "Hind Siliguri", system-ui, sans-serif';
     ctx.fillStyle = '#0F172A';
-    ctx.fillText(String(item.boxes), padding + 395, cursorY + 38);
+    ctx.fillText(formatCount(item.boxes), padding + 395, cursorY + 38);
 
     ctx.fillStyle = '#475569';
     ctx.fillText(formatBDT(item.boxPrice), padding + 490, cursorY + 38);
 
     ctx.fillStyle = '#B45309';
-    ctx.fillText(`${item.discountPercent}%`, padding + 580, cursorY + 38);
+    ctx.fillText(`${formatCount(item.discountPercent)}%`, padding + 580, cursorY + 38);
 
     ctx.fillStyle = '#047857';
     ctx.fillText(formatBDT(item.effectiveBoxPrice), padding + 695, cursorY + 38);
@@ -536,10 +537,11 @@ const receiptRenderCache = new Map<string, Promise<RenderedReceiptResult>>();
 
 export function getCachedReceiptPng(sale: SaleRecord): Promise<RenderedReceiptResult> {
   const fontId = getActiveFontOption().id;
+  const numeralMode = getActiveNumeralMode();
   const itemsSignature = sale.items
     .map((item) => `${item.productId}:${item.boxes}:${item.boxPrice}:${item.discountPercent}`)
     .join(',');
-  const cacheKey = `${sale.id}:${sale.date}:${sale.shopName}:${sale.netTotal}:${sale.paidAmount}:${sale.dueAmount}:${sale.note ?? ''}:${itemsSignature}:${fontId}`;
+  const cacheKey = `${sale.id}:${sale.date}:${sale.shopName}:${sale.netTotal}:${sale.paidAmount}:${sale.dueAmount}:${sale.note ?? ''}:${itemsSignature}:${fontId}:${numeralMode}`;
   const cached = receiptRenderCache.get(cacheKey);
   if (cached) return cached;
 

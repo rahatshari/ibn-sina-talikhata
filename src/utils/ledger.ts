@@ -9,6 +9,11 @@ import type {
   Shopkeeper,
   ShopSummary,
 } from '../types/tally';
+import {
+  formatDigits,
+  formatNumberValue,
+  type NumeralMode,
+} from './numberFormat';
 
 export function roundCurrency(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -221,7 +226,7 @@ export function getAvailableMonthKeys(
   return Array.from(keys).sort((a, b) => b.localeCompare(a));
 }
 
-export function formatMonthYearBn(monthKey: string): string {
+export function formatMonthYearBn(monthKey: string, mode?: NumeralMode): string {
   const match = monthKey.trim().match(/^(\d{4})-(\d{2})$/);
   if (!match) return monthKey;
   const year = Number(match[1]);
@@ -230,10 +235,11 @@ export function formatMonthYearBn(monthKey: string): string {
     return monthKey;
   }
   const sampleDate = new Date(year, month - 1, 15);
-  return sampleDate.toLocaleDateString('bn-BD', {
+  const formatted = sampleDate.toLocaleDateString('bn-BD', {
     month: 'long',
     year: 'numeric',
   });
+  return formatDigits(formatted, mode);
 }
 
 export function computeMonthlySalesAndCollection(
@@ -301,26 +307,35 @@ export function saveKpiPeriodMode(mode: KpiPeriodMode): void {
   }
 }
 
-export function formatBDT(amount: number): string {
+export function formatCount(value: number | string, mode?: NumeralMode): string {
+  if (typeof value === 'string') {
+    return formatDigits(value, mode);
+  }
+  return formatNumberValue(value, { mode });
+}
+
+export function formatBDT(amount: number, mode?: NumeralMode): string {
   const rounded = roundCurrency(amount);
   const isWhole = Math.abs(rounded - Math.round(rounded)) < 0.001;
-  return `৳${rounded.toLocaleString('en-US', {
+  return `৳${formatNumberValue(rounded, {
+    mode,
     minimumFractionDigits: isWhole ? 0 : 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
-export function formatDateTimeBn(isoString: string): string {
+export function formatDateTimeBn(isoString: string, mode?: NumeralMode): string {
   const trimmed = isoString.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     const [y, m, d] = trimmed.split('-').map(Number);
     const localDate = new Date(y, m - 1, d);
     if (Number.isNaN(localDate.getTime())) return isoString;
-    return localDate.toLocaleDateString('bn-BD', {
+    const formatted = localDate.toLocaleDateString('bn-BD', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
+    return formatDigits(formatted, mode);
   }
   const date = new Date(trimmed);
   if (Number.isNaN(date.getTime())) return isoString;
@@ -334,7 +349,7 @@ export function formatDateTimeBn(isoString: string): string {
     minute: '2-digit',
     hour12: true,
   });
-  return `${datePart}, ${timePart}`;
+  return formatDigits(`${datePart}, ${timePart}`, mode);
 }
 
 export function generateNextInvoiceNo(sales: SaleRecord[]): string {

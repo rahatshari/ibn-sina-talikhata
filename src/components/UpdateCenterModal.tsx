@@ -9,7 +9,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { DownloadTask, ReleaseInfo } from '../hooks/useAppUpdater';
-import { formatDateTimeBn } from '../utils/ledger';
+import { formatCount, formatDateTimeBn } from '../utils/ledger';
+import { useNumeralMode } from '../utils/NumeralContext';
 import { compareVersions, formatBytes, parseReleaseChangelog } from '../utils/updater';
 import { ModalShell } from './Modals';
 
@@ -58,6 +59,7 @@ export function UpdateCenterModal({
   onOpenInstallPermission,
   onClearHistory,
 }: UpdateCenterModalProps) {
+  const { numeralMode } = useNumeralMode();
   const activeDownload = downloads.find((d) => d.status === 'downloading');
   const checkNowRef = useRef(onCheckNow);
   checkNowRef.current = onCheckNow;
@@ -85,10 +87,10 @@ export function UpdateCenterModal({
               </div>
               <div>
                 <div className="text-base font-bold text-[#171D19]">
-                  ব্যক্তিগত টালিখাতা · v{installedVersion}
+                  ব্যক্তিগত টালিখাতা · v{formatCount(installedVersion, numeralMode)}
                 </div>
                 <div className="text-xs sm:text-sm font-mono-num text-[#404943]">
-                  Build {installedCode} · {packageName}
+                  Build {formatCount(installedCode, numeralMode)} · {packageName}
                 </div>
               </div>
             </div>
@@ -104,7 +106,7 @@ export function UpdateCenterModal({
           </div>
           {lastCheckedAt && (
             <div className="mt-2.5 text-xs text-[#404943]">
-              সর্বশেষ চেক: {formatDateTimeBn(lastCheckedAt)}
+              সর্বশেষ চেক: {formatDateTimeBn(lastCheckedAt, numeralMode)}
             </div>
           )}
 
@@ -175,13 +177,13 @@ export function UpdateCenterModal({
                   )}
                   <span>
                     {updateAvailable
-                      ? `নতুন ভার্সন পাওয়া গেছে: v${latestRelease.version}`
-                      : `আপনি সর্বশেষ ভার্সন ব্যবহার করছেন (v${latestRelease.version})`}
+                      ? `নতুন ভার্সন পাওয়া গেছে: v${formatCount(latestRelease.version, numeralMode)}`
+                      : `আপনি সর্বশেষ ভার্সন ব্যবহার করছেন (v${formatCount(latestRelease.version, numeralMode)})`}
                   </span>
                 </div>
                 <div className="mt-1 text-[13px] text-[#404943]">
                   {latestRelease.apkAsset
-                    ? `${latestRelease.apkAsset.name} · ${formatBytes(latestRelease.apkAsset.size)}`
+                    ? `${latestRelease.apkAsset.name} · ${formatCount(formatBytes(latestRelease.apkAsset.size), numeralMode)}`
                     : 'এই রিলিজে কোনো APK ফাইল পাওয়া যায়নি'}
                 </div>
               </div>
@@ -216,8 +218,8 @@ export function UpdateCenterModal({
               >
                 <Download className="h-4 w-4" />
                 {activeDownload
-                  ? `ডাউনলোড চলছে (${activeDownload.progress}%)...`
-                  : `ডাউনলোড ও আপডেট করুন (v${latestRelease.version})`}
+                  ? `ডাউনলোড চলছে (${formatCount(activeDownload.progress, numeralMode)}%)...`
+                  : `ডাউনলোড ও আপডেট করুন (v${formatCount(latestRelease.version, numeralMode)})`}
               </button>
             )}
 
@@ -225,7 +227,7 @@ export function UpdateCenterModal({
               <div className="flex items-center gap-2 rounded-2xl bg-[#CBEAD6]/75 px-4 py-3 text-sm font-semibold text-[#002114]">
                 <CheckCircle2 className="h-4 w-4 text-[#006B47] shrink-0" />
                 <span>
-                  এই ভার্সনটি (v{installedVersion}) ইতোমধ্যে আপনার ফোনে ইনস্টল করা আছে — পুনরায় ডাউনলোডের প্রয়োজন নেই।
+                  এই ভার্সনটি (v{formatCount(installedVersion, numeralMode)}) ইতোমধ্যে আপনার ফোনে ইনস্টল করা আছে — পুনরায় ডাউনলোডের প্রয়োজন নেই।
                 </span>
               </div>
             )}
@@ -237,7 +239,7 @@ export function UpdateCenterModal({
           <div className="flex items-center justify-between border-b border-[#ECF3ED] px-5 py-3.5">
             <div className="flex items-center gap-2 text-base font-bold text-[#171D19]">
               <FolderDown className="h-5 w-5 text-[#006B47]" />
-              <span>ডাউনলোড ম্যানেজার ({downloads.length})</span>
+              <span>ডাউনলোড ম্যানেজার ({formatCount(downloads.length, numeralMode)})</span>
             </div>
             {downloads.length > 0 && (
               <button
@@ -267,8 +269,8 @@ export function UpdateCenterModal({
                         {task.fileName}
                       </div>
                       <div className="text-xs font-mono-num text-[#404943]">
-                        v{task.version} · {formatBytes(task.downloadedBytes)} /{' '}
-                        {formatBytes(task.totalBytes)}
+                        v{formatCount(task.version, numeralMode)} · {formatCount(formatBytes(task.downloadedBytes), numeralMode)} /{' '}
+                        {formatCount(formatBytes(task.totalBytes), numeralMode)}
                       </div>
                     </div>
                     <span className="text-xs font-bold font-mono-num text-[#006B47]">
@@ -277,7 +279,7 @@ export function UpdateCenterModal({
                           ? 'ইনস্টল করা আছে'
                           : 'সম্পন্ন (অটো ইনস্টলার চালু)'
                         : task.status === 'downloading'
-                          ? `${task.progress}%`
+                          ? `${formatCount(task.progress, numeralMode)}%`
                           : task.status === 'permission-required'
                             ? 'অনুমতি প্রয়োজন'
                             : 'ব্যর্থ'}
