@@ -463,3 +463,91 @@ export function buildEditedPaymentRecord(
   return { ok: true, payment: updated };
 }
 
+const LEGACY_DEMO_SHOP_IDS = new Set([
+  'shop-maa-medical',
+  'shop-bismillah',
+  'shop-al-madina',
+  'shop-jonoseba',
+]);
+
+const LEGACY_DEMO_SALE_IDS = new Set([
+  'sale-101',
+  'sale-102',
+  'sale-103',
+  'sale-104',
+]);
+
+const LEGACY_DEMO_PAYMENT_IDS = new Set(['pay-201']);
+
+export function stripLegacyDemoData<
+  TShop extends { id: string },
+  TSale extends { id: string; shopId: string },
+  TPay extends { id: string; shopId: string },
+>(state: {
+  shops: TShop[];
+  sales: TSale[];
+  payments: TPay[];
+}): {
+  shops: TShop[];
+  sales: TSale[];
+  payments: TPay[];
+  changed: boolean;
+} {
+  const sales = state.sales.filter((s) => !LEGACY_DEMO_SALE_IDS.has(s.id));
+  const payments = state.payments.filter((p) => !LEGACY_DEMO_PAYMENT_IDS.has(p.id));
+
+  const activeShopIdsWithRealActivity = new Set<string>();
+  for (const s of sales) activeShopIdsWithRealActivity.add(s.shopId);
+  for (const p of payments) activeShopIdsWithRealActivity.add(p.shopId);
+
+  const shops = state.shops.filter(
+    (shop) => !LEGACY_DEMO_SHOP_IDS.has(shop.id) || activeShopIdsWithRealActivity.has(shop.id),
+  );
+
+  const changed =
+    shops.length !== state.shops.length ||
+    sales.length !== state.sales.length ||
+    payments.length !== state.payments.length;
+
+  return { shops, sales, payments, changed };
+}
+
+export function findLegacyCloudDemoDocsToDelete<
+  TShop extends { id: string },
+  TSale extends { id: string; shopId: string },
+  TPay extends { id: string; shopId: string },
+>(state: {
+  shops: TShop[];
+  sales: TSale[];
+  payments: TPay[];
+}): {
+  shopIds: string[];
+  saleIds: string[];
+  paymentIds: string[];
+} {
+  const saleIds = state.sales
+    .filter((s) => LEGACY_DEMO_SALE_IDS.has(s.id))
+    .map((s) => s.id);
+  const paymentIds = state.payments
+    .filter((p) => LEGACY_DEMO_PAYMENT_IDS.has(p.id))
+    .map((p) => p.id);
+
+  const saleSet = new Set(saleIds);
+  const paySet = new Set(paymentIds);
+  const realActiveShopIds = new Set<string>();
+  for (const s of state.sales) {
+    if (!saleSet.has(s.id)) realActiveShopIds.add(s.shopId);
+  }
+  for (const p of state.payments) {
+    if (!paySet.has(p.id)) realActiveShopIds.add(p.shopId);
+  }
+
+  const shopIds = state.shops
+    .filter((shop) => LEGACY_DEMO_SHOP_IDS.has(shop.id) && !realActiveShopIds.has(shop.id))
+    .map((shop) => shop.id);
+
+  return { shopIds, saleIds, paymentIds };
+}
+
+
+

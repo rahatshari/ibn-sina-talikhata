@@ -811,7 +811,6 @@ export default function App() {
             onDeleteSale={store.deleteSale}
             onDeletePayment={store.deletePayment}
             onImportBackup={store.importBackupData}
-            onResetDemoData={store.resetToDemoData}
           />
         )}
       </main>
@@ -905,9 +904,10 @@ export default function App() {
         authError={store.authError}
         cloudLoading={store.cloudLoading}
         shopCount={store.shops.length}
+        hasLocalData={store.hasLocalData}
         onSignInWithGoogle={store.signInWithGoogle}
         onSignOut={store.signOutUser}
-        onSyncLocalToCloud={store.syncLocalDemoToCloud}
+        onSyncLocalToCloud={store.syncLocalToCloud}
       />
 
       <UpdateCenterModal

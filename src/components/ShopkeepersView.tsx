@@ -613,7 +613,11 @@ export function ShopkeepersView({
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         {rows.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-sm text-slate-500">এই ফিল্টারে কোনো দোকান পাওয়া যায়নি।</p>
+            <p className="text-sm text-slate-500">
+              {shops.length === 0
+                ? 'এখনও কোনো দোকানদার যোগ করা হয়নি। উপরে "নতুন দোকানদার" বাটনে ক্লিক করে শুরু করুন।'
+                : 'এই ফিল্টারে কোনো দোকান পাওয়া যায়নি।'}
+            </p>
           </div>
         ) : (
           <>

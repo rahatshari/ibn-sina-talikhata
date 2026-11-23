@@ -491,4 +491,72 @@ test('buildEditedPaymentRecord updates amount, method, note and validates bounds
   assert.equal(buildEditedPaymentRecord(existingPay, -100, 'Cash').ok, false);
 });
 
+test('stripLegacyDemoData removes hardcoded demo records while preserving user-created data', async () => {
+  const { stripLegacyDemoData } = await import('./ledger');
+
+  const pureDemo = stripLegacyDemoData({
+    shops: [
+      { id: 'shop-maa-medical', shopName: 'মা মেডিকেল হল' },
+      { id: 'shop-bismillah', shopName: 'বিসমিল্লাহ ফার্মেসি' },
+    ],
+    sales: [{ id: 'sale-101', shopId: 'shop-maa-medical' }],
+    payments: [{ id: 'pay-201', shopId: 'shop-maa-medical' }],
+  });
+
+  assert.equal(pureDemo.changed, true);
+  assert.equal(pureDemo.shops.length, 0);
+  assert.equal(pureDemo.sales.length, 0);
+  assert.equal(pureDemo.payments.length, 0);
+
+  const mixed = stripLegacyDemoData({
+    shops: [
+      { id: 'shop-maa-medical', shopName: 'মা মেডিকেল হল' },
+      { id: 'shop-real-1', shopName: 'নতুন ফার্মেসি' },
+    ],
+    sales: [
+      { id: 'sale-101', shopId: 'shop-maa-medical' },
+      { id: 'sale-real-1', shopId: 'shop-maa-medical' },
+      { id: 'sale-real-2', shopId: 'shop-real-1' },
+    ],
+    payments: [{ id: 'pay-real-1', shopId: 'shop-real-1' }],
+  });
+
+  assert.equal(mixed.changed, true);
+  // shop-maa-medical is kept because it has a real sale (sale-real-1)
+  assert.deepEqual(
+    mixed.shops.map((s) => s.id),
+    ['shop-maa-medical', 'shop-real-1'],
+  );
+  assert.deepEqual(
+    mixed.sales.map((s) => s.id),
+    ['sale-real-1', 'sale-real-2'],
+  );
+  assert.deepEqual(
+    mixed.payments.map((p) => p.id),
+    ['pay-real-1'],
+  );
+
+  const { findLegacyCloudDemoDocsToDelete } = await import('./ledger');
+  const toDelete = findLegacyCloudDemoDocsToDelete({
+    shops: [
+      { id: 'shop-maa-medical', shopName: 'মা মেডিকেল হল' },
+      { id: 'shop-bismillah', shopName: 'বিসমিল্লাহ ফার্মেসি' },
+      { id: 'shop-real-1', shopName: 'নতুন ফার্মেসি' },
+    ],
+    sales: [
+      { id: 'sale-101', shopId: 'shop-maa-medical' },
+      { id: 'sale-real-1', shopId: 'shop-maa-medical' },
+      { id: 'sale-102', shopId: 'shop-bismillah' },
+    ],
+    payments: [{ id: 'pay-201', shopId: 'shop-maa-medical' }],
+  });
+
+  // shop-maa-medical has sale-real-1 so it must NOT be deleted; shop-bismillah has no real sales so it CAN be deleted
+  assert.deepEqual(toDelete.shopIds, ['shop-bismillah']);
+  assert.deepEqual(toDelete.saleIds, ['sale-101', 'sale-102']);
+  assert.deepEqual(toDelete.paymentIds, ['pay-201']);
+});
+
+
+
 

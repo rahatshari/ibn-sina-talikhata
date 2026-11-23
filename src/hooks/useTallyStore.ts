@@ -24,7 +24,6 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { INITIAL_IBN_SINA_PRODUCTS } from '../data/ibnSinaProducts';
-import { SEED_PAYMENTS, SEED_SALES, SEED_SHOPS } from '../data/seedData';
 import {
   auth,
   db,
@@ -47,10 +46,12 @@ import {
   buildEditedPaymentRecord,
   buildEditedSaleRecord,
   calculateInvoiceTotals,
+  findLegacyCloudDemoDocsToDelete,
   generateNextInvoiceNo,
   generateNextReceiptNo,
   mergeCatalogProducts,
   roundCurrency,
+  stripLegacyDemoData,
 } from '../utils/ledger';
 import { computeSyncStatus } from '../utils/updater';
 
@@ -163,14 +164,19 @@ function loadCloudMirror(uid: string): StoredTallyState {
       return { products: INITIAL_IBN_SINA_PRODUCTS, shops: [], sales: [], payments: [] };
     }
     const parsed = JSON.parse(raw) as Partial<StoredTallyState>;
+    const cleaned = stripLegacyDemoData({
+      shops: Array.isArray(parsed.shops) ? parsed.shops : [],
+      sales: Array.isArray(parsed.sales) ? parsed.sales : [],
+      payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+    });
     return {
       products:
         Array.isArray(parsed.products) && parsed.products.length > 0
           ? parsed.products
           : INITIAL_IBN_SINA_PRODUCTS,
-      shops: Array.isArray(parsed.shops) ? parsed.shops : [],
-      sales: Array.isArray(parsed.sales) ? parsed.sales : [],
-      payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+      shops: cleaned.shops,
+      sales: cleaned.sales,
+      payments: cleaned.payments,
     };
   } catch {
     return { products: INITIAL_IBN_SINA_PRODUCTS, shops: [], sales: [], payments: [] };
@@ -178,39 +184,40 @@ function loadCloudMirror(uid: string): StoredTallyState {
 }
 
 function loadLocalState(): StoredTallyState {
+  const emptyState: StoredTallyState = {
+    products: INITIAL_IBN_SINA_PRODUCTS,
+    shops: [],
+    sales: [],
+    payments: [],
+  };
+
   if (typeof window === 'undefined') {
-    return {
-      products: INITIAL_IBN_SINA_PRODUCTS,
-      shops: SEED_SHOPS,
-      sales: SEED_SALES,
-      payments: SEED_PAYMENTS,
-    };
+    return emptyState;
   }
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return {
-        products: INITIAL_IBN_SINA_PRODUCTS,
-        shops: SEED_SHOPS,
-        sales: SEED_SALES,
-        payments: SEED_PAYMENTS,
-      };
+      return emptyState;
     }
     const parsed = JSON.parse(raw) as Partial<StoredTallyState>;
+    const rawShops = Array.isArray(parsed.shops) ? parsed.shops : [];
+    const rawSales = Array.isArray(parsed.sales) ? parsed.sales : [];
+    const rawPayments = Array.isArray(parsed.payments) ? parsed.payments : [];
+    const cleaned = stripLegacyDemoData({
+      shops: rawShops,
+      sales: rawSales,
+      payments: rawPayments,
+    });
+
     return {
       products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS),
-      shops: Array.isArray(parsed.shops) ? parsed.shops : SEED_SHOPS,
-      sales: Array.isArray(parsed.sales) ? parsed.sales : SEED_SALES,
-      payments: Array.isArray(parsed.payments) ? parsed.payments : SEED_PAYMENTS,
+      shops: cleaned.shops,
+      sales: cleaned.sales,
+      payments: cleaned.payments,
     };
   } catch {
-    return {
-      products: INITIAL_IBN_SINA_PRODUCTS,
-      shops: SEED_SHOPS,
-      sales: SEED_SALES,
-      payments: SEED_PAYMENTS,
-    };
+    return emptyState;
   }
 }
 
@@ -267,6 +274,7 @@ export function useTallyStore() {
   );
   const loadedUidRef = useRef<string | null>(savedProfile?.uid ?? null);
   const silentAuthTriedOnlineRef = useRef<boolean>(false);
+  const cleaningCloudDemoRef = useRef<boolean>(false);
 
   if (asyncError) {
     throw asyncError;
@@ -715,7 +723,51 @@ export function useTallyStore() {
     };
   }, [authReady, firebaseUser]);
 
-  const activeState = user ? cloudState : localState;
+  // Automatically remove any legacy pre-seeded demo docs that were previously synced to Firestore
+  useEffect(() => {
+    if (!firebaseUser || !isOnline || cleaningCloudDemoRef.current) return;
+    const toDelete = findLegacyCloudDemoDocsToDelete(cloudState);
+    if (
+      toDelete.saleIds.length === 0 &&
+      toDelete.paymentIds.length === 0 &&
+      toDelete.shopIds.length === 0
+    ) {
+      return;
+    }
+
+    cleaningCloudDemoRef.current = true;
+    const uid = firebaseUser.uid;
+    const batch = writeBatch(db);
+    for (const saleId of toDelete.saleIds) {
+      batch.delete(doc(db, 'users', uid, 'sales', saleId));
+    }
+    for (const payId of toDelete.paymentIds) {
+      batch.delete(doc(db, 'users', uid, 'payments', payId));
+    }
+    for (const shopId of toDelete.shopIds) {
+      batch.delete(doc(db, 'users', uid, 'shops', shopId));
+    }
+    batch
+      .commit()
+      .catch(() => {
+        // Ignore offline/transient errors; retry on next snapshot/reconnect
+      })
+      .finally(() => {
+        cleaningCloudDemoRef.current = false;
+      });
+  }, [firebaseUser, isOnline, cloudState]);
+
+  const activeState = useMemo(() => {
+    const base = user ? cloudState : localState;
+    const cleaned = stripLegacyDemoData(base);
+    if (!cleaned.changed) return base;
+    return {
+      products: base.products,
+      shops: cleaned.shops,
+      sales: cleaned.sales,
+      payments: cleaned.payments,
+    };
+  }, [user, cloudState, localState]);
 
   const syncStatus = useMemo(
     () =>
@@ -1318,7 +1370,7 @@ export function useTallyStore() {
     [firebaseUser, user, appendFallbackOp],
   );
 
-  const syncLocalDemoToCloud = useCallback(async () => {
+  const syncLocalToCloud = useCallback(async () => {
     if (!firebaseUser) return;
     const uid = firebaseUser.uid;
     try {
@@ -1403,14 +1455,10 @@ export function useTallyStore() {
     }
   }, []);
 
-  const resetToDemoData = useCallback(() => {
-    setLocalState({
-      products: INITIAL_IBN_SINA_PRODUCTS,
-      shops: SEED_SHOPS,
-      sales: SEED_SALES,
-      payments: SEED_PAYMENTS,
-    });
-  }, []);
+  const hasLocalData =
+    localState.shops.length > 0 ||
+    localState.sales.length > 0 ||
+    localState.payments.length > 0;
 
   return {
     user,
@@ -1422,9 +1470,10 @@ export function useTallyStore() {
     hasPendingWrites,
     justSyncedNotice,
     syncStatus,
+    hasLocalData,
     signInWithGoogle,
     signOutUser,
-    syncLocalDemoToCloud,
+    syncLocalToCloud,
     products: activeState.products,
     shops: activeState.shops,
     sales: activeState.sales,
@@ -1440,6 +1489,5 @@ export function useTallyStore() {
     updateProductPrice,
     addProduct,
     importBackupData,
-    resetToDemoData,
   };
 }

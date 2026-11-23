@@ -136,7 +136,7 @@ export function AddShopModal({ open, editingShop, onClose, onSave }: AddShopModa
               setShopName(e.target.value);
               setError('');
             }}
-            placeholder="যেমন: মা মেডিকেল হল"
+            placeholder="দোকান বা ফার্মেসির নাম লিখুন"
             className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
           />
         </div>
@@ -150,7 +150,7 @@ export function AddShopModal({ open, editingShop, onClose, onSave }: AddShopModa
               type="text"
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
-              placeholder="যেমন: মোঃ করিম উদ্দিন"
+              placeholder="মালিকের নাম লিখুন"
               className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
             />
           </div>
@@ -177,7 +177,7 @@ export function AddShopModal({ open, editingShop, onClose, onSave }: AddShopModa
             type="text"
             value={area}
             onChange={(e) => setArea(e.target.value)}
-            placeholder="যেমন: শাহবাগ বাজার"
+            placeholder="এলাকা বা বাজারের নাম"
             className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
           />
         </div>

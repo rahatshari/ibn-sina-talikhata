@@ -6,7 +6,22 @@ import App from './App.tsx';
 import './index.css';
 
 if (!Capacitor.isNativePlatform()) {
-  registerSW({ immediate: true });
+  if (import.meta.env.DEV) {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => {
+          for (const reg of regs) {
+            void reg.unregister();
+          }
+        })
+        .catch(() => {
+          // Ignore service worker cleanup errors
+        });
+    }
+  } else {
+    registerSW({ immediate: true });
+  }
 }
 
 createRoot(document.getElementById('root')!).render(

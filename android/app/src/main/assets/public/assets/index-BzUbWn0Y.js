@@ -12842,19 +12842,6 @@ var RefreshCw = createLucideIcon("refresh-cw", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
-var RotateCcw = createLucideIcon("rotate-ccw", [["path", {
-	d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8",
-	key: "1357e3"
-}], ["path", {
-	d: "M3 3v5h5",
-	key: "1xhq8a"
-}]]);
-/**
-* @license lucide-react v0.546.0 - ISC
-*
-* This source code is licensed under the ISC license.
-* See the LICENSE file in the root directory of this source tree.
-*/
 var Search = createLucideIcon("search", [["path", {
 	d: "m21 21-4.34-4.34",
 	key: "14j7rj"
@@ -13392,6 +13379,47 @@ function buildEditedPaymentRecord(existingPayment, amountInput, methodInput, not
 			method,
 			...trimmedNote ? { note: trimmedNote } : {}
 		}
+	};
+}
+var LEGACY_DEMO_SHOP_IDS = /* @__PURE__ */ new Set([
+	"shop-maa-medical",
+	"shop-bismillah",
+	"shop-al-madina",
+	"shop-jonoseba"
+]);
+var LEGACY_DEMO_SALE_IDS = /* @__PURE__ */ new Set([
+	"sale-101",
+	"sale-102",
+	"sale-103",
+	"sale-104"
+]);
+var LEGACY_DEMO_PAYMENT_IDS = /* @__PURE__ */ new Set(["pay-201"]);
+function stripLegacyDemoData(state) {
+	const sales = state.sales.filter((s) => !LEGACY_DEMO_SALE_IDS.has(s.id));
+	const payments = state.payments.filter((p) => !LEGACY_DEMO_PAYMENT_IDS.has(p.id));
+	const activeShopIdsWithRealActivity = /* @__PURE__ */ new Set();
+	for (const s of sales) activeShopIdsWithRealActivity.add(s.shopId);
+	for (const p of payments) activeShopIdsWithRealActivity.add(p.shopId);
+	const shops = state.shops.filter((shop) => !LEGACY_DEMO_SHOP_IDS.has(shop.id) || activeShopIdsWithRealActivity.has(shop.id));
+	return {
+		shops,
+		sales,
+		payments,
+		changed: shops.length !== state.shops.length || sales.length !== state.sales.length || payments.length !== state.payments.length
+	};
+}
+function findLegacyCloudDemoDocsToDelete(state) {
+	const saleIds = state.sales.filter((s) => LEGACY_DEMO_SALE_IDS.has(s.id)).map((s) => s.id);
+	const paymentIds = state.payments.filter((p) => LEGACY_DEMO_PAYMENT_IDS.has(p.id)).map((p) => p.id);
+	const saleSet = new Set(saleIds);
+	const paySet = new Set(paymentIds);
+	const realActiveShopIds = /* @__PURE__ */ new Set();
+	for (const s of state.sales) if (!saleSet.has(s.id)) realActiveShopIds.add(s.shopId);
+	for (const p of state.payments) if (!paySet.has(p.id)) realActiveShopIds.add(p.shopId);
+	return {
+		shopIds: state.shops.filter((shop) => LEGACY_DEMO_SHOP_IDS.has(shop.id) && !realActiveShopIds.has(shop.id)).map((shop) => shop.id),
+		saleIds,
+		paymentIds
 	};
 }
 // src/utils/fontPreferences.ts
@@ -13959,7 +13987,7 @@ function AddShopModal({ open, editingShop, onClose, onSave }) {
 						setShopName(e.target.value);
 						setError("");
 					},
-					placeholder: "যেমন: মা মেডিকেল হল",
+					placeholder: "দোকান বা ফার্মেসির নাম লিখুন",
 					className: "w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
 				})] }),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -13973,7 +14001,7 @@ function AddShopModal({ open, editingShop, onClose, onSave }) {
 						type: "text",
 						value: ownerName,
 						onChange: (e) => setOwnerName(e.target.value),
-						placeholder: "যেমন: মোঃ করিম উদ্দিন",
+						placeholder: "মালিকের নাম লিখুন",
 						className: "w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
 					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
 						htmlFor: "shop-phone-input",
@@ -13997,7 +14025,7 @@ function AddShopModal({ open, editingShop, onClose, onSave }) {
 					type: "text",
 					value: area,
 					onChange: (e) => setArea(e.target.value),
-					placeholder: "যেমন: শাহবাগ বাজার",
+					placeholder: "এলাকা বা বাজারের নাম",
 					className: "w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none"
 				})] }),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -14719,7 +14747,7 @@ function GoogleLogoIcon() {
 		]
 	});
 }
-function AccountModal({ open, onClose, user, isOnline, syncStatus, authError, cloudLoading, shopCount, onSignInWithGoogle, onSignOut, onSyncLocalToCloud }) {
+function AccountModal({ open, onClose, user, isOnline, syncStatus, authError, cloudLoading, shopCount, hasLocalData, onSignInWithGoogle, onSignOut, onSyncLocalToCloud }) {
 	const [signingIn, setSigningIn] = (0, import_react.useState)(false);
 	const [confirmLogout, setConfirmLogout] = (0, import_react.useState)(false);
 	const [signingOut, setSigningOut] = (0, import_react.useState)(false);
@@ -14795,7 +14823,7 @@ function AccountModal({ open, onClose, user, isOnline, syncStatus, authError, cl
 						children: [syncStatus.detail, " — আপনি ইন্টারনেট ছাড়াই যেকোনো হিসাব লিখতে পারবেন; নেট পেলেই সব তথ্য এই জিমেইলে স্বয়ংক্রিয়ভাবে জমা হবে।"]
 					})]
 				}),
-				shopCount === 0 && !cloudLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				shopCount === 0 && !cloudLoading && hasLocalData && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 					type: "button",
 					onClick: () => void onSyncLocalToCloud(),
 					className: "inline-flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100",
@@ -16963,7 +16991,7 @@ function PWAInstallButton() {
 	return null;
 }
 // src/components/ReportsView.tsx
-function ReportsView({ products, shops, sales, payments, appVersion, appVersionCode, onOpenUpdateManager, onOpenSaleDetail, onEditSale, onEditPayment, onDeleteSale, onDeletePayment, onImportBackup, onResetDemoData }) {
+function ReportsView({ products, shops, sales, payments, appVersion, appVersionCode, onOpenUpdateManager, onOpenSaleDetail, onEditSale, onEditPayment, onDeleteSale, onDeletePayment, onImportBackup }) {
 	const [tab, setTab] = (0, import_react.useState)("all");
 	const [monthFilter, setMonthFilter] = (0, import_react.useState)("all");
 	const [search, setSearch] = (0, import_react.useState)("");
@@ -17394,12 +17422,6 @@ function ReportsView({ products, shops, sales, payments, appVersion, appVersionC
 								onClick: () => fileInputRef.current?.click(),
 								className: "inline-flex min-h-[42px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Upload, { className: "h-3.5 w-3.5" }), "ব্যাকআপ রিস্টোর"]
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-								type: "button",
-								onClick: onResetDemoData,
-								className: "inline-flex min-h-[42px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RotateCcw, { className: "h-3.5 w-3.5" }), "ডেমো রিসেট"]
 							})
 						]
 					})]
@@ -18034,7 +18056,7 @@ function ShopkeepersView({ shops, sales, payments, selectedLedgerShop, onSelectL
 					className: "p-8 text-center",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "text-sm text-slate-500",
-						children: "এই ফিল্টারে কোনো দোকান পাওয়া যায়নি।"
+						children: shops.length === 0 ? "এখনও কোনো দোকানদার যোগ করা হয়নি। উপরে \"নতুন দোকানদার\" বাটনে ক্লিক করে শুরু করুন।" : "এই ফিল্টারে কোনো দোকান পাওয়া যায়নি।"
 					})
 				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "divide-y divide-slate-100 md:hidden",
@@ -60662,143 +60684,6 @@ var INITIAL_IBN_SINA_PRODUCTS = [
 		active: true
 	}
 ];
-// src/data/seedData.ts
-var SEED_SHOPS = [
-	{
-		id: "shop-maa-medical",
-		shopName: "মা মেডিকেল হল",
-		ownerName: "মোঃ আব্দুল করিম",
-		phone: "01711-345678",
-		area: "শাহবাগ বাজার",
-		createdAt: "2026-11-05T08:30:00.000Z"
-	},
-	{
-		id: "shop-bismillah",
-		shopName: "বিসমিল্লাহ ফার্মেসি",
-		ownerName: "হাজী রফিকুল ইসলাম",
-		phone: "01819-223344",
-		area: "কলাবাগান",
-		createdAt: "2026-11-08T09:15:00.000Z"
-	},
-	{
-		id: "shop-al-madina",
-		shopName: "আল-মদিনা ড্রাগ হাউস",
-		ownerName: "জসিম উদ্দিন",
-		phone: "01912-887766",
-		area: "মিরপুর ১০",
-		createdAt: "2026-11-10T10:00:00.000Z"
-	},
-	{
-		id: "shop-jonoseba",
-		shopName: "জনসেবা ফার্মেসি",
-		ownerName: "সুমন আহমেদ",
-		phone: "01675-445566",
-		area: "উত্তরা সেক্টর ৭",
-		createdAt: "2026-11-12T11:20:00.000Z"
-	}
-];
-function buildSeedSale(id, invoiceNo, shop, date, draftItems, paidAmount, note) {
-	const items = draftItems.map(calculateLineItem);
-	const totals = calculateInvoiceTotals(items, paidAmount);
-	return {
-		id,
-		invoiceNo,
-		shopId: shop.id,
-		shopName: shop.shopName,
-		date,
-		items,
-		totalBoxes: totals.totalBoxes,
-		grossTotal: totals.grossTotal,
-		totalDiscount: totals.totalDiscount,
-		netTotal: totals.netTotal,
-		paidAmount: totals.paidAmount,
-		dueAmount: totals.dueAmount,
-		note
-	};
-}
-var SEED_SALES = [
-	buildSeedSale("sale-101", "INV-101", SEED_SHOPS[0], "2026-11-14T10:30:00.000Z", [
-		{
-			productId: "ibn-dexlan",
-			productName: "Dexlan",
-			tier: "Super Star",
-			boxes: 5,
-			boxPrice: 480,
-			discountPercent: 10
-		},
-		{
-			productId: "ibn-linax-plus",
-			productName: "Linax Plus",
-			tier: "Super Star",
-			boxes: 4,
-			boxPrice: 540,
-			discountPercent: 12
-		},
-		{
-			productId: "ibn-esolok-mups",
-			productName: "Esolok MUPS",
-			tier: "Promising Star",
-			boxes: 3,
-			boxPrice: 520,
-			discountPercent: 8
-		}
-	], 2500, "প্রথম চালান ডেলিভারি"),
-	buildSeedSale("sale-102", "INV-102", SEED_SHOPS[1], "2026-11-15T14:20:00.000Z", [{
-		productId: "ibn-cefixim",
-		productName: "Cefixim",
-		tier: "Star Line (Group B)",
-		boxes: 6,
-		boxPrice: 680,
-		discountPercent: 15
-	}, {
-		productId: "ibn-montex",
-		productName: "Montex",
-		tier: "Star Line (Group B)",
-		boxes: 4,
-		boxPrice: 440,
-		discountPercent: 10
-	}], 3e3, "সাপ্তাহিক অর্ডার"),
-	buildSeedSale("sale-103", "INV-103", SEED_SHOPS[2], "2026-11-16T11:10:00.000Z", [{
-		productId: "ibn-vitalgin",
-		productName: "Vitalgin",
-		tier: "Super Star",
-		boxes: 8,
-		boxPrice: 320,
-		discountPercent: 10
-	}, {
-		productId: "ibn-gavisol",
-		productName: "Gavisol",
-		tier: "Star Line (Group B)",
-		boxes: 5,
-		boxPrice: 340,
-		discountPercent: 10
-	}], 3834, "নগদ পরিশোধ"),
-	buildSeedSale("sale-104", "INV-104", SEED_SHOPS[3], "2026-11-17T16:45:00.000Z", [{
-		productId: "ibn-meroclav",
-		productName: "Meroclav",
-		tier: "Super Star",
-		boxes: 3,
-		boxPrice: 720,
-		discountPercent: 12
-	}, {
-		productId: "ibn-glipatab-m",
-		productName: "Glipatab-M",
-		tier: "Promising Line (Group B)",
-		boxes: 4,
-		boxPrice: 510,
-		discountPercent: 10
-	}], 1500, "বাকি আগামী সপ্তাহে দিবে")
-];
-var SEED_PAYMENTS = [{
-	id: "pay-201",
-	receiptNo: "REC-201",
-	shopId: "shop-maa-medical",
-	shopName: "মা মেডিকেল হল",
-	date: "2026-11-16T15:00:00.000Z",
-	amount: 1500,
-	method: "Cash",
-	note: "পূর্বের বাকি থেকে আংশিক জমা"
-}];
 // node_modules/firebase/app/dist/esm/index.esm.js
 /**
 * @license
@@ -60975,11 +60860,16 @@ function loadCloudMirror(uid) {
 			payments: []
 		};
 		const parsed = JSON.parse(raw);
-		return {
-			products: Array.isArray(parsed.products) && parsed.products.length > 0 ? parsed.products : INITIAL_IBN_SINA_PRODUCTS,
+		const cleaned = stripLegacyDemoData({
 			shops: Array.isArray(parsed.shops) ? parsed.shops : [],
 			sales: Array.isArray(parsed.sales) ? parsed.sales : [],
 			payments: Array.isArray(parsed.payments) ? parsed.payments : []
+		});
+		return {
+			products: Array.isArray(parsed.products) && parsed.products.length > 0 ? parsed.products : INITIAL_IBN_SINA_PRODUCTS,
+			shops: cleaned.shops,
+			sales: cleaned.sales,
+			payments: cleaned.payments
 		};
 	} catch {
 		return {
@@ -60991,34 +60881,30 @@ function loadCloudMirror(uid) {
 	}
 }
 function loadLocalState() {
-	if (typeof window === "undefined") return {
+	const emptyState = {
 		products: INITIAL_IBN_SINA_PRODUCTS,
-		shops: SEED_SHOPS,
-		sales: SEED_SALES,
-		payments: SEED_PAYMENTS
+		shops: [],
+		sales: [],
+		payments: []
 	};
+	if (typeof window === "undefined") return emptyState;
 	try {
 		const raw = window.localStorage.getItem(STORAGE_KEY);
-		if (!raw) return {
-			products: INITIAL_IBN_SINA_PRODUCTS,
-			shops: SEED_SHOPS,
-			sales: SEED_SALES,
-			payments: SEED_PAYMENTS
-		};
+		if (!raw) return emptyState;
 		const parsed = JSON.parse(raw);
+		const cleaned = stripLegacyDemoData({
+			shops: Array.isArray(parsed.shops) ? parsed.shops : [],
+			sales: Array.isArray(parsed.sales) ? parsed.sales : [],
+			payments: Array.isArray(parsed.payments) ? parsed.payments : []
+		});
 		return {
 			products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS),
-			shops: Array.isArray(parsed.shops) ? parsed.shops : SEED_SHOPS,
-			sales: Array.isArray(parsed.sales) ? parsed.sales : SEED_SALES,
-			payments: Array.isArray(parsed.payments) ? parsed.payments : SEED_PAYMENTS
+			shops: cleaned.shops,
+			sales: cleaned.sales,
+			payments: cleaned.payments
 		};
 	} catch {
-		return {
-			products: INITIAL_IBN_SINA_PRODUCTS,
-			shops: SEED_SHOPS,
-			sales: SEED_SALES,
-			payments: SEED_PAYMENTS
-		};
+		return emptyState;
 	}
 }
 function useTallyStore() {
@@ -61060,6 +60946,7 @@ function useTallyStore() {
 	const explicitSignedOutRef = (0, import_react.useRef)(typeof window !== "undefined" && window.localStorage.getItem(AUTH_SIGNED_OUT_KEY) === "true");
 	const loadedUidRef = (0, import_react.useRef)(savedProfile?.uid ?? null);
 	const silentAuthTriedOnlineRef = (0, import_react.useRef)(false);
+	const cleaningCloudDemoRef = (0, import_react.useRef)(false);
 	if (asyncError) throw asyncError;
 	const hasFallbackPending = Boolean(user && !firebaseUser && loadFallbackQueue(user.uid).length > 0);
 	const hasPendingWrites = pendingMap.products || pendingMap.shops || pendingMap.sales || pendingMap.payments || hasFallbackPending;
@@ -61427,7 +61314,39 @@ function useTallyStore() {
 			unsubPayments();
 		};
 	}, [authReady, firebaseUser]);
-	const activeState = user ? cloudState : localState;
+	(0, import_react.useEffect)(() => {
+		if (!firebaseUser || !isOnline || cleaningCloudDemoRef.current) return;
+		const toDelete = findLegacyCloudDemoDocsToDelete(cloudState);
+		if (toDelete.saleIds.length === 0 && toDelete.paymentIds.length === 0 && toDelete.shopIds.length === 0) return;
+		cleaningCloudDemoRef.current = true;
+		const uid = firebaseUser.uid;
+		const batch = writeBatch(db);
+		for (const saleId of toDelete.saleIds) batch.delete(doc(db, "users", uid, "sales", saleId));
+		for (const payId of toDelete.paymentIds) batch.delete(doc(db, "users", uid, "payments", payId));
+		for (const shopId of toDelete.shopIds) batch.delete(doc(db, "users", uid, "shops", shopId));
+		batch.commit().catch(() => {}).finally(() => {
+			cleaningCloudDemoRef.current = false;
+		});
+	}, [
+		firebaseUser,
+		isOnline,
+		cloudState
+	]);
+	const activeState = (0, import_react.useMemo)(() => {
+		const base = user ? cloudState : localState;
+		const cleaned = stripLegacyDemoData(base);
+		if (!cleaned.changed) return base;
+		return {
+			products: base.products,
+			shops: cleaned.shops,
+			sales: cleaned.sales,
+			payments: cleaned.payments
+		};
+	}, [
+		user,
+		cloudState,
+		localState
+	]);
 	const syncStatus = (0, import_react.useMemo)(() => computeSyncStatus({
 		isOnline,
 		isCloudUser: Boolean(user),
@@ -61982,7 +61901,7 @@ function useTallyStore() {
 		user,
 		appendFallbackOp
 	]);
-	const syncLocalDemoToCloud = (0, import_react.useCallback)(async () => {
+	const syncLocalToCloud = (0, import_react.useCallback)(async () => {
 		if (!firebaseUser) return;
 		const uid = firebaseUser.uid;
 		try {
@@ -62069,14 +61988,7 @@ function useTallyStore() {
 			};
 		}
 	}, []);
-	const resetToDemoData = (0, import_react.useCallback)(() => {
-		setLocalState({
-			products: INITIAL_IBN_SINA_PRODUCTS,
-			shops: SEED_SHOPS,
-			sales: SEED_SALES,
-			payments: SEED_PAYMENTS
-		});
-	}, []);
+	const hasLocalData = localState.shops.length > 0 || localState.sales.length > 0 || localState.payments.length > 0;
 	return {
 		user,
 		authReady,
@@ -62087,9 +61999,10 @@ function useTallyStore() {
 		hasPendingWrites,
 		justSyncedNotice,
 		syncStatus,
+		hasLocalData,
 		signInWithGoogle,
 		signOutUser,
-		syncLocalDemoToCloud,
+		syncLocalToCloud,
 		products: activeState.products,
 		shops: activeState.shops,
 		sales: activeState.sales,
@@ -62104,8 +62017,7 @@ function useTallyStore() {
 		deletePayment,
 		updateProductPrice,
 		addProduct,
-		importBackupData,
-		resetToDemoData
+		importBackupData
 	};
 }
 // src/utils/navigation.ts
@@ -62756,8 +62668,7 @@ function App() {
 						onEditPayment: (payment) => setEditingPayment(payment),
 						onDeleteSale: store.deleteSale,
 						onDeletePayment: store.deletePayment,
-						onImportBackup: store.importBackupData,
-						onResetDemoData: store.resetToDemoData
+						onImportBackup: store.importBackupData
 					})
 				]
 			}),
@@ -62839,9 +62750,10 @@ function App() {
 				authError: store.authError,
 				cloudLoading: store.cloudLoading,
 				shopCount: store.shops.length,
+				hasLocalData: store.hasLocalData,
 				onSignInWithGoogle: store.signInWithGoogle,
 				onSignOut: store.signOutUser,
-				onSyncLocalToCloud: store.syncLocalDemoToCloud
+				onSyncLocalToCloud: store.syncLocalToCloud
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(UpdateCenterModal, {
 				open: updateModalOpen,

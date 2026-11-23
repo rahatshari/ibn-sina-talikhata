@@ -22,6 +22,7 @@ interface AccountModalProps {
   authError: string | null;
   cloudLoading: boolean;
   shopCount: number;
+  hasLocalData: boolean;
   onSignInWithGoogle: () => Promise<void>;
   onSignOut: () => Promise<void>;
   onSyncLocalToCloud: () => Promise<void>;
@@ -59,6 +60,7 @@ export function AccountModal({
   authError,
   cloudLoading,
   shopCount,
+  hasLocalData,
   onSignInWithGoogle,
   onSignOut,
   onSyncLocalToCloud,
@@ -156,7 +158,7 @@ export function AccountModal({
             </p>
           </div>
 
-          {shopCount === 0 && !cloudLoading && (
+          {shopCount === 0 && !cloudLoading && hasLocalData && (
             <button
               type="button"
               onClick={() => void onSyncLocalToCloud()}

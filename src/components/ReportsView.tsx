@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { CalendarDays, CheckCircle2, Download, FolderDown, Pencil, RotateCcw, Search, Trash2, Upload } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Download, FolderDown, Pencil, Search, Trash2, Upload } from 'lucide-react';
 import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import type { PaymentRecord, Product, SaleRecord, Shopkeeper } from '../types/tally';
 import {
@@ -26,7 +26,6 @@ interface ReportsViewProps {
   onDeleteSale: (saleId: string) => void;
   onDeletePayment: (paymentId: string) => void;
   onImportBackup: (jsonText: string) => { ok: boolean; error?: string };
-  onResetDemoData: () => void;
 }
 
 export function ReportsView({
@@ -43,7 +42,6 @@ export function ReportsView({
   onDeleteSale,
   onDeletePayment,
   onImportBackup,
-  onResetDemoData,
 }: ReportsViewProps) {
   const [tab, setTab] = useState<'all' | 'sales' | 'payments'>('all');
   const [monthFilter, setMonthFilter] = useState<string>('all');
@@ -461,14 +459,6 @@ export function ReportsView({
             >
               <Upload className="h-3.5 w-3.5" />
               ব্যাকআপ রিস্টোর
-            </button>
-            <button
-              type="button"
-              onClick={onResetDemoData}
-              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              ডেমো রিসেট
             </button>
           </div>
         </div>
