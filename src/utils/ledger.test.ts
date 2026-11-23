@@ -170,6 +170,28 @@ test('INITIAL_IBN_SINA_PRODUCTS contains all 55 unique products from the sheet',
   assert.equal(merged.length, 55);
 });
 
+test('mergeCatalogProducts preserves edited names/prices and keeps deleted default products deleted', () => {
+  const firstTwo = INITIAL_IBN_SINA_PRODUCTS.slice(0, 2);
+  const editedFirst = { ...firstTwo[0], name: 'Dexlan Plus', boxPrice: 520 };
+  const merged = mergeCatalogProducts(
+    [editedFirst],
+    INITIAL_IBN_SINA_PRODUCTS,
+    [firstTwo[1].id],
+  );
+  assert.equal(merged.length, 54);
+  assert.equal(merged.find((p) => p.id === firstTwo[0].id)?.name, 'Dexlan Plus');
+  assert.equal(merged.find((p) => p.id === firstTwo[0].id)?.boxPrice, 520);
+  assert.equal(merged.find((p) => p.id === firstTwo[1].id), undefined);
+
+  // Deleting every product still returns an empty list rather than resurrecting defaults
+  const allDeleted = mergeCatalogProducts(
+    [],
+    INITIAL_IBN_SINA_PRODUCTS,
+    INITIAL_IBN_SINA_PRODUCTS.map((p) => p.id),
+  );
+  assert.equal(allDeleted.length, 0);
+});
+
 test('getDueShopSummaries returns only shops with due > 0 sorted highest first', () => {
   const shops: Shopkeeper[] = [
     {

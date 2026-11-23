@@ -135,7 +135,7 @@ export function ProductsView({
                     <button
                       type="button"
                       onClick={() => onEditProduct(product)}
-                      aria-label={`দাম পরিবর্তন: ${product.name}`}
+                      aria-label={`প্রোডাক্ট এডিট: ${product.name}`}
                       className="inline-flex min-h-[38px] items-center gap-1.5 rounded-full bg-[#ECF3ED] px-3.5 py-1.5 text-xs font-bold text-[#171D19] hover:bg-[#D7E7DC] whitespace-nowrap"
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -171,11 +171,11 @@ export function ProductsView({
                         <button
                           type="button"
                           onClick={() => onEditProduct(product)}
-                          aria-label={`দাম পরিবর্তন: ${product.name}`}
+                          aria-label={`প্রোডাক্ট এডিট: ${product.name}`}
                           className="inline-flex min-h-[38px] items-center gap-1.5 rounded-full bg-[#ECF3ED] px-3.5 py-1.5 text-xs font-bold text-[#171D19] hover:bg-[#D7E7DC] whitespace-nowrap"
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                          দাম পরিবর্তন
+                          এডিট
                         </button>
                       </td>
                     </tr>

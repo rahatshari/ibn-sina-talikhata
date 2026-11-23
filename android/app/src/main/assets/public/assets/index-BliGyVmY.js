@@ -13437,12 +13437,14 @@ function generateNextInvoiceNo(sales) {
 function generateNextReceiptNo(payments) {
 	return `REC-${payments.length + 201}`;
 }
-function mergeCatalogProducts(stored, defaults) {
-	if (!stored || stored.length === 0) return defaults;
+function mergeCatalogProducts(stored, defaults, deletedIds = []) {
+	const deletedSet = new Set(deletedIds);
+	const activeDefaults = defaults.filter((def) => !deletedSet.has(def.id));
+	if (!stored || stored.length === 0 && deletedSet.size === 0) return activeDefaults;
 	const byId = new Map(stored.map((p) => [p.id, p]));
-	const merged = defaults.map((def) => byId.get(def.id) ?? def);
+	const merged = activeDefaults.map((def) => byId.get(def.id) ?? def);
 	const defaultIds = new Set(defaults.map((d) => d.id));
-	const custom = stored.filter((p) => !defaultIds.has(p.id));
+	const custom = stored.filter((p) => !defaultIds.has(p.id) && !deletedSet.has(p.id));
 	return [...merged, ...custom];
 }
 function getDueShopSummaries(shops, sales, payments) {
@@ -14909,12 +14911,13 @@ var TIERS$1 = [
 	"Promising Line (Group B)",
 	"Custom"
 ];
-function ProductFormModal({ open, editingProduct, onClose, onSaveNew, onUpdatePrice }) {
+function ProductFormModal({ open, editingProduct, onClose, onSaveNew, onUpdateProduct, onDeleteProduct }) {
 	const [name, setName] = (0, import_react.useState)("");
 	const [tier, setTier] = (0, import_react.useState)("Super Star");
 	const [boxPrice, setBoxPrice] = (0, import_react.useState)("");
 	const [packInfo, setPackInfo] = (0, import_react.useState)("1 Box (30 Tabs)");
 	const [error, setError] = (0, import_react.useState)("");
+	const [confirmDelete, setConfirmDelete] = (0, import_react.useState)(false);
 	(0, import_react.useEffect)(() => {
 		if (open) {
 			if (editingProduct) {
@@ -14929,36 +14932,38 @@ function ProductFormModal({ open, editingProduct, onClose, onSaveNew, onUpdatePr
 				setPackInfo("1 Box (30 Tabs)");
 			}
 			setError("");
+			setConfirmDelete(false);
 		}
 	}, [open, editingProduct]);
 	const handleSubmit = (e) => {
 		e.preventDefault();
+		if (!name.trim()) {
+			setError("প্রোডাক্টের নাম লিখুন।");
+			return;
+		}
 		const numericPrice = Number(boxPrice);
 		if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
 			setError("সঠিক বক্সের দাম লিখুন (০ এর বেশি)।");
 			return;
 		}
-		if (editingProduct) {
-			onUpdatePrice(editingProduct.id, numericPrice, packInfo);
-			onClose();
-			return;
-		}
-		if (!name.trim()) {
-			setError("প্রোডাক্টের নাম লিখুন।");
-			return;
-		}
-		onSaveNew({
+		const payload = {
 			name: name.trim(),
 			tier,
 			boxPrice: numericPrice,
 			packInfo: packInfo.trim() || "1 Box"
-		});
+		};
+		if (editingProduct) {
+			onUpdateProduct(editingProduct.id, payload);
+			onClose();
+			return;
+		}
+		onSaveNew(payload);
 		onClose();
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ModalShell, {
 		open,
 		onClose,
-		title: editingProduct ? `দাম পরিবর্তন — ${editingProduct.name}` : "নতুন প্রোডাক্ট যোগ করুন",
+		title: editingProduct ? `প্রোডাক্ট এডিট — ${editingProduct.name}` : "নতুন প্রোডাক্ট যোগ করুন",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
 			onSubmit: handleSubmit,
 			className: "space-y-4",
@@ -14968,7 +14973,7 @@ function ProductFormModal({ open, editingProduct, onClose, onSaveNew, onUpdatePr
 					role: "alert",
 					children: error
 				}),
-				!editingProduct && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
 					htmlFor: "prod-name-input",
 					className: "mb-1.5 block text-[15px] font-semibold text-[#171D19]",
 					children: "প্রোডাক্টের নাম *"
@@ -14982,7 +14987,8 @@ function ProductFormModal({ open, editingProduct, onClose, onSaveNew, onUpdatePr
 					},
 					placeholder: "যেমন: Dexlan",
 					className: "w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
-				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
 					htmlFor: "prod-tier-select",
 					className: "mb-1.5 block text-[15px] font-semibold text-[#171D19]",
 					children: "গ্রুপ / ক্যাটাগরি"
@@ -14999,7 +15005,7 @@ function ProductFormModal({ open, editingProduct, onClose, onSaveNew, onUpdatePr
 					menuTitle: "ওষুধের গ্রুপ নির্বাচন করুন",
 					ariaLabel: "গ্রুপ বা ক্যাটাগরি",
 					icon: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Layers, { className: "h-4 w-4 text-[#006B47] shrink-0" })
-				})] })] }),
+				})] }),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "grid grid-cols-1 gap-4 sm:grid-cols-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
@@ -15031,17 +15037,55 @@ function ProductFormModal({ open, editingProduct, onClose, onSaveNew, onUpdatePr
 						className: "w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
 					})] })]
 				}),
+				editingProduct && onDeleteProduct && confirmDelete && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "rounded-3xl bg-[#FFDAD6]/80 p-4 space-y-3",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "text-sm font-semibold text-[#410002]",
+						children: [
+							"আপনি কি নিশ্চিতভাবে “",
+							editingProduct.name,
+							"” প্রোডাক্ট তালিকা থেকে ডিলিট করতে চান? (পুরানো চালানের হিসাব ঠিক থাকবে।)"
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex items-center justify-end gap-2.5",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							onClick: () => setConfirmDelete(false),
+							className: "min-h-[42px] rounded-full bg-white px-4 py-2 text-sm font-bold text-[#171D19] hover:bg-[#ECF3ED]",
+							children: "না, থাক"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							"data-testid": "modal-confirm-delete-product",
+							onClick: () => {
+								onDeleteProduct(editingProduct.id);
+								onClose();
+							},
+							className: "min-h-[42px] rounded-full bg-[#BA1A1A] px-4 py-2 text-sm font-bold text-white hover:bg-[#93000A]",
+							children: "হ্যাঁ, ডিলিট করুন"
+						})]
+					})]
+				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex items-center justify-end gap-3 pt-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					className: "flex flex-wrap items-center justify-between gap-3 pt-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { children: editingProduct && onDeleteProduct && !confirmDelete && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 						type: "button",
-						onClick: onClose,
-						className: "min-h-[46px] rounded-full bg-[#ECF3ED] px-5 py-2 text-[15px] font-semibold text-[#171D19] hover:bg-[#D7E7DC]",
-						children: "বাতিল"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						type: "submit",
-						className: "min-h-[46px] rounded-full bg-[#006B47] px-6 py-2 text-[15px] font-bold text-white hover:bg-[#005739]",
-						children: "সেভ করুন"
+						"data-testid": "modal-delete-product-btn",
+						onClick: () => setConfirmDelete(true),
+						className: "inline-flex min-h-[46px] items-center gap-1.5 rounded-full bg-[#FFDAD6]/80 px-4 py-2 text-sm font-bold text-[#BA1A1A] hover:bg-[#FFDAD6]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, { className: "h-4 w-4" }), "ডিলিট করুন"]
+					}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex items-center gap-2.5 ml-auto",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							onClick: onClose,
+							className: "min-h-[46px] rounded-full bg-[#ECF3ED] px-5 py-2 text-[15px] font-semibold text-[#171D19] hover:bg-[#D7E7DC]",
+							children: "বাতিল"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "submit",
+							"data-testid": "modal-save-product-btn",
+							className: "min-h-[46px] rounded-full bg-[#006B47] px-6 py-2 text-[15px] font-bold text-white hover:bg-[#005739]",
+							children: "সেভ করুন"
+						})]
 					})]
 				})
 			]
@@ -17311,7 +17355,7 @@ function ProductsView({ products, onEditProduct, onAddProduct }) {
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 								type: "button",
 								onClick: () => onEditProduct(product),
-								"aria-label": `দাম পরিবর্তন: ${product.name}`,
+								"aria-label": `প্রোডাক্ট এডিট: ${product.name}`,
 								className: "inline-flex min-h-[38px] items-center gap-1.5 rounded-full bg-[#ECF3ED] px-3.5 py-1.5 text-xs font-bold text-[#171D19] hover:bg-[#D7E7DC] whitespace-nowrap",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pencil, { className: "h-3.5 w-3.5" }), "এডিট"]
 							})]
@@ -17371,9 +17415,9 @@ function ProductsView({ products, onEditProduct, onAddProduct }) {
 										children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 											type: "button",
 											onClick: () => onEditProduct(product),
-											"aria-label": `দাম পরিবর্তন: ${product.name}`,
+											"aria-label": `প্রোডাক্ট এডিট: ${product.name}`,
 											className: "inline-flex min-h-[38px] items-center gap-1.5 rounded-full bg-[#ECF3ED] px-3.5 py-1.5 text-xs font-bold text-[#171D19] hover:bg-[#D7E7DC] whitespace-nowrap",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pencil, { className: "h-3.5 w-3.5" }), "দাম পরিবর্তন"]
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Pencil, { className: "h-3.5 w-3.5" }), "এডিট"]
 										})
 									})
 								]
@@ -18849,25 +18893,35 @@ function formatBytes(bytes) {
 	return `${(kb / 1024).toFixed(2)} MB`;
 }
 function computeSyncStatus(args) {
-	if (!args.isCloudUser) return {
-		state: args.isOnline ? "guest" : "offline",
-		label: args.isOnline ? "অফলাইন লোকাল মোড" : "অফলাইন মোড (ইন্টারনেট নেই)",
-		detail: args.isOnline ? "সব ডাটা ফোনে সেভ হচ্ছে। জিমেইল লগইন করলে ক্লাউডে সিঙ্ক হবে।" : "ইন্টারনেট ছাড়াই বিক্রি ও হিসাব সেভ হচ্ছে। পরে লগইন করে সিঙ্ক করতে পারবেন।"
-	};
 	if (!args.isOnline) return {
 		state: "offline",
-		label: "অফলাইন মোড · ডাটা কিউতে আছে",
-		detail: "ইন্টারনেট নেই। নতুন এন্ট্রি ফোনে সেভ হচ্ছে, নেট পেলেই অটো আপলোড হবে।"
+		label: args.isCloudUser ? "অফলাইন · কিউতে আছে" : "অফলাইন",
+		shortLabel: "অফলাইন",
+		detail: args.isCloudUser ? "ইন্টারনেট নেই। নতুন এন্ট্রি ফোনে সেভ হচ্ছে, নেট পেলেই অটো ব্যাকআপ হবে।" : "ইন্টারনেট ছাড়াই বিক্রি ও হিসাব ফোনে সেভ হচ্ছে।"
+	};
+	if (!args.isCloudUser) return {
+		state: "guest",
+		label: "ফোনে সেভ হচ্ছে (ক্লাউড বন্ধ)",
+		shortLabel: "ফোনে সেভ",
+		detail: "সব ডাটা ফোনে সেভ হচ্ছে। জিমেইল লগইন করলে অটো ক্লাউড ব্যাকআপ চালু হবে।"
 	};
 	if (args.cloudLoading || args.hasPendingWrites) return {
 		state: "syncing",
-		label: "ক্লাউডে সিঙ্ক হচ্ছে...",
-		detail: "অফলাইনে করা হিসাবগুলো ফায়ারবেস ক্লাউডে আপলোড হচ্ছে।"
+		label: "ডাটা ব্যাকআপ হচ্ছে...",
+		shortLabel: "ব্যাকআপ হচ্ছে...",
+		detail: "আপনার হিসাবগুলো ফায়ারবেস ক্লাউডে ব্যাকআপ হচ্ছে।"
+	};
+	if (args.justSynced) return {
+		state: "synced",
+		label: "ব্যাকআপ সম্পন্ন হয়েছে",
+		shortLabel: "ব্যাকআপ সম্পন্ন",
+		detail: "সকল ডাটা নিরাপদে ক্লাউডে ব্যাকআপ সম্পন্ন হয়েছে।"
 	};
 	return {
 		state: "synced",
-		label: "অনলাইন · ফায়ারবেস ক্লাউড সিঙ্কড",
-		detail: "সব হিসাব ক্লাউড স্টোরেজে সুরক্ষিতভাবে সংরক্ষিত আছে।"
+		label: "ব্যাকআপ সম্পন্ন",
+		shortLabel: "ব্যাকআপ সম্পন্ন",
+		detail: "সব হিসাব ফায়ারবেস ক্লাউডে সুরক্ষিতভাবে ব্যাকআপ আছে।"
 	};
 }
 // src/components/UpdateCenterModal.tsx
@@ -61384,6 +61438,7 @@ function loadCloudMirror(uid) {
 function loadLocalState() {
 	const emptyState = {
 		products: INITIAL_IBN_SINA_PRODUCTS,
+		deletedProductIds: [],
 		shops: [],
 		sales: [],
 		payments: []
@@ -61393,13 +61448,18 @@ function loadLocalState() {
 		const raw = window.localStorage.getItem(STORAGE_KEY);
 		if (!raw) return emptyState;
 		const parsed = JSON.parse(raw);
+		const rawShops = Array.isArray(parsed.shops) ? parsed.shops : [];
+		const rawSales = Array.isArray(parsed.sales) ? parsed.sales : [];
+		const rawPayments = Array.isArray(parsed.payments) ? parsed.payments : [];
+		const deletedProductIds = Array.isArray(parsed.deletedProductIds) ? parsed.deletedProductIds.filter((id) => typeof id === "string") : [];
 		const cleaned = stripLegacyDemoData({
-			shops: Array.isArray(parsed.shops) ? parsed.shops : [],
-			sales: Array.isArray(parsed.sales) ? parsed.sales : [],
-			payments: Array.isArray(parsed.payments) ? parsed.payments : []
+			shops: rawShops,
+			sales: rawSales,
+			payments: rawPayments
 		});
 		return {
-			products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS),
+			products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS, deletedProductIds),
+			deletedProductIds,
 			shops: cleaned.shops,
 			sales: cleaned.sales,
 			payments: cleaned.payments
@@ -61609,10 +61669,13 @@ function useTallyStore() {
 					updatedAt: serverTimestamp()
 				});
 			} else if (op.kind === "update-product") batch.update(doc(db, "users", uid, "products", sanitizeId(op.productId)), {
+				...op.name ? { name: clampStr(op.name, 100) } : {},
+				...op.tier ? { tier: op.tier } : {},
 				boxPrice: op.boxPrice,
 				packInfo: op.packInfo,
 				updatedAt: serverTimestamp()
 			});
+			else if (op.kind === "delete-product") batch.delete(doc(db, "users", uid, "products", sanitizeId(op.productId)));
 			await batch.commit();
 			saveFallbackQueue(uid, []);
 			setJustSyncedNotice(true);
@@ -61852,12 +61915,14 @@ function useTallyStore() {
 		isOnline,
 		isCloudUser: Boolean(user),
 		hasPendingWrites,
-		cloudLoading
+		cloudLoading,
+		justSynced: justSyncedNotice
 	}), [
 		isOnline,
 		user,
 		hasPendingWrites,
-		cloudLoading
+		cloudLoading,
+		justSyncedNotice
 	]);
 	const signInWithGoogle = (0, import_react.useCallback)(async () => {
 		setAuthError(null);
@@ -61910,6 +61975,36 @@ function useTallyStore() {
 				} : item));
 				return;
 			}
+		}
+		if (op.kind === "update-product") {
+			const upsertIdx = existing.findIndex((item) => item.kind === "upsert-product" && item.product.id === op.productId);
+			if (upsertIdx !== -1) {
+				saveFallbackQueue(uid, existing.map((item, idx) => {
+					if (idx !== upsertIdx || item.kind !== "upsert-product") return item;
+					return {
+						kind: "upsert-product",
+						product: {
+							...item.product,
+							...op.name ? { name: op.name } : {},
+							...op.tier ? { tier: op.tier } : {},
+							boxPrice: op.boxPrice,
+							packInfo: op.packInfo
+						}
+					};
+				}));
+				return;
+			}
+			const updateIdx = existing.findIndex((item) => item.kind === "update-product" && item.productId === op.productId);
+			if (updateIdx !== -1) {
+				saveFallbackQueue(uid, existing.map((item, idx) => idx === updateIdx ? op : item));
+				return;
+			}
+		}
+		if (op.kind === "delete-product") {
+			const hadPendingUpsert = existing.some((item) => item.kind === "upsert-product" && item.product.id === op.productId);
+			const filtered = existing.filter((item) => !(item.kind === "upsert-product" && item.product.id === op.productId || item.kind === "update-product" && item.productId === op.productId || item.kind === "delete-product" && item.productId === op.productId));
+			saveFallbackQueue(uid, hadPendingUpsert ? filtered : [...filtered, op]);
+			return;
 		}
 		saveFallbackQueue(uid, [...existing, op]);
 	}, []);
@@ -62310,14 +62405,19 @@ function useTallyStore() {
 		user,
 		appendFallbackOp
 	]);
-	const updateProductPrice = (0, import_react.useCallback)((productId, boxPrice, packInfo) => {
-		const safePrice = roundCurrency(Math.max(0, Math.min(1e6, boxPrice)));
+	const updateProduct = (0, import_react.useCallback)((productId, input) => {
+		const safePrice = roundCurrency(Math.max(0, Math.min(1e6, input.boxPrice)));
+		const existing = activeState.products.find((p) => p.id === productId);
+		const nextName = clampStr(input.name !== void 0 ? input.name || existing?.name || "Product" : existing?.name || "Product", 100);
+		const nextTier = input.tier ?? existing?.tier ?? "Custom";
+		const nextPack = clampStr(input.packInfo !== void 0 ? input.packInfo || existing?.packInfo || "1 Box" : existing?.packInfo || "1 Box", 60);
 		if (firebaseUser) {
-			const existing = cloudState.products.find((p) => p.id === productId);
 			const path = `users/${firebaseUser.uid}/products/${productId}`;
 			updateDoc(doc(db, "users", firebaseUser.uid, "products", productId), {
+				name: nextName,
+				tier: nextTier,
 				boxPrice: safePrice,
-				packInfo: clampStr(packInfo !== void 0 ? packInfo || existing?.packInfo || "1 Box" : existing?.packInfo || "1 Box", 60),
+				packInfo: nextPack,
 				updatedAt: serverTimestamp()
 			}).catch((err) => {
 				if (isOfflineFirestoreError(err)) return;
@@ -62328,12 +62428,12 @@ function useTallyStore() {
 				}
 			});
 		} else if (user) {
-			const existing = cloudState.products.find((p) => p.id === productId);
-			const nextPack = clampStr(packInfo !== void 0 ? packInfo || existing?.packInfo || "1 Box" : existing?.packInfo || "1 Box", 60);
 			setCloudState((prev) => ({
 				...prev,
 				products: prev.products.map((p) => p.id === productId ? {
 					...p,
+					name: nextName,
+					tier: nextTier,
 					boxPrice: safePrice,
 					packInfo: nextPack
 				} : p)
@@ -62341,6 +62441,8 @@ function useTallyStore() {
 			appendFallbackOp(user.uid, {
 				kind: "update-product",
 				productId,
+				name: nextName,
+				tier: nextTier,
 				boxPrice: safePrice,
 				packInfo: nextPack
 			});
@@ -62348,14 +62450,50 @@ function useTallyStore() {
 			...prev,
 			products: prev.products.map((p) => p.id === productId ? {
 				...p,
+				name: nextName,
+				tier: nextTier,
 				boxPrice: safePrice,
-				packInfo: packInfo !== void 0 ? packInfo.trim() || p.packInfo : p.packInfo
+				packInfo: nextPack
 			} : p)
 		}));
 	}, [
 		firebaseUser,
 		user,
-		cloudState.products,
+		activeState.products,
+		appendFallbackOp
+	]);
+	const deleteProduct = (0, import_react.useCallback)((productId) => {
+		if (firebaseUser) {
+			const path = `users/${firebaseUser.uid}/products/${productId}`;
+			deleteDoc(doc(db, "users", firebaseUser.uid, "products", productId)).catch((err) => {
+				if (isOfflineFirestoreError(err)) return;
+				try {
+					handleFirestoreError(err, OperationType.DELETE, path);
+				} catch (wrapped) {
+					setAsyncError(wrapped);
+				}
+			});
+		} else if (user) {
+			setCloudState((prev) => ({
+				...prev,
+				products: prev.products.filter((p) => p.id !== productId)
+			}));
+			appendFallbackOp(user.uid, {
+				kind: "delete-product",
+				productId
+			});
+		} else setLocalState((prev) => {
+			const prevDeleted = prev.deletedProductIds ?? [];
+			const nextDeleted = prevDeleted.includes(productId) ? prevDeleted : [...prevDeleted, productId];
+			return {
+				...prev,
+				products: prev.products.filter((p) => p.id !== productId),
+				deletedProductIds: nextDeleted
+			};
+		});
+	}, [
+		firebaseUser,
+		user,
 		appendFallbackOp
 	]);
 	const addProduct = (0, import_react.useCallback)((input) => {
@@ -62475,8 +62613,10 @@ function useTallyStore() {
 				ok: false,
 				error: "ফাইলটি সঠিক টালিখাতা ব্যাকআপ ফরম্যাটে নেই।"
 			};
+			const deletedProductIds = Array.isArray(parsed.deletedProductIds) ? parsed.deletedProductIds.filter((id) => typeof id === "string") : [];
 			setLocalState({
-				products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS),
+				products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS, deletedProductIds),
+				deletedProductIds,
 				shops: parsed.shops,
 				sales: parsed.sales,
 				payments: Array.isArray(parsed.payments) ? parsed.payments : []
@@ -62516,7 +62656,8 @@ function useTallyStore() {
 		updatePayment,
 		deleteSale,
 		deletePayment,
-		updateProductPrice,
+		updateProduct,
+		deleteProduct,
 		addProduct,
 		importBackupData
 	};
@@ -62757,28 +62898,23 @@ function AppContent() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("header", {
 				className: "no-print sticky top-0 z-30 border-b border-[#DCE7DF] bg-[#F5FAF6]/95 backdrop-blur-md pt-safe",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-6 px-3.5 py-2.5 sm:px-6 sm:py-3",
+					className: "mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4 px-3 py-2.5 sm:px-6 sm:py-3",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center gap-2.5 min-w-0",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "flex items-center min-w-0",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 								type: "button",
 								onClick: handleBackToDashboard,
-								className: "flex items-center gap-2.5 text-left min-w-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-[#006B47]",
+								className: "flex items-center gap-2 sm:gap-2.5 text-left min-w-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-[#006B47]",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
 									src: "/icon.svg",
 									alt: "",
-									className: "h-9 w-9 rounded-2xl border border-[#CBEAD6] bg-white p-0.5 shrink-0"
+									className: "h-8 w-8 sm:h-9 sm:w-9 rounded-2xl border border-[#CBEAD6] bg-white p-0.5 shrink-0"
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "font-display text-lg sm:text-[21px] font-bold tracking-tight text-[#171D19] truncate",
+									className: "font-display text-[15.5px] sm:text-[21px] font-bold tracking-tight text-[#171D19] whitespace-nowrap",
 									children: "ব্যক্তিগত টালিখাতা"
 								})]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-								"data-testid": "sync-status-text",
-								title: store.syncStatus.detail,
-								className: `hidden lg:inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${store.syncStatus.state === "offline" ? "bg-[#FFF3E0] text-[#7A4100]" : store.syncStatus.state === "syncing" ? "bg-[#E3EEFF] text-[#0D47A1]" : store.user ? "bg-[#CBEAD6] text-[#002114]" : "bg-[#E2EDE5] text-[#404943]"}`,
-								children: [store.syncStatus.state === "offline" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CloudOff, { className: "h-3.5 w-3.5" }) : store.syncStatus.state === "syncing" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RefreshCw, { className: "h-3.5 w-3.5 animate-spin" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cloud, { className: "h-3.5 w-3.5" }), store.syncStatus.label]
-							})]
+							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("nav", {
 							className: "hidden md:flex items-center gap-1.5",
@@ -62802,11 +62938,21 @@ function AppContent() {
 									className: "hidden sm:inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-[#006B47] px-4 py-2 text-sm font-semibold text-white shadow-xs transition-all hover:bg-[#005739] active:scale-[0.98] whitespace-nowrap shrink-0",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, { className: "h-4 w-4" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "নতুন বিক্রি" })]
 								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									type: "button",
+									onClick: () => setAccountModalOpen(true),
+									"data-testid": "sync-status-text",
+									"data-sync-state": store.syncStatus.state,
+									title: store.syncStatus.detail,
+									"aria-label": `ব্যাকআপ ও নেটওয়ার্ক অবস্থা: ${store.syncStatus.label}`,
+									className: `inline-flex min-h-[36px] sm:min-h-[38px] items-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-3 py-1 text-[11px] sm:text-xs font-bold whitespace-nowrap shrink-0 transition-colors ${store.syncStatus.state === "offline" ? "bg-[#FFF3E0] text-[#7A4100] ring-1 ring-[#7A4100]/20 hover:bg-[#FFE6BF]" : store.syncStatus.state === "syncing" ? "bg-[#E3EEFF] text-[#0D47A1] ring-1 ring-[#0D47A1]/20 hover:bg-[#D2E4FF]" : store.syncStatus.state === "synced" ? store.justSyncedNotice ? "bg-[#CBEAD6] text-[#002114] ring-1 ring-[#006B47]/35 shadow-xs hover:bg-[#BAE2C8]" : "bg-[#E2EDE5] text-[#006B47] hover:bg-[#D4E7DA]" : "bg-[#ECF3ED] text-[#404943] hover:bg-[#DCE7DF]"}`,
+									children: [store.syncStatus.state === "offline" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CloudOff, { className: "h-3.5 w-3.5 shrink-0" }) : store.syncStatus.state === "syncing" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RefreshCw, { className: "h-3.5 w-3.5 animate-spin shrink-0" }) : store.syncStatus.state === "synced" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "h-3.5 w-3.5 text-[#006B47] shrink-0" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Smartphone, { className: "h-3.5 w-3.5 text-[#404943] shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: store.syncStatus.shortLabel })]
+								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 									type: "button",
 									onClick: () => setAccountModalOpen(true),
 									"aria-label": store.user ? "অ্যাকাউন্ট প্রোফাইল ও লগআউট" : "জিমেইল দিয়ে লগইন",
-									className: "inline-flex min-h-[42px] min-w-[42px] items-center justify-center gap-2 rounded-full bg-[#E2EDE5] px-2 sm:px-3 text-sm font-semibold text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0",
+									className: "inline-flex min-h-[38px] min-w-[38px] sm:min-h-[42px] sm:min-w-[42px] items-center justify-center gap-2 rounded-full bg-[#E2EDE5] px-2 sm:px-3 text-sm font-semibold text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0",
 									children: store.user ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [store.user.photoURL ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
 										src: store.user.photoURL,
 										alt: store.user.displayName || "User",
@@ -62832,10 +62978,10 @@ function AppContent() {
 										"aria-haspopup": "menu",
 										"aria-expanded": menuOpen,
 										onClick: () => setMenuOpen((prev) => !prev),
-										className: "relative inline-flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[#ECF3ED] text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0",
+										className: "relative inline-flex h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] items-center justify-center rounded-full bg-[#ECF3ED] text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0",
 										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(EllipsisVertical, { className: "h-5 w-5" }), updater.updateAvailable && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 											"aria-hidden": "true",
-											className: "absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-[#006B47] ring-2 ring-[#ECF3ED]"
+											className: "absolute right-1.5 top-1.5 sm:right-2 sm:top-2 h-2.5 w-2.5 rounded-full bg-[#006B47] ring-2 ring-[#ECF3ED]"
 										})]
 									}), menuOpen && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 										role: "menu",
@@ -63093,31 +63239,13 @@ function AppContent() {
 							})
 						});
 					})(),
-					(store.syncStatus.state === "offline" || store.syncStatus.state === "syncing" || store.justSyncedNotice || store.authError) && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "no-print mb-5 space-y-2.5",
-						children: [
-							(store.syncStatus.state === "offline" || store.syncStatus.state === "syncing") && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: `flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm ${store.syncStatus.state === "offline" ? "bg-[#FFF3E0] text-[#7A4100]" : "bg-[#E3EEFF] text-[#0D47A1]"}`,
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "flex items-center gap-2.5",
-									children: [store.syncStatus.state === "offline" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CloudOff, { className: "h-4 w-4 shrink-0" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RefreshCw, { className: "h-4 w-4 animate-spin shrink-0" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("strong", { children: [store.syncStatus.label, ":"] }),
-										" ",
-										store.syncStatus.detail
-									] })]
-								})
-							}),
-							store.justSyncedNotice && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								role: "status",
-								className: "flex items-center gap-2.5 rounded-2xl bg-[#CBEAD6] px-4 py-3 text-sm font-semibold text-[#002114]",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleCheck, { className: "h-5 w-5 text-[#006B47] shrink-0" }), "অফলাইনে করা সকল ডাটা স্বয়ংক্রিয়ভাবে ক্লাউডে আপলোড ও সিঙ্ক হয়েছে।"]
-							}),
-							store.authError && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "rounded-2xl bg-[#FFDAD6] px-4 py-3 text-sm font-medium text-[#410002]",
-								role: "alert",
-								children: store.authError
-							})
-						]
+					store.authError && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "no-print mb-5",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "rounded-2xl bg-[#FFDAD6] px-4 py-3 text-sm font-medium text-[#410002]",
+							role: "alert",
+							children: store.authError
+						})
 					}),
 					activeView === "dashboard" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardView, {
 						metrics,
@@ -63294,7 +63422,8 @@ function AppContent() {
 					editing: null
 				}),
 				onSaveNew: (data) => store.addProduct(data),
-				onUpdatePrice: (id, price, packInfo) => store.updateProductPrice(id, price, packInfo)
+				onUpdateProduct: (id, data) => store.updateProduct(id, data),
+				onDeleteProduct: (id) => store.deleteProduct(id)
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AccountModal, {
 				open: accountModalOpen,

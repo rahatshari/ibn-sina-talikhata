@@ -365,12 +365,17 @@ export function generateNextReceiptNo(payments: PaymentRecord[]): string {
 export function mergeCatalogProducts(
   stored: Product[] | undefined,
   defaults: Product[],
+  deletedIds: string[] = [],
 ): Product[] {
-  if (!stored || stored.length === 0) return defaults;
+  const deletedSet = new Set(deletedIds);
+  const activeDefaults = defaults.filter((def) => !deletedSet.has(def.id));
+  if (!stored || (stored.length === 0 && deletedSet.size === 0)) {
+    return activeDefaults;
+  }
   const byId = new Map(stored.map((p) => [p.id, p]));
-  const merged = defaults.map((def) => byId.get(def.id) ?? def);
+  const merged = activeDefaults.map((def) => byId.get(def.id) ?? def);
   const defaultIds = new Set(defaults.map((d) => d.id));
-  const custom = stored.filter((p) => !defaultIds.has(p.id));
+  const custom = stored.filter((p) => !defaultIds.has(p.id) && !deletedSet.has(p.id));
   return [...merged, ...custom];
 }
 

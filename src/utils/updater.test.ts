@@ -159,33 +159,60 @@ versionCode: 114
     assert.equal(formatBytes(1536), '1.5 KB');
     assert.equal(formatBytes(5 * 1024 * 1024), '5.00 MB');
 
-    assert.equal(
-      computeSyncStatus({
-        isOnline: false,
-        isCloudUser: true,
-        hasPendingWrites: true,
-        cloudLoading: false,
-      }).state,
-      'offline',
-    );
-    assert.equal(
-      computeSyncStatus({
-        isOnline: true,
-        isCloudUser: true,
-        hasPendingWrites: true,
-        cloudLoading: false,
-      }).state,
-      'syncing',
-    );
-    assert.equal(
-      computeSyncStatus({
-        isOnline: true,
-        isCloudUser: true,
-        hasPendingWrites: false,
-        cloudLoading: false,
-      }).state,
-      'synced',
-    );
+    const offlineCloud = computeSyncStatus({
+      isOnline: false,
+      isCloudUser: true,
+      hasPendingWrites: true,
+      cloudLoading: false,
+    });
+    assert.equal(offlineCloud.state, 'offline');
+    assert.equal(offlineCloud.shortLabel, 'অফলাইন');
+
+    const offlineGuest = computeSyncStatus({
+      isOnline: false,
+      isCloudUser: false,
+      hasPendingWrites: false,
+      cloudLoading: false,
+    });
+    assert.equal(offlineGuest.state, 'offline');
+    assert.equal(offlineGuest.shortLabel, 'অফলাইন');
+
+    const guestOnline = computeSyncStatus({
+      isOnline: true,
+      isCloudUser: false,
+      hasPendingWrites: false,
+      cloudLoading: false,
+    });
+    assert.equal(guestOnline.state, 'guest');
+    assert.equal(guestOnline.shortLabel, 'ফোনে সেভ');
+
+    const syncing = computeSyncStatus({
+      isOnline: true,
+      isCloudUser: true,
+      hasPendingWrites: true,
+      cloudLoading: false,
+    });
+    assert.equal(syncing.state, 'syncing');
+    assert.equal(syncing.shortLabel, 'ব্যাকআপ হচ্ছে...');
+
+    const synced = computeSyncStatus({
+      isOnline: true,
+      isCloudUser: true,
+      hasPendingWrites: false,
+      cloudLoading: false,
+    });
+    assert.equal(synced.state, 'synced');
+    assert.equal(synced.shortLabel, 'ব্যাকআপ সম্পন্ন');
+
+    const justSynced = computeSyncStatus({
+      isOnline: true,
+      isCloudUser: true,
+      hasPendingWrites: false,
+      cloudLoading: false,
+      justSynced: true,
+    });
+    assert.equal(justSynced.state, 'synced');
+    assert.equal(justSynced.label, 'ব্যাকআপ সম্পন্ন হয়েছে');
   });
 
   it('throttles auto-checks for 60s only after a successful check', () => {

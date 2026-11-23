@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Download, Layers, Pencil, Printer, Share2, Wallet, X } from 'lucide-react';
+import { CheckCircle2, Download, Layers, Pencil, Printer, Share2, Trash2, Wallet, X } from 'lucide-react';
 import { AppUpdater, isNativeAndroid } from '../plugins/nativeBridge';
 import type { PaymentRecord, Product, ProductTier, SaleRecord, Shopkeeper } from '../types/tally';
 import { formatBDT, formatCount, formatDateTimeBn } from '../utils/ledger';
@@ -693,7 +693,11 @@ interface ProductFormModalProps {
   editingProduct: Product | null;
   onClose: () => void;
   onSaveNew: (data: { name: string; tier: ProductTier; boxPrice: number; packInfo: string }) => void;
-  onUpdatePrice: (productId: string, boxPrice: number, packInfo: string) => void;
+  onUpdateProduct: (
+    productId: string,
+    data: { name: string; tier: ProductTier; boxPrice: number; packInfo: string },
+  ) => void;
+  onDeleteProduct?: (productId: string) => void;
 }
 
 const TIERS: ProductTier[] = [
@@ -711,13 +715,15 @@ export function ProductFormModal({
   editingProduct,
   onClose,
   onSaveNew,
-  onUpdatePrice,
+  onUpdateProduct,
+  onDeleteProduct,
 }: ProductFormModalProps) {
   const [name, setName] = useState('');
   const [tier, setTier] = useState<ProductTier>('Super Star');
   const [boxPrice, setBoxPrice] = useState('');
   const [packInfo, setPackInfo] = useState('1 Box (30 Tabs)');
   const [error, setError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -733,33 +739,37 @@ export function ProductFormModal({
         setPackInfo('1 Box (30 Tabs)');
       }
       setError('');
+      setConfirmDelete(false);
     }
   }, [open, editingProduct]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim()) {
+      setError('প্রোডাক্টের নাম লিখুন।');
+      return;
+    }
+
     const numericPrice = Number(boxPrice);
     if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
       setError('সঠিক বক্সের দাম লিখুন (০ এর বেশি)।');
       return;
     }
 
-    if (editingProduct) {
-      onUpdatePrice(editingProduct.id, numericPrice, packInfo);
-      onClose();
-      return;
-    }
-
-    if (!name.trim()) {
-      setError('প্রোডাক্টের নাম লিখুন।');
-      return;
-    }
-    onSaveNew({
+    const payload = {
       name: name.trim(),
       tier,
       boxPrice: numericPrice,
       packInfo: packInfo.trim() || '1 Box',
-    });
+    };
+
+    if (editingProduct) {
+      onUpdateProduct(editingProduct.id, payload);
+      onClose();
+      return;
+    }
+
+    onSaveNew(payload);
     onClose();
   };
 
@@ -767,7 +777,7 @@ export function ProductFormModal({
     <ModalShell
       open={open}
       onClose={onClose}
-      title={editingProduct ? `দাম পরিবর্তন — ${editingProduct.name}` : 'নতুন প্রোডাক্ট যোগ করুন'}
+      title={editingProduct ? `প্রোডাক্ট এডিট — ${editingProduct.name}` : 'নতুন প্রোডাক্ট যোগ করুন'}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
@@ -775,42 +785,38 @@ export function ProductFormModal({
             {error}
           </p>
         )}
-        {!editingProduct && (
-          <>
-            <div>
-              <label htmlFor="prod-name-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
-                প্রোডাক্টের নাম *
-              </label>
-              <input
-                id="prod-name-input"
-                type="text"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setError('');
-                }}
-                placeholder="যেমন: Dexlan"
-                className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="prod-tier-select" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
-                গ্রুপ / ক্যাটাগরি
-              </label>
-              <M3SelectPopup
-                id="prod-tier-select"
-                testId="prod-tier-select"
-                variant="field"
-                value={tier}
-                onChange={(next) => setTier(next as ProductTier)}
-                options={TIERS.map((t) => ({ value: t, label: t }))}
-                menuTitle="ওষুধের গ্রুপ নির্বাচন করুন"
-                ariaLabel="গ্রুপ বা ক্যাটাগরি"
-                icon={<Layers className="h-4 w-4 text-[#006B47] shrink-0" />}
-              />
-            </div>
-          </>
-        )}
+        <div>
+          <label htmlFor="prod-name-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
+            প্রোডাক্টের নাম *
+          </label>
+          <input
+            id="prod-name-input"
+            type="text"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setError('');
+            }}
+            placeholder="যেমন: Dexlan"
+            className="w-full min-h-[48px] rounded-2xl border border-[#DCE7DF] bg-[#F5FAF6] px-4 py-2.5 text-base text-[#171D19] focus:border-[#006B47] focus:bg-white focus:outline-none"
+          />
+        </div>
+        <div>
+          <label htmlFor="prod-tier-select" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
+            গ্রুপ / ক্যাটাগরি
+          </label>
+          <M3SelectPopup
+            id="prod-tier-select"
+            testId="prod-tier-select"
+            variant="field"
+            value={tier}
+            onChange={(next) => setTier(next as ProductTier)}
+            options={TIERS.map((t) => ({ value: t, label: t }))}
+            menuTitle="ওষুধের গ্রুপ নির্বাচন করুন"
+            ariaLabel="গ্রুপ বা ক্যাটাগরি"
+            icon={<Layers className="h-4 w-4 text-[#006B47] shrink-0" />}
+          />
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="prod-price-input" className="mb-1.5 block text-[15px] font-semibold text-[#171D19]">
@@ -844,20 +850,65 @@ export function ProductFormModal({
             />
           </div>
         </div>
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-[46px] rounded-full bg-[#ECF3ED] px-5 py-2 text-[15px] font-semibold text-[#171D19] hover:bg-[#D7E7DC]"
-          >
-            বাতিল
-          </button>
-          <button
-            type="submit"
-            className="min-h-[46px] rounded-full bg-[#006B47] px-6 py-2 text-[15px] font-bold text-white hover:bg-[#005739]"
-          >
-            সেভ করুন
-          </button>
+
+        {editingProduct && onDeleteProduct && confirmDelete && (
+          <div className="rounded-3xl bg-[#FFDAD6]/80 p-4 space-y-3">
+            <p className="text-sm font-semibold text-[#410002]">
+              আপনি কি নিশ্চিতভাবে &ldquo;{editingProduct.name}&rdquo; প্রোডাক্ট তালিকা থেকে ডিলিট করতে চান? (পুরানো চালানের হিসাব ঠিক থাকবে।)
+            </p>
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="min-h-[42px] rounded-full bg-white px-4 py-2 text-sm font-bold text-[#171D19] hover:bg-[#ECF3ED]"
+              >
+                না, থাক
+              </button>
+              <button
+                type="button"
+                data-testid="modal-confirm-delete-product"
+                onClick={() => {
+                  onDeleteProduct(editingProduct.id);
+                  onClose();
+                }}
+                className="min-h-[42px] rounded-full bg-[#BA1A1A] px-4 py-2 text-sm font-bold text-white hover:bg-[#93000A]"
+              >
+                হ্যাঁ, ডিলিট করুন
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <div>
+            {editingProduct && onDeleteProduct && !confirmDelete && (
+              <button
+                type="button"
+                data-testid="modal-delete-product-btn"
+                onClick={() => setConfirmDelete(true)}
+                className="inline-flex min-h-[46px] items-center gap-1.5 rounded-full bg-[#FFDAD6]/80 px-4 py-2 text-sm font-bold text-[#BA1A1A] hover:bg-[#FFDAD6]"
+              >
+                <Trash2 className="h-4 w-4" />
+                ডিলিট করুন
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2.5 ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-[46px] rounded-full bg-[#ECF3ED] px-5 py-2 text-[15px] font-semibold text-[#171D19] hover:bg-[#D7E7DC]"
+            >
+              বাতিল
+            </button>
+            <button
+              type="submit"
+              data-testid="modal-save-product-btn"
+              className="min-h-[46px] rounded-full bg-[#006B47] px-6 py-2 text-[15px] font-bold text-white hover:bg-[#005739]"
+            >
+              সেভ করুন
+            </button>
+          </div>
         </div>
       </form>
     </ModalShell>

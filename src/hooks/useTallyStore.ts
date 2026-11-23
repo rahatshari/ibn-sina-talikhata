@@ -69,10 +69,19 @@ type FallbackSyncOp =
   | { kind: 'update-payment'; payment: PaymentRecord }
   | { kind: 'delete-payment'; paymentId: string }
   | { kind: 'upsert-product'; product: Product }
-  | { kind: 'update-product'; productId: string; boxPrice: number; packInfo: string };
+  | {
+      kind: 'update-product';
+      productId: string;
+      name?: string;
+      tier?: ProductTier;
+      boxPrice: number;
+      packInfo: string;
+    }
+  | { kind: 'delete-product'; productId: string };
 
 interface StoredTallyState {
   products: Product[];
+  deletedProductIds?: string[];
   shops: Shopkeeper[];
   sales: SaleRecord[];
   payments: PaymentRecord[];
@@ -186,6 +195,7 @@ function loadCloudMirror(uid: string): StoredTallyState {
 function loadLocalState(): StoredTallyState {
   const emptyState: StoredTallyState = {
     products: INITIAL_IBN_SINA_PRODUCTS,
+    deletedProductIds: [],
     shops: [],
     sales: [],
     payments: [],
@@ -204,6 +214,9 @@ function loadLocalState(): StoredTallyState {
     const rawShops = Array.isArray(parsed.shops) ? parsed.shops : [];
     const rawSales = Array.isArray(parsed.sales) ? parsed.sales : [];
     const rawPayments = Array.isArray(parsed.payments) ? parsed.payments : [];
+    const deletedProductIds = Array.isArray(parsed.deletedProductIds)
+      ? parsed.deletedProductIds.filter((id): id is string => typeof id === 'string')
+      : [];
     const cleaned = stripLegacyDemoData({
       shops: rawShops,
       sales: rawSales,
@@ -211,7 +224,8 @@ function loadLocalState(): StoredTallyState {
     });
 
     return {
-      products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS),
+      products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS, deletedProductIds),
+      deletedProductIds,
       shops: cleaned.shops,
       sales: cleaned.sales,
       payments: cleaned.payments,
@@ -486,10 +500,14 @@ export function useTallyStore() {
           });
         } else if (op.kind === 'update-product') {
           batch.update(doc(db, 'users', uid, 'products', sanitizeId(op.productId)), {
+            ...(op.name ? { name: clampStr(op.name, 100) } : {}),
+            ...(op.tier ? { tier: op.tier } : {}),
             boxPrice: op.boxPrice,
             packInfo: op.packInfo,
             updatedAt: serverTimestamp(),
           });
+        } else if (op.kind === 'delete-product') {
+          batch.delete(doc(db, 'users', uid, 'products', sanitizeId(op.productId)));
         }
       }
       await batch.commit();
@@ -776,8 +794,9 @@ export function useTallyStore() {
         isCloudUser: Boolean(user),
         hasPendingWrites,
         cloudLoading,
+        justSynced: justSyncedNotice,
       }),
-    [isOnline, user, hasPendingWrites, cloudLoading],
+    [isOnline, user, hasPendingWrites, cloudLoading, justSyncedNotice],
   );
 
   const signInWithGoogle = useCallback(async () => {
@@ -855,6 +874,51 @@ export function useTallyStore() {
         saveFallbackQueue(uid, next);
         return;
       }
+    }
+    if (op.kind === 'update-product') {
+      const upsertIdx = existing.findIndex(
+        (item) => item.kind === 'upsert-product' && item.product.id === op.productId,
+      );
+      if (upsertIdx !== -1) {
+        const next = existing.map((item, idx) => {
+          if (idx !== upsertIdx || item.kind !== 'upsert-product') return item;
+          return {
+            kind: 'upsert-product',
+            product: {
+              ...item.product,
+              ...(op.name ? { name: op.name } : {}),
+              ...(op.tier ? { tier: op.tier } : {}),
+              boxPrice: op.boxPrice,
+              packInfo: op.packInfo,
+            },
+          } satisfies FallbackSyncOp;
+        });
+        saveFallbackQueue(uid, next);
+        return;
+      }
+      const updateIdx = existing.findIndex(
+        (item) => item.kind === 'update-product' && item.productId === op.productId,
+      );
+      if (updateIdx !== -1) {
+        const next = existing.map((item, idx) => (idx === updateIdx ? op : item));
+        saveFallbackQueue(uid, next);
+        return;
+      }
+    }
+    if (op.kind === 'delete-product') {
+      const hadPendingUpsert = existing.some(
+        (item) => item.kind === 'upsert-product' && item.product.id === op.productId,
+      );
+      const filtered = existing.filter(
+        (item) =>
+          !(
+            (item.kind === 'upsert-product' && item.product.id === op.productId) ||
+            (item.kind === 'update-product' && item.productId === op.productId) ||
+            (item.kind === 'delete-product' && item.productId === op.productId)
+          ),
+      );
+      saveFallbackQueue(uid, hadPendingUpsert ? filtered : [...filtered, op]);
+      return;
     }
     saveFallbackQueue(uid, [...existing, op]);
   }, []);
@@ -1266,18 +1330,32 @@ export function useTallyStore() {
     [firebaseUser, user, appendFallbackOp],
   );
 
-  const updateProductPrice = useCallback(
-    (productId: string, boxPrice: number, packInfo?: string) => {
-      const safePrice = roundCurrency(Math.max(0, Math.min(1000000, boxPrice)));
+  const updateProduct = useCallback(
+    (
+      productId: string,
+      input: { name?: string; tier?: ProductTier; boxPrice: number; packInfo?: string },
+    ) => {
+      const safePrice = roundCurrency(Math.max(0, Math.min(1000000, input.boxPrice)));
+      const existing = activeState.products.find((p) => p.id === productId);
+      const nextName = clampStr(
+        input.name !== undefined ? input.name || existing?.name || 'Product' : existing?.name || 'Product',
+        100,
+      );
+      const nextTier: ProductTier = input.tier ?? existing?.tier ?? 'Custom';
+      const nextPack = clampStr(
+        input.packInfo !== undefined
+          ? input.packInfo || existing?.packInfo || '1 Box'
+          : existing?.packInfo || '1 Box',
+        60,
+      );
+
       if (firebaseUser) {
-        const existing = cloudState.products.find((p) => p.id === productId);
         const path = `users/${firebaseUser.uid}/products/${productId}`;
         updateDoc(doc(db, 'users', firebaseUser.uid, 'products', productId), {
+          name: nextName,
+          tier: nextTier,
           boxPrice: safePrice,
-          packInfo: clampStr(
-            packInfo !== undefined ? packInfo || existing?.packInfo || '1 Box' : existing?.packInfo || '1 Box',
-            60,
-          ),
+          packInfo: nextPack,
           updatedAt: serverTimestamp(),
         }).catch((err) => {
           if (isOfflineFirestoreError(err)) return;
@@ -1288,22 +1366,19 @@ export function useTallyStore() {
           }
         });
       } else if (user) {
-        const existing = cloudState.products.find((p) => p.id === productId);
-        const nextPack = clampStr(
-          packInfo !== undefined ? packInfo || existing?.packInfo || '1 Box' : existing?.packInfo || '1 Box',
-          60,
-        );
         setCloudState((prev) => ({
           ...prev,
           products: prev.products.map((p) =>
             p.id === productId
-              ? { ...p, boxPrice: safePrice, packInfo: nextPack }
+              ? { ...p, name: nextName, tier: nextTier, boxPrice: safePrice, packInfo: nextPack }
               : p,
           ),
         }));
         appendFallbackOp(user.uid, {
           kind: 'update-product',
           productId,
+          name: nextName,
+          tier: nextTier,
           boxPrice: safePrice,
           packInfo: nextPack,
         });
@@ -1312,17 +1387,48 @@ export function useTallyStore() {
           ...prev,
           products: prev.products.map((p) =>
             p.id === productId
-              ? {
-                  ...p,
-                  boxPrice: safePrice,
-                  packInfo: packInfo !== undefined ? packInfo.trim() || p.packInfo : p.packInfo,
-                }
+              ? { ...p, name: nextName, tier: nextTier, boxPrice: safePrice, packInfo: nextPack }
               : p,
           ),
         }));
       }
     },
-    [firebaseUser, user, cloudState.products, appendFallbackOp],
+    [firebaseUser, user, activeState.products, appendFallbackOp],
+  );
+
+  const deleteProduct = useCallback(
+    (productId: string) => {
+      if (firebaseUser) {
+        const path = `users/${firebaseUser.uid}/products/${productId}`;
+        deleteDoc(doc(db, 'users', firebaseUser.uid, 'products', productId)).catch((err) => {
+          if (isOfflineFirestoreError(err)) return;
+          try {
+            handleFirestoreError(err, OperationType.DELETE, path);
+          } catch (wrapped) {
+            setAsyncError(wrapped as Error);
+          }
+        });
+      } else if (user) {
+        setCloudState((prev) => ({
+          ...prev,
+          products: prev.products.filter((p) => p.id !== productId),
+        }));
+        appendFallbackOp(user.uid, { kind: 'delete-product', productId });
+      } else {
+        setLocalState((prev) => {
+          const prevDeleted = prev.deletedProductIds ?? [];
+          const nextDeleted = prevDeleted.includes(productId)
+            ? prevDeleted
+            : [...prevDeleted, productId];
+          return {
+            ...prev,
+            products: prev.products.filter((p) => p.id !== productId),
+            deletedProductIds: nextDeleted,
+          };
+        });
+      }
+    },
+    [firebaseUser, user, appendFallbackOp],
   );
 
   const addProduct = useCallback(
@@ -1443,8 +1549,12 @@ export function useTallyStore() {
       if (!Array.isArray(parsed.shops) || !Array.isArray(parsed.sales)) {
         return { ok: false, error: 'ফাইলটি সঠিক টালিখাতা ব্যাকআপ ফরম্যাটে নেই।' };
       }
+      const deletedProductIds = Array.isArray(parsed.deletedProductIds)
+        ? parsed.deletedProductIds.filter((id): id is string => typeof id === 'string')
+        : [];
       setLocalState({
-        products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS),
+        products: mergeCatalogProducts(parsed.products, INITIAL_IBN_SINA_PRODUCTS, deletedProductIds),
+        deletedProductIds,
         shops: parsed.shops,
         sales: parsed.sales,
         payments: Array.isArray(parsed.payments) ? parsed.payments : [],
@@ -1486,7 +1596,8 @@ export function useTallyStore() {
     updatePayment,
     deleteSale,
     deletePayment,
-    updateProductPrice,
+    updateProduct,
+    deleteProduct,
     addProduct,
     importBackupData,
   };

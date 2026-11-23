@@ -16,6 +16,7 @@ import {
   Package,
   Plus,
   RefreshCw,
+  Smartphone,
   Store,
   Type,
   UserCircle2,
@@ -317,45 +318,23 @@ function AppContent() {
     <div className="min-h-screen overflow-x-clip bg-[#F5FAF6] text-[#171D19] pb-24 md:pb-12">
       {/* Material You 3 Top App Bar */}
       <header className="no-print sticky top-0 z-30 border-b border-[#DCE7DF] bg-[#F5FAF6]/95 backdrop-blur-md pt-safe">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-6 px-3.5 py-2.5 sm:px-6 sm:py-3">
-          {/* Zone 1: Brand Emblem + Title + Compact Sync Status */}
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4 px-3 py-2.5 sm:px-6 sm:py-3">
+          {/* Zone 1: Brand Emblem + Title */}
+          <div className="flex items-center min-w-0">
             <button
               type="button"
               onClick={handleBackToDashboard}
-              className="flex items-center gap-2.5 text-left min-w-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-[#006B47]"
+              className="flex items-center gap-2 sm:gap-2.5 text-left min-w-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-[#006B47]"
             >
               <img
                 src="/icon.svg"
                 alt=""
-                className="h-9 w-9 rounded-2xl border border-[#CBEAD6] bg-white p-0.5 shrink-0"
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-2xl border border-[#CBEAD6] bg-white p-0.5 shrink-0"
               />
-              <span className="font-display text-lg sm:text-[21px] font-bold tracking-tight text-[#171D19] truncate">
+              <span className="font-display text-[15.5px] sm:text-[21px] font-bold tracking-tight text-[#171D19] whitespace-nowrap">
                 ব্যক্তিগত টালিখাতা
               </span>
             </button>
-            <span
-              data-testid="sync-status-text"
-              title={store.syncStatus.detail}
-              className={`hidden lg:inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${
-                store.syncStatus.state === 'offline'
-                  ? 'bg-[#FFF3E0] text-[#7A4100]'
-                  : store.syncStatus.state === 'syncing'
-                    ? 'bg-[#E3EEFF] text-[#0D47A1]'
-                    : store.user
-                      ? 'bg-[#CBEAD6] text-[#002114]'
-                      : 'bg-[#E2EDE5] text-[#404943]'
-              }`}
-            >
-              {store.syncStatus.state === 'offline' ? (
-                <CloudOff className="h-3.5 w-3.5" />
-              ) : store.syncStatus.state === 'syncing' ? (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Cloud className="h-3.5 w-3.5" />
-              )}
-              {store.syncStatus.label}
-            </span>
           </div>
 
           {/* Zone 2: Material 3 Desktop Navigation Chips */}
@@ -379,7 +358,7 @@ function AppContent() {
             })}
           </nav>
 
-          {/* Zone 3: Primary M3 Pill CTA + Tonal Account Chip + 3-Dot Overflow Menu */}
+          {/* Zone 3: Primary M3 Pill CTA + Compact Backup/Offline Chip + Tonal Account Chip + 3-Dot Overflow Menu */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
@@ -393,8 +372,39 @@ function AppContent() {
             <button
               type="button"
               onClick={() => setAccountModalOpen(true)}
+              data-testid="sync-status-text"
+              data-sync-state={store.syncStatus.state}
+              title={store.syncStatus.detail}
+              aria-label={`ব্যাকআপ ও নেটওয়ার্ক অবস্থা: ${store.syncStatus.label}`}
+              className={`inline-flex min-h-[36px] sm:min-h-[38px] items-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-3 py-1 text-[11px] sm:text-xs font-bold whitespace-nowrap shrink-0 transition-colors ${
+                store.syncStatus.state === 'offline'
+                  ? 'bg-[#FFF3E0] text-[#7A4100] ring-1 ring-[#7A4100]/20 hover:bg-[#FFE6BF]'
+                  : store.syncStatus.state === 'syncing'
+                    ? 'bg-[#E3EEFF] text-[#0D47A1] ring-1 ring-[#0D47A1]/20 hover:bg-[#D2E4FF]'
+                    : store.syncStatus.state === 'synced'
+                      ? store.justSyncedNotice
+                        ? 'bg-[#CBEAD6] text-[#002114] ring-1 ring-[#006B47]/35 shadow-xs hover:bg-[#BAE2C8]'
+                        : 'bg-[#E2EDE5] text-[#006B47] hover:bg-[#D4E7DA]'
+                      : 'bg-[#ECF3ED] text-[#404943] hover:bg-[#DCE7DF]'
+              }`}
+            >
+              {store.syncStatus.state === 'offline' ? (
+                <CloudOff className="h-3.5 w-3.5 shrink-0" />
+              ) : store.syncStatus.state === 'syncing' ? (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" />
+              ) : store.syncStatus.state === 'synced' ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#006B47] shrink-0" />
+              ) : (
+                <Smartphone className="h-3.5 w-3.5 text-[#404943] shrink-0" />
+              )}
+              <span>{store.syncStatus.shortLabel}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAccountModalOpen(true)}
               aria-label={store.user ? 'অ্যাকাউন্ট প্রোফাইল ও লগআউট' : 'জিমেইল দিয়ে লগইন'}
-              className="inline-flex min-h-[42px] min-w-[42px] items-center justify-center gap-2 rounded-full bg-[#E2EDE5] px-2 sm:px-3 text-sm font-semibold text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0"
+              className="inline-flex min-h-[38px] min-w-[38px] sm:min-h-[42px] sm:min-w-[42px] items-center justify-center gap-2 rounded-full bg-[#E2EDE5] px-2 sm:px-3 text-sm font-semibold text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0"
             >
               {store.user ? (
                 <>
@@ -430,13 +440,13 @@ function AppContent() {
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen((prev) => !prev)}
-                className="relative inline-flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[#ECF3ED] text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0"
+                className="relative inline-flex h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] items-center justify-center rounded-full bg-[#ECF3ED] text-[#171D19] transition-colors hover:bg-[#D7E7DC] shrink-0"
               >
                 <MoreVertical className="h-5 w-5" />
                 {updater.updateAvailable && (
                   <span
                     aria-hidden="true"
-                    className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-[#006B47] ring-2 ring-[#ECF3ED]"
+                    className="absolute right-1.5 top-1.5 sm:right-2 sm:top-2 h-2.5 w-2.5 rounded-full bg-[#006B47] ring-2 ring-[#ECF3ED]"
                   />
                 )}
               </button>
@@ -742,48 +752,12 @@ function AppContent() {
           );
         })()}
 
-        {/* Contextual Offline / Sync / Auth Notice */}
-        {(store.syncStatus.state === 'offline' ||
-          store.syncStatus.state === 'syncing' ||
-          store.justSyncedNotice ||
-          store.authError) && (
-          <div className="no-print mb-5 space-y-2.5">
-            {(store.syncStatus.state === 'offline' || store.syncStatus.state === 'syncing') && (
-              <div
-                className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm ${
-                  store.syncStatus.state === 'offline'
-                    ? 'bg-[#FFF3E0] text-[#7A4100]'
-                    : 'bg-[#E3EEFF] text-[#0D47A1]'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  {store.syncStatus.state === 'offline' ? (
-                    <CloudOff className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4 animate-spin shrink-0" />
-                  )}
-                  <span>
-                    <strong>{store.syncStatus.label}:</strong> {store.syncStatus.detail}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {store.justSyncedNotice && (
-              <div
-                role="status"
-                className="flex items-center gap-2.5 rounded-2xl bg-[#CBEAD6] px-4 py-3 text-sm font-semibold text-[#002114]"
-              >
-                <CheckCircle2 className="h-5 w-5 text-[#006B47] shrink-0" />
-                অফলাইনে করা সকল ডাটা স্বয়ংক্রিয়ভাবে ক্লাউডে আপলোড ও সিঙ্ক হয়েছে।
-              </div>
-            )}
-
-            {store.authError && (
-              <p className="rounded-2xl bg-[#FFDAD6] px-4 py-3 text-sm font-medium text-[#410002]" role="alert">
-                {store.authError}
-              </p>
-            )}
+        {/* Auth Error Notice (Offline & Backup statuses are shown compactly beside Account in Header) */}
+        {store.authError && (
+          <div className="no-print mb-5">
+            <p className="rounded-2xl bg-[#FFDAD6] px-4 py-3 text-sm font-medium text-[#410002]" role="alert">
+              {store.authError}
+            </p>
           </div>
         )}
 
@@ -968,7 +942,8 @@ function AppContent() {
         editingProduct={productModalState.editing}
         onClose={() => setProductModalState({ open: false, editing: null })}
         onSaveNew={(data) => store.addProduct(data)}
-        onUpdatePrice={(id, price, packInfo) => store.updateProductPrice(id, price, packInfo)}
+        onUpdateProduct={(id, data) => store.updateProduct(id, data)}
+        onDeleteProduct={(id) => store.deleteProduct(id)}
       />
 
       <AccountModal

@@ -256,6 +256,7 @@ export function formatBytes(bytes: number): string {
 export interface SyncStatusDescriptor {
   state: 'offline' | 'syncing' | 'synced' | 'guest';
   label: string;
+  shortLabel: string;
   detail: string;
 }
 
@@ -264,36 +265,50 @@ export function computeSyncStatus(args: {
   isCloudUser: boolean;
   hasPendingWrites: boolean;
   cloudLoading: boolean;
+  justSynced?: boolean;
 }): SyncStatusDescriptor {
-  if (!args.isCloudUser) {
-    return {
-      state: args.isOnline ? 'guest' : 'offline',
-      label: args.isOnline ? 'অফলাইন লোকাল মোড' : 'অফলাইন মোড (ইন্টারনেট নেই)',
-      detail: args.isOnline
-        ? 'সব ডাটা ফোনে সেভ হচ্ছে। জিমেইল লগইন করলে ক্লাউডে সিঙ্ক হবে।'
-        : 'ইন্টারনেট ছাড়াই বিক্রি ও হিসাব সেভ হচ্ছে। পরে লগইন করে সিঙ্ক করতে পারবেন।',
-    };
-  }
-
   if (!args.isOnline) {
     return {
       state: 'offline',
-      label: 'অফলাইন মোড · ডাটা কিউতে আছে',
-      detail: 'ইন্টারনেট নেই। নতুন এন্ট্রি ফোনে সেভ হচ্ছে, নেট পেলেই অটো আপলোড হবে।',
+      label: args.isCloudUser ? 'অফলাইন · কিউতে আছে' : 'অফলাইন',
+      shortLabel: 'অফলাইন',
+      detail: args.isCloudUser
+        ? 'ইন্টারনেট নেই। নতুন এন্ট্রি ফোনে সেভ হচ্ছে, নেট পেলেই অটো ব্যাকআপ হবে।'
+        : 'ইন্টারনেট ছাড়াই বিক্রি ও হিসাব ফোনে সেভ হচ্ছে।',
+    };
+  }
+
+  if (!args.isCloudUser) {
+    return {
+      state: 'guest',
+      label: 'ফোনে সেভ হচ্ছে (ক্লাউড বন্ধ)',
+      shortLabel: 'ফোনে সেভ',
+      detail: 'সব ডাটা ফোনে সেভ হচ্ছে। জিমেইল লগইন করলে অটো ক্লাউড ব্যাকআপ চালু হবে।',
     };
   }
 
   if (args.cloudLoading || args.hasPendingWrites) {
     return {
       state: 'syncing',
-      label: 'ক্লাউডে সিঙ্ক হচ্ছে...',
-      detail: 'অফলাইনে করা হিসাবগুলো ফায়ারবেস ক্লাউডে আপলোড হচ্ছে।',
+      label: 'ডাটা ব্যাকআপ হচ্ছে...',
+      shortLabel: 'ব্যাকআপ হচ্ছে...',
+      detail: 'আপনার হিসাবগুলো ফায়ারবেস ক্লাউডে ব্যাকআপ হচ্ছে।',
+    };
+  }
+
+  if (args.justSynced) {
+    return {
+      state: 'synced',
+      label: 'ব্যাকআপ সম্পন্ন হয়েছে',
+      shortLabel: 'ব্যাকআপ সম্পন্ন',
+      detail: 'সকল ডাটা নিরাপদে ক্লাউডে ব্যাকআপ সম্পন্ন হয়েছে।',
     };
   }
 
   return {
     state: 'synced',
-    label: 'অনলাইন · ফায়ারবেস ক্লাউড সিঙ্কড',
-    detail: 'সব হিসাব ক্লাউড স্টোরেজে সুরক্ষিতভাবে সংরক্ষিত আছে।',
+    label: 'ব্যাকআপ সম্পন্ন',
+    shortLabel: 'ব্যাকআপ সম্পন্ন',
+    detail: 'সব হিসাব ফায়ারবেস ক্লাউডে সুরক্ষিতভাবে ব্যাকআপ আছে।',
   };
 }
